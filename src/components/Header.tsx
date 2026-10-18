@@ -564,84 +564,79 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
         const tenantId =
           process.env.AMPLIFY_NEXT_PUBLIC_TENANT_ID ||
           process.env.NEXT_PUBLIC_TENANT_ID;
+        const email = user.emailAddresses?.[0]?.emailAddress;
 
-        if (!tenantId) {
-          console.warn('[Header] NEXT_PUBLIC_TENANT_ID not set, cannot check tenant-scoped admin status');
-          setIsAdmin(false);
-          return;
-        }
-
-        const query = new URLSearchParams({
-          'userId.equals': userId,
-          'tenantId.equals': tenantId,
-          size: '1',
-        });
-
-        const url = `/api/proxy/user-profiles?${query.toString()}`;
-
-        const resp = await fetch(url, {
-          cache: 'no-store',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (resp.ok) {
-          const data = await resp.json();
-          let profile = pickFirstUserProfile(data);
-
-          if (!profile) {
-            const email = user.emailAddresses?.[0]?.emailAddress;
-            if (email) {
-              const emailQuery = new URLSearchParams({
-                'email.equals': email,
-                'tenantId.equals': tenantId,
-                size: '1',
-              });
-              const emailResp = await fetch(`/api/proxy/user-profiles?${emailQuery.toString()}`, {
-                cache: 'no-store',
-                headers: { 'Content-Type': 'application/json' }
-              });
-              if (emailResp.ok) {
-                profile = pickFirstUserProfile(await emailResp.json());
-              }
+        let profile = null;
+        if (tenantId) {
+          const query = new URLSearchParams({
+            'userId.equals': userId,
+            'tenantId.equals': tenantId,
+            size: '1',
+          });
+          const resp = await fetch(`/api/proxy/user-profiles?${query.toString()}`, {
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (resp.ok) {
+            profile = pickFirstUserProfile(await resp.json());
+          }
+          if (!profile && email) {
+            const emailQuery = new URLSearchParams({
+              'email.equals': email,
+              'tenantId.equals': tenantId,
+              size: '1',
+            });
+            const emailResp = await fetch(`/api/proxy/user-profiles?${emailQuery.toString()}`, {
+              cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            if (emailResp.ok) {
+              profile = pickFirstUserProfile(await emailResp.json());
             }
           }
+        }
 
-          console.log('[Header] 🔍 Profile data from API:', {
-            id: profile?.id,
-            userId: profile?.userId,
-            email: profile?.email,
-            userRole: profile?.userRole,
-            userStatus: profile?.userStatus,
-            tenantId: profile?.tenantId,
-            rawProfile: JSON.stringify(profile, null, 2)
+        // Duplicate MEMBER rows are newer and fill an unfiltered first page.
+        // Ask for admin roles directly so a super-admin row is not skipped.
+        if (!isAdminRole(profile?.userRole) && (email || userId)) {
+          const roleQuery = new URLSearchParams();
+          if (email) roleQuery.set('email.equals', email);
+          else roleQuery.set('userId.equals', userId);
+          roleQuery.append('userRole.in', 'ADMIN');
+          roleQuery.append('userRole.in', 'SUPER_ADMIN');
+          roleQuery.set('size', '1');
+          roleQuery.set('sort', 'id,asc');
+          const roleResp = await fetch(`/api/proxy/user-profiles?${roleQuery.toString()}`, {
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' }
           });
-          const isAdminUser = profile ? isAdminRole(profile.userRole) : false;
-          console.log('[Header] ✅ Admin status check result:', {
+          if (roleResp.ok) {
+            const adminProfile = pickFirstUserProfile(await roleResp.json());
+            if (adminProfile) profile = adminProfile;
+          }
+        }
+
+        const isAdminUser = profile ? isAdminRole(profile.userRole) : false;
+        if (profile) {
+          console.log('[Header] Admin status check result:', {
             userId,
             isAdminUser,
-            userRole: profile?.userRole,
-            roleMatch: isAdminRole(profile?.userRole),
-            roleType: typeof profile?.userRole,
-            roleValue: JSON.stringify(profile?.userRole),
+            userRole: profile.userRole,
+            tenantId: profile.tenantId,
             isTenantAdminProp: isTenantAdmin
           });
           setIsAdmin(isAdminUser);
+        } else if (typeof isTenantAdmin === 'boolean') {
+          setIsAdmin(isTenantAdmin);
         } else {
-          console.warn('[Header] Failed to check admin status:', resp.status);
-          // Fallback to server-verified flag or Clerk metadata
-          if (typeof isTenantAdmin === 'boolean') {
-            setIsAdmin(isTenantAdmin);
-          } else {
-            // Fallback to Clerk metadata
-            const publicRole = user.publicMetadata?.role as string;
-            const orgRole = user.organizationMemberships?.[0]?.role;
-            const isAdminUser =
-              publicRole === 'admin' ||
-              publicRole === 'administrator' ||
-              orgRole === 'admin' ||
-              orgRole === 'org:admin';
-            setIsAdmin(isAdminUser);
-          }
+          const publicRole = user.publicMetadata?.role as string;
+          const orgRole = user.organizationMemberships?.[0]?.role;
+          setIsAdmin(
+            publicRole === 'admin' ||
+            publicRole === 'administrator' ||
+            orgRole === 'admin' ||
+            orgRole === 'org:admin'
+          );
         }
       } catch (error) {
         console.error('[Header] Error checking admin status:', error);

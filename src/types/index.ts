@@ -749,6 +749,8 @@ export interface TenantSettingsDTO {
   showHeaderAffiliations?: boolean | null;
   showHeaderProjects?: boolean | null;
   showHeaderFamily?: boolean | null;
+  /** When true, public header may show the featured published tournament. Sports tenants. */
+  showHeaderTournament?: boolean | null;
   // Gas station COO module (GAS_STATION site type)
   /** Master on/off for the gas station admin module for this tenant */
   enableGasStationModule?: boolean;
@@ -868,6 +870,40 @@ export interface DiscountCodeDTO {
 }
 
 // Focus Groups
+export type TenantTournamentStatus = 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED';
+
+export interface TenantTournamentDTO {
+  id?: number | null;
+  tenantId?: string;
+  title: string;
+  /** Unique menu item shown when this tournament is selected for the header. */
+  shortLabel: string;
+  editionYear?: number | null;
+  slug: string;
+  showInHeader?: boolean;
+  status: TenantTournamentStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  isPublished?: boolean;
+  welcomeText?: string | null;
+  aboutText?: string | null;
+  detailsText?: string | null;
+  ageGroupLabel?: string | null;
+  chiefGuestName?: string | null;
+  chiefGuestImageUrl?: string | null;
+  heroImageUrl?: string | null;
+  fixturesImageUrl?: string | null;
+  registrationEmail?: string | null;
+  externalResultsUrl?: string | null;
+  externalResultsLabel?: string | null;
+  legacyPageUrl?: string | null;
+  winnerName?: string | null;
+  runnerUpName?: string | null;
+  thirdPlaceName?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface FocusGroupDTO {
   id?: number;
   tenantId?: string;

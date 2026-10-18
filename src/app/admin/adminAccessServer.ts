@@ -63,6 +63,20 @@ async function listUserProfiles(query: URLSearchParams): Promise<UserProfileDTO[
 }
 
 /**
+ * Only ADMIN / SUPER_ADMIN rows. Unfiltered lists are newest-first, and duplicate
+ * MEMBER rows created on sign-in fill the first page and hide the real admin profile.
+ */
+function adminRoleQuery(field: 'userId.equals' | 'email.equals', value: string): URLSearchParams {
+  const query = new URLSearchParams();
+  query.set(field, value);
+  query.append('userRole.in', 'ADMIN');
+  query.append('userRole.in', 'SUPER_ADMIN');
+  query.set('size', '200');
+  query.set('sort', 'id,asc');
+  return query;
+}
+
+/**
  * Load every tenant profile for this Clerk user, then derive the admin allowlist.
  * Looks up by Clerk userId and by email so Google login still finds ADMIN rows
  * whose user_id was never updated on other tenants.
@@ -71,16 +85,13 @@ export const fetchAdminAccessForClerkUser = cache(
   async (userId: string, email?: string | null): Promise<AdminTenantAccess> => {
     if (!userId) return emptyAdminTenantAccess();
 
-    const byUser = new URLSearchParams();
-    byUser.set('userId.equals', userId);
-    byUser.set('size', '100');
-    let profiles = await listUserProfiles(byUser);
+    let profiles = await listUserProfiles(adminRoleQuery('userId.equals', userId));
 
     if (email?.trim()) {
-      const byEmail = new URLSearchParams();
-      byEmail.set('email.equals', email.trim());
-      byEmail.set('size', '100');
-      profiles = mergeProfilesById(profiles, await listUserProfiles(byEmail));
+      profiles = mergeProfilesById(
+        profiles,
+        await listUserProfiles(adminRoleQuery('email.equals', email.trim())),
+      );
     }
 
     return resolveAdminAccessFromProfiles(profiles, isAllTenantsAdmin());
@@ -162,15 +173,12 @@ export const fetchAdminWorkspaceTenants = cache(async (): Promise<{
 
   let profiles: UserProfileDTO[] = [];
   if (userId) {
-    const byUser = new URLSearchParams();
-    byUser.set('userId.equals', userId);
-    byUser.set('size', '100');
-    profiles = await listUserProfiles(byUser);
+    profiles = await listUserProfiles(adminRoleQuery('userId.equals', userId));
     if (email?.trim()) {
-      const byEmail = new URLSearchParams();
-      byEmail.set('email.equals', email.trim());
-      byEmail.set('size', '100');
-      profiles = mergeProfilesById(profiles, await listUserProfiles(byEmail));
+      profiles = mergeProfilesById(
+        profiles,
+        await listUserProfiles(adminRoleQuery('email.equals', email.trim())),
+      );
     }
   }
 

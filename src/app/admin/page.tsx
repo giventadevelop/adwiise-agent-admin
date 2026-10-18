@@ -1,15 +1,31 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from "@clerk/nextjs";
 import { useAdminAccess } from './AdminTenantContext';
 import AdminTenantWorkspacePicker from './AdminTenantWorkspacePicker';
+import { fetchTenantSiteTypeServer } from './tournaments/ApiServerActions';
 // Icons removed - using inline SVGs instead
 
 export default function AdminPage() {
   const { userId } = useAuth();
-  const { isPlatformSuperAdmin } = useAdminAccess();
+  const { isPlatformSuperAdmin, tenantId } = useAdminAccess();
   const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [isSportsTeam, setIsSportsTeam] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setIsSportsTeam(false);
+      return;
+    }
+    let cancelled = false;
+    fetchTenantSiteTypeServer(tenantId).then((siteType) => {
+      if (!cancelled) setIsSportsTeam(siteType === 'SPORTS_TEAM');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   // CRITICAL: Each button must have a UNIQUE color - no duplicates allowed
   // All gray colors (gray, slate, stone, zinc, neutral) are avoided
@@ -136,6 +152,15 @@ export default function AdminPage() {
       sublabel: 'Members',
       color: 'squadRoster',
       key: 'team-members'
+    },
+    {
+      href: '/admin/tournaments',
+      icon: 'trophy',
+      label: 'Tournaments',
+      sublabel: 'Sports editions',
+      color: 'tournamentCup',
+      key: 'tournaments',
+      sportsOnly: true,
     },
     {
       href: '/admin/homepage-cache',
@@ -347,6 +372,7 @@ export default function AdminPage() {
       documentOfficial: 'bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#5b21b6]',
       docCategories: 'bg-[#fdf2f8] hover:bg-[#fce7f3] text-[#9d174d]',
       squadGroups: 'bg-[#f3e8ff] hover:bg-[#e9d5ff] text-[#6b21a8]',
+      tournamentCup: 'bg-[#ecfeff] hover:bg-[#cffafe] text-[#155e75]',
       squadRoster: 'bg-[#fff1f2] hover:bg-[#ffe4e6] text-[#9f1239]',
       cacheRecords: 'bg-[#ecfeff] hover:bg-[#cffafe] text-[#0e7490]',
       youtubeLive: 'bg-[#f4f7e8] hover:bg-[#e7efc8] text-[#3f6212]',
@@ -389,6 +415,7 @@ export default function AdminPage() {
       documentOfficial: 'bg-[#ddd6fe]',
       docCategories: 'bg-[#fbcfe8]',
       squadGroups: 'bg-[#e9d5ff]',
+      tournamentCup: 'bg-[#a5f3fc]',
       squadRoster: 'bg-[#fecdd3]',
       cacheRecords: 'bg-[#a5f3fc]',
       youtubeLive: 'bg-[#d9e8a8]',
@@ -431,6 +458,7 @@ export default function AdminPage() {
       documentOfficial: 'text-violet-600',
       docCategories: 'text-pink-600',
       squadGroups: 'text-[#7c3aed]',
+      tournamentCup: 'text-[#0e7490]',
       squadRoster: 'text-[#e11d48]',
       cacheRecords: 'text-[#0891b2]',
       youtubeLive: 'text-[#4d7c0f]',
@@ -444,6 +472,8 @@ export default function AdminPage() {
 
   const renderIcon = (iconName: string, className: string) => {
     switch (iconName) {
+      case 'trophy':
+        return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21h8m-4-4v4M6 4h12v5a6 6 0 01-12 0V4zM6 6H4a2 2 0 000 4h2M18 6h2a2 2 0 010 4h-2" /></svg>;
       case 'home':
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
       case 'users':
@@ -557,7 +587,11 @@ export default function AdminPage() {
       {/* Responsive Button Group */}
       <div className={`w-full mb-8 ${workspaceReady ? '' : 'pointer-events-none opacity-40'}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {adminButtons.filter((button) => !('platformOnly' in button && button.platformOnly) || isPlatformSuperAdmin).map((button) => {
+          {adminButtons.filter((button) => {
+            if ('platformOnly' in button && button.platformOnly && !isPlatformSuperAdmin) return false;
+            if ('sportsOnly' in button && button.sportsOnly && !isSportsTeam) return false;
+            return true;
+          }).map((button) => {
             const colorClasses = getColorClasses(button.color);
             const iconBgColor = getIconBgColor(button.color);
             const iconTextColor = getIconTextColor(button.color);

@@ -30,6 +30,7 @@ export interface SiteTypePresetSettings {
   showHeaderAffiliations?: boolean;
   showHeaderProjects?: boolean;
   showHeaderFamily?: boolean;
+  showHeaderTournament?: boolean;
 }
 
 const EVENT_ORG_PRESET: SiteTypePresetSettings = {
@@ -61,11 +62,13 @@ const EVENT_ORG_PRESET: SiteTypePresetSettings = {
   showHeaderAffiliations: false,
   showHeaderProjects: false,
   showHeaderFamily: false,
+  showHeaderTournament: false,
 };
 
 const SPORTS_PRESET: SiteTypePresetSettings = {
   ...EVENT_ORG_PRESET,
   showTeamMembersSectionInHomePage: true,
+  showHeaderTournament: true,
 };
 
 const CHURCH_PRESET: SiteTypePresetSettings = {
@@ -103,6 +106,7 @@ const PERSONAL_PROFILE_PRESET: SiteTypePresetSettings = {
   showHeaderAffiliations: true,
   showHeaderProjects: true,
   showHeaderFamily: true,
+  showHeaderTournament: false,
 };
 
 const HYBRID_PRESET: SiteTypePresetSettings = {
@@ -144,6 +148,7 @@ const GAS_STATION_PRESET: SiteTypePresetSettings = {
   showHeaderAffiliations: false,
   showHeaderProjects: false,
   showHeaderFamily: false,
+  showHeaderTournament: false,
 };
 
 export function getSiteTypePresetSettings(siteType: TenantSiteType): SiteTypePresetSettings {
@@ -151,7 +156,7 @@ export function getSiteTypePresetSettings(siteType: TenantSiteType): SiteTypePre
     case 'SPORTS_TEAM':
       return SPORTS_PRESET;
     case 'MUSIC_BAND':
-      return { ...SPORTS_PRESET };
+      return { ...SPORTS_PRESET, showHeaderTournament: false };
     case 'CHURCH_ORG':
       return CHURCH_PRESET;
     case 'PERSONAL_PROFILE':

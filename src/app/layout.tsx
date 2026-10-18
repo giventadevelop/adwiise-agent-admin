@@ -221,7 +221,10 @@ export default async function RootLayout({
               if (emailResp.ok) {
                 const existingProfile = pickFirstUserProfile(await emailResp.json());
 
-                if (existingProfile && existingProfile.userId !== userId) {
+                if (existingProfile && existingProfile.userId === userId) {
+                  // Same Clerk user already has a profile. Do not insert another MEMBER row.
+                  isTenantAdmin = isAdminRole(existingProfile.userRole);
+                } else if (existingProfile && existingProfile.userId !== userId) {
                   // Step 3: Email + tenantId exists but with different userId
                   // UPDATE the existing record's userId to match current Clerk userId
                   // CRITICAL: Preserve all existing fields - only update userId and clerkUserId

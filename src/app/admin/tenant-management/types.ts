@@ -129,6 +129,8 @@ export interface TenantSettingsDTO {
   showHeaderAffiliations?: boolean | null;
   showHeaderProjects?: boolean | null;
   showHeaderFamily?: boolean | null;
+  /** When true, public header may show the featured published tournament. Sports tenants. */
+  showHeaderTournament?: boolean | null;
   // Gas station COO module (GAS_STATION site type)
   /** Master on/off for the gas station admin module for this tenant */
   enableGasStationModule?: boolean;
