@@ -8,6 +8,7 @@ import Script from "next/script";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ConditionalLayout from "../components/ConditionalLayout";
+import PaginationScrollToTop from "../components/PaginationScrollToTop";
 import MobileDebugConsole from "../components/MobileDebugConsole";
 import { TenantSettingsProvider } from "../components/TenantSettingsProvider";
 import { headers } from "next/headers";
@@ -19,7 +20,8 @@ import { getAllowedRedirectOrigins, isKnownSatelliteHost } from "@/lib/satellite
 import { getMergedSatelliteConfigs } from "@/lib/satelliteConfigRuntime";
 import { fetchFooterContactPropsServer } from "@/app/ApiServerActions";
 import { isAdminRole } from "@/lib/utils";
-import { pickFirstUserProfile } from "@/lib/pickFirstUserProfile";
+import { pickAllUserProfiles, pickFirstUserProfile } from "@/lib/pickFirstUserProfile";
+import { buildClerkProfileInsert, decideClerkProfileIdentity } from "@/lib/clerkProfileIdentity";
 import { fetchAdminAccessForClerkUser } from "@/app/admin/adminAccessServer";
 import { BRAND_NAME, BRAND_PRIMARY_HOST, BRAND_TAGLINE } from "@/lib/brand";
 import type { Metadata } from "next";
@@ -210,7 +212,8 @@ export default async function RootLayout({
               // Check for existing profile with same email in the active tenant
               const emailQuery = new URLSearchParams({
                 'email.equals': userEmail,
-                size: '1',
+                size: '20',
+                sort: 'id,asc',
               });
               if (tenantId) {
                 emailQuery.set('tenantId.equals', tenantId);
@@ -219,70 +222,46 @@ export default async function RootLayout({
               const emailResp = await fetchWithJwtRetry(emailCheckUrl, { cache: 'no-store', headers: { 'Content-Type': 'application/json' } });
 
               if (emailResp.ok) {
-                const existingProfile = pickFirstUserProfile(await emailResp.json());
+                const emailRows = pickAllUserProfiles(await emailResp.json());
+                const decision = decideClerkProfileIdentity(emailRows, userId);
+                const matched = emailRows.find((row) => row.userId === userId || row.clerkUserId === userId);
 
-                if (existingProfile && existingProfile.userId === userId) {
-                  // Same Clerk user already has a profile. Do not insert another MEMBER row.
-                  isTenantAdmin = isAdminRole(existingProfile.userRole);
-                } else if (existingProfile && existingProfile.userId !== userId) {
-                  // Step 3: Email + tenantId exists but with different userId
-                  // UPDATE the existing record's userId to match current Clerk userId
-                  // CRITICAL: Preserve all existing fields - only update userId and clerkUserId
-                  // DO NOT overwrite firstName, lastName, email if they already have values
-                  console.log('[Layout] Found existing profile with same email but different userId. Updating userId...');
-                  console.log('[Layout] Old userId:', existingProfile.userId, '→ New userId:', userId);
-                  console.log('[Layout] Preserving existing profile data:', {
-                    firstName: existingProfile.firstName,
-                    lastName: existingProfile.lastName,
-                    email: existingProfile.email
-                  });
+                if (decision.action === 'use' && matched) {
+                  isTenantAdmin = isAdminRole(matched.userRole);
+                } else if (decision.action === 'patch') {
+                  const existingProfile = decision.row;
+                  console.log('[Layout] Production pool updating userId on the email row', existingProfile.id);
 
-                  // Use direct backend call with JWT (not proxy) for PATCH operations
-                  const API_BASE_URL = apiBase;
-
-                  // CRITICAL: Build update payload that ONLY updates userId/clerkUserId
-                  // Preserve ALL existing fields - do NOT include fields that might overwrite existing data
-                  const updatePayload: any = {
-                    id: existingProfile.id, // MUST include id in PATCH payload per backend requirements
-                    userId: userId, // Update to current Clerk userId
-                    clerkUserId: userId, // Also update clerkUserId
-                    tenantId: existingProfile.tenantId, // Preserve existing tenantId from the profile
+                  const updatePayload: Record<string, unknown> = {
+                    id: existingProfile.id,
+                    userId: userId,
+                    clerkUserId: userId,
+                    tenantId: existingProfile.tenantId,
                     updatedAt: new Date().toISOString(),
                   };
 
-                  // ONLY update firstName/lastName/email if they are missing/empty in existing profile
-                  // This prevents overwriting existing data with empty values from Clerk
                   if (!existingProfile.firstName || existingProfile.firstName.trim() === '') {
                     if (u?.firstName && u.firstName.trim() !== '') {
                       updatePayload.firstName = u.firstName;
                     }
                   }
-                  // Preserve existing firstName - do NOT update
-
                   if (!existingProfile.lastName || existingProfile.lastName.trim() === '') {
                     if (u?.lastName && u.lastName.trim() !== '') {
                       updatePayload.lastName = u.lastName;
                     }
                   }
-                  // Preserve existing lastName - do NOT update
-
                   if (!existingProfile.email || existingProfile.email.trim() === '') {
                     if (userEmail && userEmail.trim() !== '') {
                       updatePayload.email = userEmail;
                     }
                   }
-                  // Preserve existing email - do NOT update
-
                   if (!existingProfile.profileImageUrl || existingProfile.profileImageUrl.trim() === '') {
                     if (u?.imageUrl && u.imageUrl.trim() !== '') {
                       updatePayload.profileImageUrl = u.imageUrl;
                     }
                   }
-                  // Preserve existing profileImageUrl - do NOT update
 
-                  console.log('[Layout] Sending PATCH request with payload:', JSON.stringify(updatePayload, null, 2));
-
-                  const updateRes = await fetchWithJwtRetry(`${API_BASE_URL}/api/user-profiles/${existingProfile.id}`, {
+                  const updateRes = await fetchWithJwtRetry(`${apiBase}/api/user-profiles/${existingProfile.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/merge-patch+json' },
                     body: JSON.stringify(updatePayload),
@@ -290,44 +269,22 @@ export default async function RootLayout({
 
                   if (updateRes.ok) {
                     const updated = await updateRes.json();
-                    console.log('[Layout] 🔍 Updated profile data:', {
-                      id: updated?.id,
-                      userId: updated?.userId,
-                      email: updated?.email,
-                      userRole: updated?.userRole,
-                      userStatus: updated?.userStatus,
-                      tenantId: updated?.tenantId,
-                      rawProfile: JSON.stringify(updated, null, 2)
-                    });
                     isTenantAdmin = isAdminRole(updated?.userRole);
-                    console.log('[Layout] ✅ Successfully updated userId. Admin status:', {
-                      isTenantAdmin,
-                      userRole: updated?.userRole,
-                      roleMatch: isAdminRole(updated?.userRole),
-                      roleType: typeof updated?.userRole,
-                      roleValue: JSON.stringify(updated?.userRole)
-                    });
                   } else {
                     const errorText = await updateRes.text();
-                    console.error('[Layout] Failed to update userId:', updateRes.status);
-                    console.error('[Layout] Error response:', errorText);
+                    console.error('[Layout] Failed to update userId:', updateRes.status, errorText);
                   }
                 } else {
-                  // Step 4: No existing profile found - Create new profile
-                  console.log('[Layout] Creating new user profile for userId:', userId);
-                  const now = new Date().toISOString();
-                  const payload = {
+                  console.log('[Layout] Inserting profile for Clerk user', userId);
+                  const payload = buildClerkProfileInsert({
                     userId,
-                    clerkUserId: userId,
                     email: userEmail,
-                    firstName: u?.firstName || '',
-                    lastName: u?.lastName || '',
-                    profileImageUrl: u?.imageUrl || '',
-                    userRole: 'MEMBER',
-                    userStatus: 'PENDING_APPROVAL',
-                    createdAt: now,
-                    updatedAt: now,
-                  };
+                    tenantId: tenantId || '',
+                    firstName: u?.firstName,
+                    lastName: u?.lastName,
+                    imageUrl: u?.imageUrl,
+                    sibling: decision.action === 'insert' ? decision.sibling : undefined,
+                  });
 
                   const createRes = await fetch(`${baseUrl}/api/proxy/user-profiles`, {
                     method: 'POST',
@@ -338,6 +295,8 @@ export default async function RootLayout({
                   if (!createRes.ok) {
                     console.error('[Layout] Failed to create user profile:', createRes.status);
                   } else {
+                    const created = await createRes.json().catch(() => null);
+                    isTenantAdmin = isAdminRole(created?.userRole ?? payload.userRole);
                     console.log('[Layout] Successfully created new user profile');
                   }
                 }
@@ -416,6 +375,7 @@ export default async function RootLayout({
           publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
           {...clerkProps}
         >
+          <PaginationScrollToTop />
           <TrpcProvider>
             <TenantSettingsProvider>
               <ConditionalLayout

@@ -1,6 +1,8 @@
 "use server";
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import { getTenantId, getApiBaseUrl } from '@/lib/env';
+import { getTenantId, getApiBaseUrl, getAppUrl } from '@/lib/env';
+import { buildClerkProfileInsert, decideClerkProfileIdentity } from '@/lib/clerkProfileIdentity';
+import { pickAllUserProfiles } from '@/lib/pickFirstUserProfile';
 
 const API_BASE_URL = getApiBaseUrl();
 
@@ -79,7 +81,7 @@ export async function bootstrapUserProfile({
       const email = userData?.email || "";
       if (email) {
         const emailRes = await fetchWithJwtRetry(
-          `${API_BASE_URL}/api/user-profiles?email.equals=${encodeURIComponent(email)}&tenantId.equals=${tenantId}`,
+          `${API_BASE_URL}/api/user-profiles?email.equals=${encodeURIComponent(email)}&tenantId.equals=${encodeURIComponent(tenantId)}&sort=id,asc&size=20`,
           {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
@@ -87,18 +89,34 @@ export async function bootstrapUserProfile({
           }
         );
         if (emailRes.ok) {
-          const profiles = await emailRes.json();
-          if (Array.isArray(profiles) && profiles.length > 0) {
-            const userProfile = profiles[0];
-
-            // CRITICAL: Only update if userId is different
-            // If userId already matches, skip update to preserve existing data
-            if (userProfile.userId === userId) {
-              console.log('[bootstrapUserProfile] Profile already has correct userId, skipping update to preserve existing data');
+          const profiles = pickAllUserProfiles(await emailRes.json());
+          if (profiles.length > 0) {
+            const decision = decideClerkProfileIdentity(profiles, userId);
+            if (decision.action === 'use') {
+              console.log('[bootstrapUserProfile] Profile already has this Clerk user id');
               return;
             }
 
-            // Update the found profile with the current userId
+            if (decision.action === 'insert') {
+              const payload = buildClerkProfileInsert({
+                userId,
+                email,
+                tenantId,
+                firstName: userData?.firstName,
+                lastName: userData?.lastName,
+                imageUrl: userData?.imageUrl,
+                sibling: decision.sibling,
+              });
+              await fetch(`${getAppUrl()}/api/proxy/user-profiles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                cache: 'no-store',
+              });
+              return;
+            }
+
+            const userProfile = decision.row;
             // CRITICAL: Use PATCH (not PUT) and only update userId/clerkUserId
             // DO NOT overwrite firstName, lastName, email if they already exist
             const now = new Date().toISOString();
@@ -198,21 +216,19 @@ export async function bootstrapUserProfile({
         }
       }
       // 3. If not found by email, create minimal profile
-      const now = new Date().toISOString();
-      const profile = {
+      const payload = buildClerkProfileInsert({
         userId,
         email,
-        firstName: userData?.firstName || "",
-        lastName: userData?.lastName || "",
-        profileImageUrl: userData?.imageUrl || "",
         tenantId,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await fetchWithJwtRetry(`${API_BASE_URL}/api/user-profiles`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        firstName: userData?.firstName,
+        lastName: userData?.lastName,
+        imageUrl: userData?.imageUrl,
+      });
+      await fetch(`${getAppUrl()}/api/proxy/user-profiles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        cache: 'no-store',
       });
       return;
     }

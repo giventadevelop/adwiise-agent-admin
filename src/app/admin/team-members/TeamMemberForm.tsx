@@ -1,10 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { TeamGroupDTO } from '@/types/teamGroup';
 import type { TeamMemberDTO, TeamMemberFormData } from '@/types/teamMember';
-import { createTeamMember, updateTeamMember } from './ApiServerActions';
+import type { TeamMemberAchievementDTO } from '@/types/teamMemberAchievement';
+import {
+  createTeamMember,
+  createTeamMemberAchievement,
+  deleteTeamMemberAchievement,
+  fetchTeamMemberAchievements,
+  updateTeamMember,
+  updateTeamMemberAchievement,
+} from './ApiServerActions';
 import { uploadSquadMemberProfileImage } from './TeamMemberUploadActions';
 import DragDropImageUpload from '@/components/DragDropImageUpload';
 import { useAdminTenantId } from '../AdminTenantContext';
@@ -30,6 +38,27 @@ function parseExpertise(raw?: string): string[] {
   return raw.trim() ? raw.split(/\s+/).filter(Boolean) : [''];
 }
 
+const ACHIEVEMENT_CATEGORIES = ['AWARD', 'HONOR', 'TROPHY', 'CAP', 'OTHER'] as const;
+
+type AchievementDraft = {
+  key: string;
+  id?: number;
+  title: string;
+  achievementDate: string;
+  category: (typeof ACHIEVEMENT_CATEGORIES)[number];
+  description: string;
+};
+
+function emptyAchievement(): AchievementDraft {
+  return {
+    key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: '',
+    achievementDate: '',
+    category: 'AWARD',
+    description: '',
+  };
+}
+
 export default function TeamMemberForm({
   member,
   groups,
@@ -43,6 +72,8 @@ export default function TeamMemberForm({
   const [expertiseItems, setExpertiseItems] = useState<string[]>(() => parseExpertise(member?.expertise));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [achievements, setAchievements] = useState<AchievementDraft[]>([]);
+  const [removedAchievementIds, setRemovedAchievementIds] = useState<number[]>([]);
 
   const { register, handleSubmit, setValue, watch } = useForm<TeamMemberFormData>({
     defaultValues: {
@@ -62,11 +93,41 @@ export default function TeamMemberForm({
       instrument: member?.instrument || '',
       vocalRole: member?.vocalRole || '',
       userProfileId: member?.userProfileId ?? undefined,
+      nationality: member?.nationality || '',
+      dateOfBirth: member?.dateOfBirth ? member.dateOfBirth.slice(0, 10) : '',
+      preferredFoot: member?.preferredFoot || '',
+      heightCm: member?.heightCm ?? undefined,
+      instagramUrl: member?.instagramUrl || '',
     },
   });
 
   const watchedGroupId = watch('teamGroupId');
   const isMusic = groups.find((g) => g.id === Number(watchedGroupId))?.teamType === 'MUSIC';
+
+  useEffect(() => {
+    if (member?.id == null) return;
+    let cancelled = false;
+    fetchTeamMemberAchievements(member.id)
+      .then((rows) => {
+        if (cancelled) return;
+        setAchievements(
+          rows.map((row) => ({
+            key: `id-${row.id}`,
+            id: row.id ?? undefined,
+            title: row.title || '',
+            achievementDate: row.achievementDate ? row.achievementDate.slice(0, 10) : '',
+            category: ACHIEVEMENT_CATEGORIES.includes(row.category) ? row.category : 'OTHER',
+            description: row.description || '',
+          }))
+        );
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load achievements');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [member?.id]);
 
   const onSubmit = async (data: TeamMemberFormData) => {
     setError('');
@@ -101,6 +162,12 @@ export default function TeamMemberForm({
         instrument: data.instrument?.trim() || undefined,
         vocalRole: data.vocalRole?.trim() || undefined,
         userProfileId: data.userProfileId ? Number(data.userProfileId) : null,
+        nationality: data.nationality?.trim() || undefined,
+        dateOfBirth: data.dateOfBirth?.trim() || undefined,
+        preferredFoot: data.preferredFoot?.trim() || undefined,
+        heightCm:
+          data.heightCm != null && !Number.isNaN(Number(data.heightCm)) ? Number(data.heightCm) : null,
+        instagramUrl: data.instagramUrl?.trim() || undefined,
         profileImageUrl: member?.profileImageUrl,
       };
 
@@ -110,6 +177,27 @@ export default function TeamMemberForm({
           : await createTeamMember(payload as Omit<TeamMemberDTO, 'id'>, tenantId);
 
       if (!result?.id) throw new Error('Save failed');
+
+      const filled = achievements.filter((row) => row.title.trim());
+      for (const achievementId of removedAchievementIds) {
+        await deleteTeamMemberAchievement(achievementId);
+      }
+      for (let index = 0; index < filled.length; index += 1) {
+        const row = filled[index];
+        const body: Omit<TeamMemberAchievementDTO, 'id'> = {
+          teamMemberId: result.id,
+          title: row.title.trim(),
+          description: row.description.trim() || undefined,
+          achievementDate: row.achievementDate || undefined,
+          category: row.category,
+          displayOrder: index,
+        };
+        if (row.id != null) {
+          await updateTeamMemberAchievement(row.id, body, tenantId);
+        } else {
+          await createTeamMemberAchievement(body, tenantId);
+        }
+      }
 
       if (imageFile) {
         const url = await uploadSquadMemberProfileImage(result.id, imageFile);
@@ -197,6 +285,116 @@ export default function TeamMemberForm({
           <label className="block text-sm font-medium text-gray-700">User profile ID (optional)</label>
           <input type="number" {...register('userProfileId', { valueAsNumber: true })} className={inputClass} />
         </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700">Role</label>
+          <input {...register('designation')} placeholder="Captain, Coach, Forward" className={inputClass} />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700">Biography</label>
+          <textarea {...register('bio')} rows={4} className={inputClass} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Nationality</label>
+          <input {...register('nationality')} className={inputClass} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Date of birth</label>
+          <input type="date" {...register('dateOfBirth')} className={inputClass} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Preferred foot</label>
+          <select {...register('preferredFoot')} className={inputClass}>
+            <option value="">Not set</option>
+            <option value="LEFT">Left</option>
+            <option value="RIGHT">Right</option>
+            <option value="BOTH">Both</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
+          <input type="number" {...register('heightCm', { valueAsNumber: true })} className={inputClass} />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700">Instagram</label>
+          <input {...register('instagramUrl')} placeholder="https://instagram.com/…" className={inputClass} />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Achievements</label>
+        {achievements.map((row, index) => (
+          <div key={row.key} className="mb-3 grid grid-cols-1 md:grid-cols-2 gap-3 rounded-xl border border-gray-200 p-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Title</label>
+              <input
+                value={row.title}
+                onChange={(e) => {
+                  const next = [...achievements];
+                  next[index] = { ...row, title: e.target.value };
+                  setAchievements(next);
+                }}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Date</label>
+              <input
+                type="date"
+                value={row.achievementDate}
+                onChange={(e) => {
+                  const next = [...achievements];
+                  next[index] = { ...row, achievementDate: e.target.value };
+                  setAchievements(next);
+                }}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Category</label>
+              <select
+                value={row.category}
+                onChange={(e) => {
+                  const next = [...achievements];
+                  next[index] = { ...row, category: e.target.value as AchievementDraft['category'] };
+                  setAchievements(next);
+                }}
+                className={inputClass}
+              >
+                {ACHIEVEMENT_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                value={row.description}
+                rows={2}
+                onChange={(e) => {
+                  const next = [...achievements];
+                  next[index] = { ...row, description: e.target.value };
+                  setAchievements(next);
+                }}
+                className={inputClass}
+              />
+            </div>
+            <button
+              type="button"
+              className="text-sm text-red-600 text-left"
+              onClick={() => {
+                if (row.id != null) setRemovedAchievementIds((prev) => [...prev, row.id as number]);
+                setAchievements((prev) => prev.filter((item) => item.key !== row.key));
+              }}
+            >
+              Remove achievement
+            </button>
+          </div>
+        ))}
+        <button type="button" className="text-sm text-blue-600" onClick={() => setAchievements((prev) => [...prev, emptyAchievement()])}>
+          + Add achievement
+        </button>
       </div>
 
       <div>

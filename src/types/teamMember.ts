@@ -28,6 +28,11 @@ export interface TeamMemberDTO {
   lineupSubtitle?: string;
   instrument?: string;
   vocalRole?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  preferredFoot?: string;
+  heightCm?: number | null;
+  instagramUrl?: string;
 }
 
 export interface TeamMemberFormData extends Omit<TeamMemberDTO, 'id' | 'expertise'> {

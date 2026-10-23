@@ -5,6 +5,7 @@ import { getAdminProxyBaseUrl } from '@/lib/adminProxyBaseUrl';
 import { appendTenantIfPresent, effectiveTenantId } from '@/lib/env';
 import { parseTeamMembersResponse } from '@/lib/parseTeamMembersResponse';
 import type { TeamMemberDTO } from '@/types/teamMember';
+import type { TeamMemberAchievementDTO } from '@/types/teamMemberAchievement';
 
 /** Optional filters for admin list; tenant only when `?tenant=` is passed (see effectiveTenantId). */
 export interface TeamMemberListFilters {
@@ -187,4 +188,78 @@ export async function updateTeamMemberProfileImage(
   tenantId?: string
 ): Promise<TeamMemberDTO | null> {
   return updateTeamMember(memberId, { profileImageUrl: imageUrl }, tenantId);
+}
+
+function asAchievementList(data: unknown): TeamMemberAchievementDTO[] {
+  if (Array.isArray(data)) return data as TeamMemberAchievementDTO[];
+  if (data && typeof data === 'object' && Array.isArray((data as { content?: unknown }).content)) {
+    return (data as { content: TeamMemberAchievementDTO[] }).content;
+  }
+  return [];
+}
+
+export async function fetchTeamMemberAchievements(teamMemberId: number): Promise<TeamMemberAchievementDTO[]> {
+  const baseUrl = await getAdminProxyBaseUrl();
+  const params = new URLSearchParams({
+    'teamMemberId.equals': String(teamMemberId),
+    sort: 'displayOrder,asc',
+    size: '100',
+  });
+  const response = await fetch(`${baseUrl}/api/proxy/team-member-achievements?${params.toString()}`, {
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load achievements: ${response.status}`);
+  }
+  return asAchievementList(await response.json());
+}
+
+export async function createTeamMemberAchievement(
+  payload: Omit<TeamMemberAchievementDTO, 'id'>,
+  tenantId?: string
+): Promise<TeamMemberAchievementDTO> {
+  const baseUrl = await getAdminProxyBaseUrl();
+  const body: Record<string, unknown> = { ...payload };
+  const tid = await resolveAdminMutationTenantId(tenantId);
+  if (tid != null) body.tenantId = tid;
+  const response = await fetch(`${baseUrl}/api/proxy/team-member-achievements`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create achievement: ${response.status}`);
+  }
+  return await response.json();
+}
+
+export async function updateTeamMemberAchievement(
+  id: number,
+  payload: Partial<TeamMemberAchievementDTO>,
+  tenantId?: string
+): Promise<TeamMemberAchievementDTO> {
+  const baseUrl = await getAdminProxyBaseUrl();
+  const body: Record<string, unknown> = { ...payload, id };
+  const tid = await resolveAdminMutationTenantId(tenantId);
+  if (tid != null) body.tenantId = tid;
+  const response = await fetch(`${baseUrl}/api/proxy/team-member-achievements/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update achievement: ${response.status}`);
+  }
+  return await response.json();
+}
+
+export async function deleteTeamMemberAchievement(id: number): Promise<void> {
+  const baseUrl = await getAdminProxyBaseUrl();
+  const response = await fetch(`${baseUrl}/api/proxy/team-member-achievements/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete achievement: ${response.status}`);
+  }
 }
