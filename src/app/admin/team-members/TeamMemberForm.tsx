@@ -18,6 +18,16 @@ import DragDropImageUpload from '@/components/DragDropImageUpload';
 import { useAdminTenantId } from '../AdminTenantContext';
 import { fetchRosterCatalog } from '../roster-catalogs/ApiServerActions';
 import { selectedSportIds } from '@/lib/sportsCategories';
+import {
+  FOOTBALL_CODE,
+  parseRecentMatches,
+  parseSportProfiles,
+  serializeRecentMatches,
+  serializeSportProfiles,
+  type RecentMatchesState,
+  type SportProfileDocument,
+} from '@/lib/sportProfileForm';
+import { RecentMatchEditor, SportProfileCards } from './SportProfileSections';
 import type { RosterCatalogDTO } from '@/types/rosterCatalog';
 
 interface TeamMemberFormProps {
@@ -84,6 +94,10 @@ export default function TeamMemberForm({
   const [sportOptions, setSportOptions] = useState<RosterCatalogDTO[]>([]);
   const [achievementOptions, setAchievementOptions] = useState<RosterCatalogDTO[]>([]);
   const [selectedSports, setSelectedSports] = useState<number[]>(() => member?.sportCategoryIds ?? []);
+  const [profileDoc, setProfileDoc] = useState<SportProfileDocument>(() => parseSportProfiles(member?.sportProfiles));
+  const [recentMatchState, setRecentMatchState] = useState<RecentMatchesState>(() =>
+    parseRecentMatches(member?.recentMatches)
+  );
 
   const { register, handleSubmit, setValue, watch } = useForm<TeamMemberFormData>({
     defaultValues: {
@@ -125,7 +139,6 @@ export default function TeamMemberForm({
       coachName: member?.coachName || '',
       coachEmail: member?.coachEmail || '',
       coachPhone: member?.coachPhone || '',
-      recentMatches: member?.recentMatches || '',
     },
   });
 
@@ -222,7 +235,17 @@ export default function TeamMemberForm({
           data.heightCm != null && !Number.isNaN(Number(data.heightCm)) ? Number(data.heightCm) : null,
         instagramUrl: data.instagramUrl?.trim() || undefined,
         profileImageUrl: member?.profileImageUrl,
-        sportCategoryIds: selectedSports,
+        ...(sportOptions.length
+          ? {
+              sportCategoryIds: selectedSports,
+              sportProfiles: serializeSportProfiles(
+                profileDoc,
+                sportOptions
+                  .filter((sport) => sport.id != null && sport.code && selectedSports.includes(sport.id))
+                  .map((sport) => sport.code as string)
+              ),
+            }
+          : { sportProfiles: member?.sportProfiles }),
         seasonLabel: data.seasonLabel?.trim() || null,
         seasonAppearances: numOrNull(data.seasonAppearances),
         seasonGoals: numOrNull(data.seasonGoals),
@@ -240,7 +263,7 @@ export default function TeamMemberForm({
         coachName: data.coachName?.trim() || null,
         coachEmail: data.coachEmail?.trim() || null,
         coachPhone: data.coachPhone?.trim() || null,
-        recentMatches: data.recentMatches?.trim() || null,
+        recentMatches: isMusic ? member?.recentMatches ?? null : serializeRecentMatches(recentMatchState),
       };
 
       let result =
@@ -387,6 +410,21 @@ export default function TeamMemberForm({
               })}
             </div>
           </fieldset>
+          <div className="mt-4">
+            <SportProfileCards
+              sports={sportOptions
+                .filter(
+                  (sport) =>
+                    sport.id != null &&
+                    sport.code &&
+                    sport.code !== FOOTBALL_CODE &&
+                    selectedSports.includes(sport.id)
+                )
+                .map((sport) => ({ code: sport.code as string, label: sport.label || sport.code || 'Sport' }))}
+              profileDocument={profileDoc}
+              onChange={setProfileDoc}
+            />
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Email</label>
@@ -473,10 +511,7 @@ export default function TeamMemberForm({
               <label className="block text-sm font-medium text-gray-700">Coach phone</label>
               <input {...register('coachPhone')} className={inputClass} />
             </div>
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700">Recent matches</label>
-              <textarea {...register('recentMatches')} rows={3} className={inputClass} />
-            </div>
+            <RecentMatchEditor state={recentMatchState} onChange={setRecentMatchState} />
           </div>
         </fieldset>
       )}
