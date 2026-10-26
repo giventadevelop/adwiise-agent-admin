@@ -89,11 +89,11 @@ async function deleteCatalog(resource: string, row: CatalogRow): Promise<void> {
   if (!response.ok && response.status !== 204) throw new Error(await readError(response));
 }
 
-export function fetchAccessRoles(tenantId?: string | null): Promise<AccessRoleDTO[]> {
+export async function fetchAccessRoles(tenantId?: string | null): Promise<AccessRoleDTO[]> {
   return fetchCatalog<AccessRoleDTO>('access-roles', tenantId);
 }
 
-export function fetchRetailerTypes(tenantId?: string | null): Promise<RetailerTypeDTO[]> {
+export async function fetchRetailerTypes(tenantId?: string | null): Promise<RetailerTypeDTO[]> {
   return fetchCatalog<RetailerTypeDTO>('retailer-types', tenantId);
 }
 
@@ -108,18 +108,18 @@ export async function fetchAssignableAccessRoles(tenantId?: string | null): Prom
   });
 }
 
-export function saveAccessRole(row: AccessRoleDTO, shared: boolean, tenantId?: string | null) {
+export async function saveAccessRole(row: AccessRoleDTO, shared: boolean, tenantId?: string | null) {
   return saveCatalog('access-roles', row, shared, tenantId);
 }
 
-export function saveRetailerType(row: RetailerTypeDTO, shared: boolean, tenantId?: string | null) {
+export async function saveRetailerType(row: RetailerTypeDTO, shared: boolean, tenantId?: string | null) {
   return saveCatalog('retailer-types', row, shared, tenantId);
 }
 
-export function deleteAccessRole(row: AccessRoleDTO) {
+export async function deleteAccessRole(row: AccessRoleDTO) {
   return deleteCatalog('access-roles', row);
 }
 
-export function deleteRetailerType(row: RetailerTypeDTO) {
+export async function deleteRetailerType(row: RetailerTypeDTO) {
   return deleteCatalog('retailer-types', row);
 }
