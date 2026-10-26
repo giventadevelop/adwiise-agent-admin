@@ -197,5 +197,3 @@ export async function fetchFocusGroupGalleryMediaServer(
 
   return Array.from(byId.values()).slice(0, 36);
 }
-
-export type { EventFocusGroupDTO };

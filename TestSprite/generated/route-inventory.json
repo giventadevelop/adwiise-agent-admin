@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-10-09T16:13:03.253Z",
+  "generatedAt": "2026-10-24T21:59:33.278Z",
   "root": "src/app",
-  "totalPages": 400,
-  "totalUniqueRoutes": 400,
+  "totalPages": 410,
+  "totalUniqueRoutes": 410,
   "byKind": {
-    "public": 103,
-    "admin": 105,
+    "public": 104,
+    "admin": 114,
     "mosc": 192
   },
   "routes": [
@@ -29,6 +29,13 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/admin/batch-jobs/page.tsx"
+    },
+    {
+      "path": "/admin/billing",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/billing/page.tsx"
     },
     {
       "path": "/admin/bulk-email",
@@ -655,6 +662,45 @@
       "sourceFile": "src/app/admin/official-documents/page.tsx"
     },
     {
+      "path": "/admin/onboarding-requests",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/onboarding-requests/page.tsx"
+    },
+    {
+      "path": "/admin/onboarding-requests/[id]",
+      "kind": "admin",
+      "dynamic": true,
+      "dynamicParams": [
+        "id"
+      ],
+      "sourceFile": "src/app/admin/onboarding-requests/[id]/page.tsx"
+    },
+    {
+      "path": "/admin/onboarding-requests/new",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/onboarding-requests/new/page.tsx"
+    },
+    {
+      "path": "/admin/platform-billing/[tenantId]",
+      "kind": "admin",
+      "dynamic": true,
+      "dynamicParams": [
+        "tenantId"
+      ],
+      "sourceFile": "src/app/admin/platform-billing/[tenantId]/page.tsx"
+    },
+    {
+      "path": "/admin/platform-billing/plans",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/platform-billing/plans/page.tsx"
+    },
+    {
       "path": "/admin/polls",
       "kind": "admin",
       "dynamic": false,
@@ -829,6 +875,29 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/admin/test-stripe/success/page.tsx"
+    },
+    {
+      "path": "/admin/tournaments",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/tournaments/page.tsx"
+    },
+    {
+      "path": "/admin/tournaments/[id]/edit",
+      "kind": "admin",
+      "dynamic": true,
+      "dynamicParams": [
+        "id"
+      ],
+      "sourceFile": "src/app/admin/tournaments/[id]/edit/page.tsx"
+    },
+    {
+      "path": "/admin/tournaments/new",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/tournaments/new/page.tsx"
     },
     {
       "path": "/admin/whatsapp-settings",
@@ -1170,6 +1239,13 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/gallery/page.tsx"
+    },
+    {
+      "path": "/get-started",
+      "kind": "public",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/get-started/page.tsx"
     },
     {
       "path": "/home",

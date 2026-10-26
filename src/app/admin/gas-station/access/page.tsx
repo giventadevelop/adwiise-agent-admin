@@ -79,14 +79,12 @@ export default function GasStationAccessPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Location access</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Map <strong>GAS_STATION_MANAGER</strong> users to one or more stations for the selected
-            tenant. Platform admins manage assignments here; tenant satellite apps enforce scope on
-            the backend.
+            Map users whose access role has assigned-location scope (for example <strong>GAS_STATION_MANAGER</strong>) to one or more stations for the selected tenant. Platform admins manage assignments here; tenant satellite apps enforce scope on the backend.
           </p>
         </div>
 
         {!tenantId && (
-          <TenantSiteTypePicker siteTypes={['GAS_STATION']} title="Gas station tenants" />
+          <TenantSiteTypePicker siteTypes={['GAS_STATION', 'GAS_STATION_ENT']} title="Gas station tenants" />
         )}
 
         {tenantId && loading && (

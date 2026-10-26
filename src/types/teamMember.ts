@@ -33,6 +33,30 @@ export interface TeamMemberDTO {
   preferredFoot?: string;
   heightCm?: number | null;
   instagramUrl?: string;
+  seasonLabel?: string | null;
+  seasonAppearances?: number | null;
+  seasonGoals?: number | null;
+  seasonAssists?: number | null;
+  seasonMinutes?: number | null;
+  seasonWins?: number | null;
+  seasonDraws?: number | null;
+  seasonLosses?: number | null;
+  passAccuracyPct?: number | null;
+  shotAccuracyPct?: number | null;
+  topSpeedKmh?: number | null;
+  careerAppearances?: number | null;
+  careerGoals?: number | null;
+  careerAssists?: number | null;
+  coachName?: string | null;
+  coachEmail?: string | null;
+  coachPhone?: string | null;
+  recentMatches?: string | null;
+  /** Extra JSON kept beside the sport links. Categories are written from sportCategoryIds. */
+  sportProfiles?: string;
+  /** Selected sports_category ids. Null on update leaves existing links unchanged. */
+  sportCategoryIds?: number[] | null;
+  /** Labels returned with the member. Read-only. */
+  sportLabels?: string[] | null;
 }
 
 export interface TeamMemberFormData extends Omit<TeamMemberDTO, 'id' | 'expertise'> {

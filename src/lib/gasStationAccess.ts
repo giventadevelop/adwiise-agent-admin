@@ -52,21 +52,37 @@ export const GAS_STATION_ROLE_LABELS: Record<string, string> = {
   GAS_STATION_MANAGER: 'Gas Station Manager (assigned locations)',
 };
 
-export function isGasStationAllLocationsRole(role: string | null | undefined): boolean {
+export function isGasStationAllLocationsRole(
+  role: string | null | undefined,
+  scopes?: Readonly<Record<string, GasStationAccessScope>> | null
+): boolean {
   if (!role) return false;
+  if (scopes && scopes[role]) return scopes[role] === 'ALL';
   return (GAS_STATION_ALL_LOCATIONS_ROLES as readonly string[]).includes(role);
 }
 
-export function isGasStationManagerRole(role: string | null | undefined): boolean {
+export function isGasStationManagerRole(
+  role: string | null | undefined,
+  scopes?: Readonly<Record<string, GasStationAccessScope>> | null
+): boolean {
+  if (role && scopes && scopes[role]) return scopes[role] === 'ASSIGNED';
   return role === GAS_STATION_MANAGER_ROLE;
 }
 
-export function canAccessGasStationAdminModule(role: string | null | undefined): boolean {
+export function canAccessGasStationAdminModule(
+  role: string | null | undefined,
+  scopes?: Readonly<Record<string, GasStationAccessScope>> | null
+): boolean {
   if (!role) return false;
+  if (scopes && scopes[role]) return scopes[role] !== 'NONE';
   return (GAS_STATION_MODULE_ROLES as readonly string[]).includes(role);
 }
 
-export function getGasStationAccessScope(role: string | null | undefined): GasStationAccessScope {
+export function getGasStationAccessScope(
+  role: string | null | undefined,
+  scopes?: Readonly<Record<string, GasStationAccessScope>> | null
+): GasStationAccessScope {
+  if (role && scopes && scopes[role]) return scopes[role];
   if (isGasStationAllLocationsRole(role)) return 'ALL';
   if (isGasStationManagerRole(role)) return 'ASSIGNED';
   return 'NONE';

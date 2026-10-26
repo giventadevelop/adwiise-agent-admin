@@ -1,15 +1,8 @@
 /**
  * Site archetype for tenant_organization.site_type
  */
-export type TenantSiteType =
-  | 'EVENT_ORG'
-  | 'SPORTS_TEAM'
-  | 'MUSIC_BAND'
-  | 'CHURCH_ORG'
-  | 'PERSONAL_PROFILE'
-  | 'HYBRID'
-  | 'GAS_STATION'
-  | 'LIQUOR_STORE';
+/** Organization site type. Codes come from the retailer_type catalog. */
+export type TenantSiteType = string;
 
 export type ProfileWritingType = 'ORIGINAL' | 'REPUBLISHED' | 'EXTERNAL_LINK';
 export type ProfileWritingStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
@@ -203,7 +196,7 @@ export interface ProfileAudienceBulkImportResultDTO {
   errorCount: number;
 }
 
-export const TENANT_SITE_TYPE_LABELS: Record<TenantSiteType, string> = {
+export const TENANT_SITE_TYPE_LABELS: Record<string, string> = {
   EVENT_ORG: 'Event organization',
   SPORTS_TEAM: 'Sports team',
   MUSIC_BAND: 'Music band',
@@ -211,5 +204,8 @@ export const TENANT_SITE_TYPE_LABELS: Record<TenantSiteType, string> = {
   PERSONAL_PROFILE: 'Personal profile / portfolio',
   HYBRID: 'Hybrid (profile + events)',
   GAS_STATION: 'Gas station (AI COO)',
+  GAS_STATION_ENT: 'Gas station enterprise',
   LIQUOR_STORE: 'Liquor store',
+  DUNKIN_DONUTS: 'Dunkin',
+  SEVEN_ELEVEN: 'Seven-Eleven',
 };

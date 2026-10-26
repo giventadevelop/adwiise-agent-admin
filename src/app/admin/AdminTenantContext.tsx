@@ -51,6 +51,8 @@ function hasInlineTenantFilter(pathname: string | null): boolean {
     pathname.includes('/executive-committee') ||
     pathname.includes('/team-groups') ||
     pathname.includes('/team-members') ||
+    pathname.includes('/roster-catalogs') ||
+    pathname.includes('/access-catalogs') ||
     pathname.includes('/homepage-cache') ||
     pathname.includes('/event-sponsors') ||
     pathname.includes('/event-contacts') ||

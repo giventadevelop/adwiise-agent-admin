@@ -21,6 +21,8 @@ import { previewNextTenantIdServer } from '@/app/admin/tenant-management/organiz
 import { isTenantOrganizationDomainAvailableServer } from '@/app/admin/tenant-management/organizations/domainServerActions';
 import AddressFieldsSection from '@/components/admin/AddressFieldsSection';
 import DescriptionTextareaField from '@/components/admin/DescriptionTextareaField';
+import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
+import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 
 interface TenantOrganizationFormProps {
   initialData?: TenantOrganizationDTO;
@@ -41,6 +43,8 @@ export default function TenantOrganizationForm({
   canEditTenantId = false,
 }: TenantOrganizationFormProps) {
   const router = useRouter();
+  const tenantId = useAdminTenantId();
+  const retailerOptions = useRetailerTypeOptions('server', tenantId);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [tenantIdPrefix, setTenantIdPrefix] = useState('');
@@ -544,14 +548,12 @@ export default function TenantOrganizationForm({
                 {...register('siteType')}
                 className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
               >
-                <option value="EVENT_ORG">Event Organization</option>
-                <option value="SPORTS_TEAM">Sports Team</option>
-                <option value="MUSIC_BAND">Music Band</option>
-                <option value="CHURCH_ORG">Church Organization</option>
-                <option value="PERSONAL_PROFILE">Personal Profile</option>
-                <option value="HYBRID">Hybrid (Profile + Events)</option>
-                <option value="GAS_STATION">Gas Station (AI COO)</option>
-                <option value="LIQUOR_STORE">Liquor Store</option>
+                {retailerOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+                {watchedValues.siteType && !retailerOptions.some((option) => option.value === watchedValues.siteType) && (
+                  <option value={watchedValues.siteType}>{watchedValues.siteType}</option>
+                )}
               </select>
               <p className="mt-1 text-sm text-gray-500">
                 Changing the site type re-applies the matching homepage section presets to tenant settings

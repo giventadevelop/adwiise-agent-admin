@@ -18,7 +18,10 @@ export const ONBOARDING_SITE_TYPE_OPTIONS: { value: TenantSiteType; label: strin
   { value: 'PERSONAL_PROFILE', label: 'Personal profile', hint: 'Individual professional or personal site' },
   { value: 'HYBRID', label: 'Hybrid', hint: 'Profile plus events' },
   { value: 'GAS_STATION', label: 'Gas station', hint: 'Fuel station operations' },
+  { value: 'GAS_STATION_ENT', label: 'Gas station enterprise', hint: 'Multi-site fuel operations' },
   { value: 'LIQUOR_STORE', label: 'Liquor store', hint: 'Beer, wine, and spirits shop' },
+  { value: 'DUNKIN_DONUTS', label: 'Dunkin', hint: 'Dunkin shop' },
+  { value: 'SEVEN_ELEVEN', label: 'Seven-Eleven', hint: 'Convenience store' },
 ];
 
 export const DOMAIN_OWNERSHIP_OPTIONS: { value: DomainOwnership; label: string }[] = [

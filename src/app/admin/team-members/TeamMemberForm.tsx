@@ -16,6 +16,9 @@ import {
 import { uploadSquadMemberProfileImage } from './TeamMemberUploadActions';
 import DragDropImageUpload from '@/components/DragDropImageUpload';
 import { useAdminTenantId } from '../AdminTenantContext';
+import { fetchRosterCatalog } from '../roster-catalogs/ApiServerActions';
+import { selectedSportIds } from '@/lib/sportsCategories';
+import type { RosterCatalogDTO } from '@/types/rosterCatalog';
 
 interface TeamMemberFormProps {
   member?: TeamMemberDTO | null;
@@ -38,23 +41,27 @@ function parseExpertise(raw?: string): string[] {
   return raw.trim() ? raw.split(/\s+/).filter(Boolean) : [''];
 }
 
-const ACHIEVEMENT_CATEGORIES = ['AWARD', 'HONOR', 'TROPHY', 'CAP', 'OTHER'] as const;
-
 type AchievementDraft = {
   key: string;
   id?: number;
   title: string;
   achievementDate: string;
-  category: (typeof ACHIEVEMENT_CATEGORIES)[number];
+  category: string;
   description: string;
 };
+
+function numOrNull(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
 function emptyAchievement(): AchievementDraft {
   return {
     key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     title: '',
     achievementDate: '',
-    category: 'AWARD',
+    category: '',
     description: '',
   };
 }
@@ -74,6 +81,9 @@ export default function TeamMemberForm({
   const [error, setError] = useState('');
   const [achievements, setAchievements] = useState<AchievementDraft[]>([]);
   const [removedAchievementIds, setRemovedAchievementIds] = useState<number[]>([]);
+  const [sportOptions, setSportOptions] = useState<RosterCatalogDTO[]>([]);
+  const [achievementOptions, setAchievementOptions] = useState<RosterCatalogDTO[]>([]);
+  const [selectedSports, setSelectedSports] = useState<number[]>(() => member?.sportCategoryIds ?? []);
 
   const { register, handleSubmit, setValue, watch } = useForm<TeamMemberFormData>({
     defaultValues: {
@@ -98,11 +108,50 @@ export default function TeamMemberForm({
       preferredFoot: member?.preferredFoot || '',
       heightCm: member?.heightCm ?? undefined,
       instagramUrl: member?.instagramUrl || '',
+      seasonLabel: member?.seasonLabel || '',
+      seasonAppearances: member?.seasonAppearances ?? undefined,
+      seasonGoals: member?.seasonGoals ?? undefined,
+      seasonAssists: member?.seasonAssists ?? undefined,
+      seasonMinutes: member?.seasonMinutes ?? undefined,
+      seasonWins: member?.seasonWins ?? undefined,
+      seasonDraws: member?.seasonDraws ?? undefined,
+      seasonLosses: member?.seasonLosses ?? undefined,
+      passAccuracyPct: member?.passAccuracyPct ?? undefined,
+      shotAccuracyPct: member?.shotAccuracyPct ?? undefined,
+      topSpeedKmh: member?.topSpeedKmh ?? undefined,
+      careerAppearances: member?.careerAppearances ?? undefined,
+      careerGoals: member?.careerGoals ?? undefined,
+      careerAssists: member?.careerAssists ?? undefined,
+      coachName: member?.coachName || '',
+      coachEmail: member?.coachEmail || '',
+      coachPhone: member?.coachPhone || '',
+      recentMatches: member?.recentMatches || '',
     },
   });
 
   const watchedGroupId = watch('teamGroupId');
   const isMusic = groups.find((g) => g.id === Number(watchedGroupId))?.teamType === 'MUSIC';
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetchRosterCatalog('sports-categories', tenantId),
+      fetchRosterCatalog('achievement-categories', tenantId),
+    ])
+      .then(([sports, categories]) => {
+        if (cancelled) return;
+        const activeSports = sports.filter((row) => row.isActive !== false && row.id != null);
+        setSportOptions(activeSports);
+        setAchievementOptions(categories.filter((row) => row.isActive !== false && row.code));
+        setSelectedSports(selectedSportIds(member, activeSports));
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load sports catalogs');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, member]);
 
   useEffect(() => {
     if (member?.id == null) return;
@@ -116,7 +165,7 @@ export default function TeamMemberForm({
             id: row.id ?? undefined,
             title: row.title || '',
             achievementDate: row.achievementDate ? row.achievementDate.slice(0, 10) : '',
-            category: ACHIEVEMENT_CATEGORIES.includes(row.category) ? row.category : 'OTHER',
+            category: row.category || '',
             description: row.description || '',
           }))
         );
@@ -137,6 +186,10 @@ export default function TeamMemberForm({
     }
     if (!data.firstName?.trim() || !data.lastName?.trim()) {
       setError('First and last name are required');
+      return;
+    }
+    if (achievements.some((row) => row.title.trim() && !row.category)) {
+      setError('Each achievement needs a category');
       return;
     }
     setSaving(true);
@@ -169,6 +222,25 @@ export default function TeamMemberForm({
           data.heightCm != null && !Number.isNaN(Number(data.heightCm)) ? Number(data.heightCm) : null,
         instagramUrl: data.instagramUrl?.trim() || undefined,
         profileImageUrl: member?.profileImageUrl,
+        sportCategoryIds: selectedSports,
+        seasonLabel: data.seasonLabel?.trim() || null,
+        seasonAppearances: numOrNull(data.seasonAppearances),
+        seasonGoals: numOrNull(data.seasonGoals),
+        seasonAssists: numOrNull(data.seasonAssists),
+        seasonMinutes: numOrNull(data.seasonMinutes),
+        seasonWins: numOrNull(data.seasonWins),
+        seasonDraws: numOrNull(data.seasonDraws),
+        seasonLosses: numOrNull(data.seasonLosses),
+        passAccuracyPct: numOrNull(data.passAccuracyPct),
+        shotAccuracyPct: numOrNull(data.shotAccuracyPct),
+        topSpeedKmh: numOrNull(data.topSpeedKmh),
+        careerAppearances: numOrNull(data.careerAppearances),
+        careerGoals: numOrNull(data.careerGoals),
+        careerAssists: numOrNull(data.careerAssists),
+        coachName: data.coachName?.trim() || null,
+        coachEmail: data.coachEmail?.trim() || null,
+        coachPhone: data.coachPhone?.trim() || null,
+        recentMatches: data.recentMatches?.trim() || null,
       };
 
       let result =
@@ -190,6 +262,8 @@ export default function TeamMemberForm({
           description: row.description.trim() || undefined,
           achievementDate: row.achievementDate || undefined,
           category: row.category,
+          achievementCategoryId:
+            achievementOptions.find((option) => option.code === row.category)?.id ?? undefined,
           displayOrder: index,
         };
         if (row.id != null) {
@@ -277,6 +351,43 @@ export default function TeamMemberForm({
           <label className="block text-sm font-medium text-gray-700">Lineup subtitle</label>
           <input {...register('lineupSubtitle')} placeholder="e.g. FIRST TEAM" className={inputClass} />
         </div>
+        <div className="md:col-span-2">
+          <fieldset className="rounded-xl border border-gray-300 bg-gray-50 p-4">
+            <legend className="px-2 text-sm font-semibold text-gray-900">Sports categories</legend>
+            <p className="mb-3 text-sm text-gray-600">
+              Select every sport this member plays. More than one can be selected.
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {sportOptions.length === 0 && (
+                <p className="text-sm text-gray-500">No active sports yet. Add them under Roster catalogs.</p>
+              )}
+              {sportOptions.map((sport) => {
+                const sportId = sport.id as number;
+                const checked = selectedSports.includes(sportId);
+                return (
+                  <label
+                    key={sportId}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 ${
+                      checked ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:bg-blue-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setSelectedSports((prev) =>
+                          prev.includes(sportId) ? prev.filter((id) => id !== sportId) : [...prev, sportId]
+                        );
+                      }}
+                      className="h-4 w-4 rounded border-gray-400 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-800">{sport.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Email</label>
           <input type="email" {...register('email')} className={inputClass} />
@@ -320,6 +431,56 @@ export default function TeamMemberForm({
         </div>
       </div>
 
+      {!isMusic && (
+        <fieldset className="rounded-xl border border-gray-300 bg-gray-50 p-4">
+          <legend className="px-2 text-sm font-semibold text-gray-900">Season and career</legend>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700">Season label</label>
+              <input {...register('seasonLabel')} placeholder="2026" className={inputClass} />
+            </div>
+            {(
+              [
+                ['seasonAppearances', 'Appearances'],
+                ['seasonGoals', 'Goals'],
+                ['seasonAssists', 'Assists'],
+                ['seasonMinutes', 'Minutes'],
+                ['seasonWins', 'Wins'],
+                ['seasonDraws', 'Draws'],
+                ['seasonLosses', 'Losses'],
+                ['passAccuracyPct', 'Pass accuracy %'],
+                ['shotAccuracyPct', 'Shot accuracy %'],
+                ['topSpeedKmh', 'Top speed (km/h)'],
+                ['careerAppearances', 'Career appearances'],
+                ['careerGoals', 'Career goals'],
+                ['careerAssists', 'Career assists'],
+              ] as const
+            ).map(([name, label]) => (
+              <div key={name}>
+                <label className="block text-sm font-medium text-gray-700">{label}</label>
+                <input type="number" step="any" {...register(name, { valueAsNumber: true })} className={inputClass} />
+              </div>
+            ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Coach name</label>
+              <input {...register('coachName')} className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Coach email</label>
+              <input type="email" {...register('coachEmail')} className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Coach phone</label>
+              <input {...register('coachPhone')} className={inputClass} />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700">Recent matches</label>
+              <textarea {...register('recentMatches')} rows={3} className={inputClass} />
+            </div>
+          </div>
+        </fieldset>
+      )}
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Achievements</label>
         {achievements.map((row, index) => (
@@ -355,14 +516,18 @@ export default function TeamMemberForm({
                 value={row.category}
                 onChange={(e) => {
                   const next = [...achievements];
-                  next[index] = { ...row, category: e.target.value as AchievementDraft['category'] };
+                  next[index] = { ...row, category: e.target.value };
                   setAchievements(next);
                 }}
                 className={inputClass}
               >
-                {ACHIEVEMENT_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                <option value="">Select a category</option>
+                {row.category && !achievementOptions.some((option) => option.code === row.category) && (
+                  <option value={row.category}>{row.category}</option>
+                )}
+                {achievementOptions.map((category) => (
+                  <option key={category.id ?? category.code} value={category.code}>
+                    {category.label}
                   </option>
                 ))}
               </select>

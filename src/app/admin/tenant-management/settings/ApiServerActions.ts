@@ -7,7 +7,7 @@ import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl } fr
 import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import { stripDeprecatedSettingsIdentityFields } from '@/lib/stripDeprecatedSettingsIdentityFields';
 import { getSiteTypePresetSettings } from '@/lib/siteTypePresets';
-import type { TenantSiteType } from '@/types/profileSite';
+import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions';
 import type {
   TenantSettingsDTO,
   TenantSettingsFormDTO,
@@ -666,7 +666,7 @@ export async function uploadDefaultHeroImageClient(
  */
 export async function applySiteTypePresetsForTenant(
   tenantId: string,
-  siteType: TenantSiteType
+  siteType: string
 ): Promise<boolean> {
   try {
     const settings = await fetchTenantSettingsByTenantId(tenantId);
@@ -674,7 +674,9 @@ export async function applySiteTypePresetsForTenant(
       console.warn('[applySiteTypePresetsForTenant] No settings row for tenant', tenantId);
       return false;
     }
-    const presetPatch = getSiteTypePresetSettings(siteType);
+    const retailers = await fetchRetailerTypes(tenantId).catch(() => []);
+    const moduleKey = retailers.find((row) => row.code === siteType)?.moduleKey;
+    const presetPatch = getSiteTypePresetSettings(siteType, moduleKey);
     await patchTenantSetting(settings.id, { ...presetPatch, tenantId });
     return true;
   } catch (error) {

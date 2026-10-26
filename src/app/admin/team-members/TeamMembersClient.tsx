@@ -14,6 +14,7 @@ import {
   fetchTeamMembersPage,
   type TeamMemberListFilters,
 } from './ApiServerActions';
+import { sportLabelsForMember } from '@/lib/sportsCategories';
 
 type SearchField = 'firstName' | 'lastName' | 'email' | 'position' | 'instrument' | 'id';
 
@@ -272,7 +273,14 @@ export default function TeamMembersClient({
             {members.map((m) => (
               <tr key={m.id}>
                 <td className="px-4 py-3">
-                  {m.firstName} {m.lastName}
+                  <div>
+                    {m.firstName} {m.lastName}
+                  </div>
+                  {sportLabelsForMember(m).length > 0 && (
+                    <div className="mt-1 text-xs text-gray-500">
+                      {sportLabelsForMember(m).join(' · ')}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3">{groupName(m.teamGroupId)}</td>
                 <td className="px-4 py-3">{m.jerseyNumber ?? '—'}</td>
@@ -372,6 +380,7 @@ export default function TeamMembersClient({
           title={editing ? 'Edit roster member' : 'New roster member'}
         >
           <TeamMemberForm
+            key={editing?.id ?? 'new'}
             member={editing}
             groups={groups}
             defaultGroupId={

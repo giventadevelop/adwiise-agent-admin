@@ -8,7 +8,9 @@ export interface TeamMemberAchievementDTO {
   title: string;
   description?: string;
   achievementDate?: string;
-  category: 'AWARD' | 'HONOR' | 'TROPHY' | 'CAP' | 'OTHER';
+  /** Catalog code. The service also stores achievementCategoryId. */
+  category: string;
+  achievementCategoryId?: number | null;
   issuer?: string;
   url?: string;
   imageUrl?: string;

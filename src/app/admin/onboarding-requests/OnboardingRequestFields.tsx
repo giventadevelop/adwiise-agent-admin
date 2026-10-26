@@ -1,6 +1,7 @@
 'use client';
 
-import { DOMAIN_OWNERSHIP_OPTIONS, ONBOARDING_SITE_TYPE_OPTIONS } from '@/lib/onboarding/onboardingShared';
+import { DOMAIN_OWNERSHIP_OPTIONS } from '@/lib/onboarding/onboardingShared';
+import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 
 /** Editable customer-facing fields of an onboarding request (string values; booleans as checkboxes). */
 export interface OnboardingFieldValues {
@@ -84,6 +85,7 @@ const TEXT_FIELDS: { name: keyof OnboardingFieldValues; label: string; span?: bo
 ];
 
 export default function OnboardingRequestFields({ values, errors, disabled, onChange, onBlurField, registerRef }: Props) {
+  const siteTypeOptions = useRetailerTypeOptions('server');
   const handle = (e: React.ChangeEvent<FieldElement>) => {
     const { name, value, type } = e.target;
     onChange(name as keyof OnboardingFieldValues, type === 'checkbox' ? (e.target as HTMLInputElement).checked : value);
@@ -116,7 +118,7 @@ export default function OnboardingRequestFields({ values, errors, disabled, onCh
       <div>
         <label htmlFor="onb-siteType" className="block text-sm font-medium text-gray-700">Site type</label>
         <select id="onb-siteType" name="siteType" value={values.siteType} onChange={handle} disabled={disabled} className={onboardingInputClass()}>
-          {ONBOARDING_SITE_TYPE_OPTIONS.map((o) => (
+          {siteTypeOptions.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

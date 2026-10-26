@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
-import { ONBOARDING_SITE_TYPE_OPTIONS, ONBOARDING_STATUS_STYLES } from '@/lib/onboarding/onboardingShared';
+import { ONBOARDING_STATUS_STYLES } from '@/lib/onboarding/onboardingShared';
+import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 import type { OnboardingRequestStatus, TenantOnboardingRequestDTO } from '@/types';
 import { fetchOnboardingRequestsServer } from './ApiServerActions';
 
@@ -16,11 +17,12 @@ function formatDate(value?: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function siteTypeLabel(value?: string | null): string {
-  return ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? (value || '—');
+function siteTypeLabel(value: string | null | undefined, options: { value: string; label: string }[]): string {
+  return options.find((o) => o.value === value)?.label ?? (value || '—');
 }
 
 export default function OnboardingRequestsListClient() {
+  const siteTypeOptions = useRetailerTypeOptions('server');
   const [status, setStatus] = useState<OnboardingRequestStatus | 'ALL'>('PENDING');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -156,7 +158,7 @@ export default function OnboardingRequestsListClient() {
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900">{r.organizationName}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r.requestedHostname}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{siteTypeLabel(r.siteType)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{siteTypeLabel(r.siteType, siteTypeOptions)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r.contactEmail}</td>
                       <td className="px-4 py-3">
                         {r.status && (

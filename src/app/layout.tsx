@@ -20,6 +20,7 @@ import { getAllowedRedirectOrigins, isKnownSatelliteHost } from "@/lib/satellite
 import { getMergedSatelliteConfigs } from "@/lib/satelliteConfigRuntime";
 import { fetchFooterContactPropsServer } from "@/app/ApiServerActions";
 import { isAdminRole } from "@/lib/utils";
+import { fetchAccessRoles } from "@/app/admin/access-catalogs/ApiServerActions";
 import { pickAllUserProfiles, pickFirstUserProfile } from "@/lib/pickFirstUserProfile";
 import { buildClerkProfileInsert, decideClerkProfileIdentity } from "@/lib/clerkProfileIdentity";
 import { fetchAdminAccessForClerkUser } from "@/app/admin/adminAccessServer";
@@ -183,6 +184,17 @@ export default async function RootLayout({
         const baseUrl = sameOriginApiBase;
         const apiBase = getApiBaseUrl();
         const tenantId = getTenantIdOptional();
+        const grantsAdminRoles = new Set<string>();
+        try {
+          const catalogRoles = await fetchAccessRoles(tenantId);
+          for (const role of catalogRoles) {
+            if (role.isActive !== false && role.grantsAdmin && role.code) {
+              grantsAdminRoles.add(role.code);
+            }
+          }
+        } catch (catalogError) {
+          console.error('[Layout] Access role catalog lookup failed:', catalogError);
+        }
         console.log('[Layout] 🔍 Fetching user profile:', { userId, baseUrl, apiBase, tenantId });
 
         // Step 1: Check if userId exists in the active tenant (direct backend, not Next self-proxy)
@@ -227,7 +239,7 @@ export default async function RootLayout({
                 const matched = emailRows.find((row) => row.userId === userId || row.clerkUserId === userId);
 
                 if (decision.action === 'use' && matched) {
-                  isTenantAdmin = isAdminRole(matched.userRole);
+                  isTenantAdmin = isAdminRole(matched.userRole, grantsAdminRoles);
                 } else if (decision.action === 'patch') {
                   const existingProfile = decision.row;
                   console.log('[Layout] Production pool updating userId on the email row', existingProfile.id);
@@ -269,7 +281,7 @@ export default async function RootLayout({
 
                   if (updateRes.ok) {
                     const updated = await updateRes.json();
-                    isTenantAdmin = isAdminRole(updated?.userRole);
+                    isTenantAdmin = isAdminRole(updated?.userRole, grantsAdminRoles);
                   } else {
                     const errorText = await updateRes.text();
                     console.error('[Layout] Failed to update userId:', updateRes.status, errorText);
@@ -296,7 +308,7 @@ export default async function RootLayout({
                     console.error('[Layout] Failed to create user profile:', createRes.status);
                   } else {
                     const created = await createRes.json().catch(() => null);
-                    isTenantAdmin = isAdminRole(created?.userRole ?? payload.userRole);
+                    isTenantAdmin = isAdminRole(created?.userRole ?? payload.userRole, grantsAdminRoles);
                     console.log('[Layout] Successfully created new user profile');
                   }
                 }
@@ -319,11 +331,11 @@ export default async function RootLayout({
             tenantId: p?.tenantId,
             rawProfile: JSON.stringify(p, null, 2)
           });
-          isTenantAdmin = isAdminRole(p?.userRole);
+          isTenantAdmin = isAdminRole(p?.userRole, grantsAdminRoles);
           console.log('[Layout] ✅ Found existing profile. Admin status:', {
             isTenantAdmin,
             userRole: p?.userRole,
-            roleMatch: isAdminRole(p?.userRole),
+            roleMatch: isAdminRole(p?.userRole, grantsAdminRoles),
             roleType: typeof p?.userRole,
             roleValue: JSON.stringify(p?.userRole)
           });

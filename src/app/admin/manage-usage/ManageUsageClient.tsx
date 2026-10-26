@@ -8,11 +8,29 @@ import * as XLSX from 'xlsx';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import { fetchUsersServer, patchUserProfileServer, bulkUploadUsersServer } from './ApiServerActions';
+import { fetchAssignableAccessRoles } from '@/app/admin/access-catalogs/ApiServerActions';
 import AdminNavigation from '@/components/AdminNavigation';
 import ManageUsageAdminGuidance from '@/components/admin/ManageUsageAdminGuidance';
 
 // Import UserDetailsTooltip and EditUserModal from the same file or extract if needed
 // ... (copy UserDetailsTooltip and EditUserModal here or import them)
+
+const FALLBACK_ACCESS_ROLES = [
+  { code: 'SUPER_ADMIN', label: 'Super Admin' },
+  { code: 'ADMIN', label: 'Admin' },
+  { code: 'GAS_STATION_ADMIN', label: 'Gas Station Admin' },
+  { code: 'GAS_STATION_MANAGER', label: 'Gas Station Manager' },
+  { code: 'ORGANIZER', label: 'Organizer' },
+  { code: 'VOLUNTEER', label: 'Volunteer' },
+  { code: 'MEMBER', label: 'Member' },
+];
+
+function withCurrentRole(options: { code: string; label: string }[], current?: string | null) {
+  if (current && !options.some((option) => option.code === current)) {
+    return [{ code: current, label: current }, ...options];
+  }
+  return options;
+}
 
 const SEARCH_FIELDS = [
   { label: 'First Name', value: 'firstName' },
@@ -91,12 +109,13 @@ function UserDetailsTooltip({ user, anchorRect, onClose }: { user: UserProfileDT
   );
 }
 
-function EditUserModal({ user, open, onClose, onSave, loading }: {
+function EditUserModal({ user, open, onClose, onSave, loading, roleOptions }: {
   user: UserProfileDTO | null,
   open: boolean,
   onClose: () => void,
   onSave: (updated: Partial<UserProfileDTO>) => void,
   loading?: boolean,
+  roleOptions: { code: string; label: string }[],
 }) {
   const [form, setForm] = useState<Partial<UserProfileDTO>>(user || {});
   useEffect(() => {
@@ -302,13 +321,9 @@ function EditUserModal({ user, open, onClose, onSave, loading }: {
                 onChange={e => setForm(f => ({ ...f, userRole: e.target.value }))}
               >
                 <option value="">Select Role</option>
-                <option value="SUPER_ADMIN">SUPER ADMIN</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="GAS_STATION_ADMIN">GAS STATION ADMIN (all locations)</option>
-                <option value="GAS_STATION_MANAGER">GAS STATION MANAGER (assigned locations)</option>
-                <option value="ORGANIZER">ORGANIZER</option>
-                <option value="VOLUNTEER">VOLUNTEER</option>
-                <option value="MEMBER">MEMBER</option>
+                {withCurrentRole(roleOptions, form.userRole).map((option) => (
+                  <option key={option.code} value={option.code}>{option.label}</option>
+                ))}
               </select>
               <p className="mt-1.5 text-xs text-gray-500 leading-snug">
                 For gas station tenants, use <strong>GAS_STATION_ADMIN</strong> (all locations) or{' '}
@@ -430,6 +445,16 @@ const renderStatusBadge = (status: string | null | undefined) => {
 
 export default function ManageUsageClient({ adminProfile }: { adminProfile: UserProfileDTO | null }) {
   const tenantId = useAdminTenantId();
+  const [roleOptions, setRoleOptions] = useState(FALLBACK_ACCESS_ROLES);
+  useEffect(() => {
+    fetchAssignableAccessRoles(tenantId)
+      .then((rows) => {
+        if (rows.length > 0) {
+          setRoleOptions(rows.map((row) => ({ code: row.code, label: row.label || row.code })));
+        }
+      })
+      .catch(() => {});
+  }, [tenantId]);
   const [users, setUsers] = useState<UserProfileDTO[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState('');
@@ -804,13 +829,9 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
               className="box-border block w-full h-12 border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 text-base bg-white"
             >
               <option value="">All Roles</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
-              <option value="ADMIN">Admin</option>
-              <option value="GAS_STATION_ADMIN">Gas Station Admin</option>
-              <option value="GAS_STATION_MANAGER">Gas Station Manager</option>
-              <option value="ORGANIZER">Organizer</option>
-              <option value="VOLUNTEER">Volunteer</option>
-              <option value="MEMBER">Member</option>
+              {roleOptions.map((option) => (
+                <option key={option.code} value={option.code}>{option.label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -1118,6 +1139,7 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
           onClose={() => setEditUser(null)}
           onSave={handleEditSave}
           loading={editLoading}
+          roleOptions={roleOptions}
         />
       )}
     </div>

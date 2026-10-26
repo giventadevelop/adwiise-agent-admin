@@ -288,7 +288,7 @@ export default function GasStationDashboardPage() {
 
         {!tenantId && (
           <TenantSiteTypePicker
-            siteTypes={['GAS_STATION']}
+            siteTypes={['GAS_STATION', 'GAS_STATION_ENT']}
             title="Gas station tenants"
           />
         )}

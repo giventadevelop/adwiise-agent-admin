@@ -1,12 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   DOMAIN_OWNERSHIP_OPTIONS,
-  ONBOARDING_SITE_TYPE_OPTIONS,
   validateOnboardingSubmit,
 } from '@/lib/onboarding/onboardingShared';
+import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
@@ -80,6 +80,7 @@ export default function GetStartedForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [requestCode, setRequestCode] = useState<string | null | undefined>(undefined);
   const fieldRefs = useRef<Record<string, FieldElement>>({});
+  const siteTypeOptions = useRetailerTypeOptions('proxy');
 
   const registerRef = (name: string) => (el: FieldElement | null) => {
     if (el) fieldRefs.current[name] = el;
@@ -246,12 +247,12 @@ export default function GetStartedForm() {
             <div>
               <label htmlFor="siteType" className="block text-sm font-medium text-gray-700">Type of website</label>
               <select id="siteType" name="siteType" value={formData.siteType} onChange={handleChange} className={inputClass(false)}>
-                {ONBOARDING_SITE_TYPE_OPTIONS.map((o) => (
+                {siteTypeOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                {ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === formData.siteType)?.hint}
+                {siteTypeOptions.find((o) => o.value === formData.siteType)?.hint}
               </p>
             </div>
             <div>

@@ -1,4 +1,3 @@
-import type { TenantSiteType } from '@/types/profileSite';
 import type { TenantSettingsDTO } from '@/types';
 
 export interface SiteTypePresetSettings {
@@ -151,21 +150,35 @@ const GAS_STATION_PRESET: SiteTypePresetSettings = {
   showHeaderTournament: false,
 };
 
-export function getSiteTypePresetSettings(siteType: TenantSiteType): SiteTypePresetSettings {
-  switch (siteType) {
+export function getSiteTypePresetSettings(siteType: string, moduleKey?: string | null): SiteTypePresetSettings {
+  const moduleName = (moduleKey || '').trim().toUpperCase();
+  if (
+    moduleName === 'GAS_STATION' ||
+    moduleName === 'RETAIL' ||
+    siteType === 'GAS_STATION' ||
+    siteType === 'GAS_STATION_ENT' ||
+    siteType === 'LIQUOR_STORE' ||
+    siteType === 'DUNKIN_DONUTS' ||
+    siteType === 'SEVEN_ELEVEN'
+  ) {
+    return GAS_STATION_PRESET;
+  }
+  switch (moduleName || siteType) {
+    case 'SPORTS':
     case 'SPORTS_TEAM':
       return SPORTS_PRESET;
+    case 'MUSIC':
     case 'MUSIC_BAND':
       return { ...SPORTS_PRESET, showHeaderTournament: false };
+    case 'CHURCH':
     case 'CHURCH_ORG':
       return CHURCH_PRESET;
+    case 'PROFILE':
     case 'PERSONAL_PROFILE':
       return PERSONAL_PROFILE_PRESET;
     case 'HYBRID':
       return HYBRID_PRESET;
-    case 'GAS_STATION':
-    case 'LIQUOR_STORE':
-      return GAS_STATION_PRESET;
+    case 'EVENT':
     case 'EVENT_ORG':
     default:
       return EVENT_ORG_PRESET;
@@ -173,7 +186,7 @@ export function getSiteTypePresetSettings(siteType: TenantSiteType): SiteTypePre
 }
 
 export function applySiteTypePresetsToSettings(
-  siteType: TenantSiteType,
+  siteType: string,
   current: Partial<TenantSettingsDTO>
 ): Partial<TenantSettingsDTO> {
   return {
@@ -182,6 +195,8 @@ export function applySiteTypePresetsToSettings(
   };
 }
 
-export function isProfileSiteType(siteType?: TenantSiteType | string | null): boolean {
+export function isProfileSiteType(siteType?: string | null, moduleKey?: string | null): boolean {
+  const moduleName = (moduleKey || '').trim().toUpperCase();
+  if (moduleName === 'PROFILE' || moduleName === 'HYBRID') return true;
   return siteType === 'PERSONAL_PROFILE' || siteType === 'HYBRID';
 }

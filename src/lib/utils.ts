@@ -13,7 +13,12 @@ export function absoluteUrl(path: string) {
   return `${getAppUrl()}${path}`;
 }
 
-/** Check if a user role string represents an admin-level role. */
-export function isAdminRole(role: string | null | undefined): boolean {
-  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+/** Built-in admin roles, plus any catalog role flagged grants_admin. */
+export function isAdminRole(
+  role: string | null | undefined,
+  grantsAdminRoles?: ReadonlySet<string> | readonly string[] | null
+): boolean {
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return true;
+  if (!role || !grantsAdminRoles) return false;
+  return grantsAdminRoles instanceof Set ? grantsAdminRoles.has(role) : grantsAdminRoles.includes(role);
 }

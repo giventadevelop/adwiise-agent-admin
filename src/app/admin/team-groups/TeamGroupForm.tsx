@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { TeamGroupDTO } from '@/types/teamGroup';
+import type { RosterCatalogDTO } from '@/types/rosterCatalog';
 import { createTeamGroup, updateTeamGroup } from './ApiServerActions';
+import { fetchRosterCatalog } from '../roster-catalogs/ApiServerActions';
 import { useAdminTenantId } from '../AdminTenantContext';
 
 interface TeamGroupFormProps {
@@ -11,12 +13,11 @@ interface TeamGroupFormProps {
   onCancel: () => void;
 }
 
-const TEAM_TYPES = ['SPORTS', 'MUSIC', 'OTHER'] as const;
-
 export default function TeamGroupForm({ group, onSuccess, onCancel }: TeamGroupFormProps) {
   const tenantId = useAdminTenantId();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [teamTypes, setTeamTypes] = useState<RosterCatalogDTO[]>([]);
   const [form, setForm] = useState({
     teamType: (group?.teamType as string) || 'SPORTS',
     name: group?.name || '',
@@ -29,6 +30,25 @@ export default function TeamGroupForm({ group, onSuccess, onCancel }: TeamGroupF
     displayOrder: group?.displayOrder ?? 0,
     isActive: group?.isActive ?? true,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRosterCatalog('team-types', tenantId)
+      .then((rows) => {
+        if (cancelled) return;
+        const active = rows.filter((row) => row.isActive !== false && row.code);
+        if (form.teamType && !active.some((row) => row.code === form.teamType)) {
+          active.unshift({ code: form.teamType, label: form.teamType, isActive: false });
+        }
+        setTeamTypes(active);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load team types');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, form.teamType]);
 
   const set = (key: keyof typeof form, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -76,9 +96,9 @@ export default function TeamGroupForm({ group, onSuccess, onCancel }: TeamGroupF
             onChange={(e) => set('teamType', e.target.value)}
             className="mt-1 w-full border border-gray-400 rounded-xl px-4 py-3"
           >
-            {TEAM_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            {teamTypes.map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.label}
               </option>
             ))}
           </select>
