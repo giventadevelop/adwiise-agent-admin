@@ -17,11 +17,14 @@ export const ONBOARDING_SITE_TYPE_OPTIONS: { value: TenantSiteType; label: strin
   { value: 'MUSIC_BAND', label: 'Music band', hint: 'Bands, choirs, performances' },
   { value: 'PERSONAL_PROFILE', label: 'Personal profile', hint: 'Individual professional or personal site' },
   { value: 'HYBRID', label: 'Hybrid', hint: 'Profile plus events' },
+  { value: 'RETAIL', label: 'Retail', hint: 'Shop archetype. The pack is gas, liquor, or another retailer type.' },
   { value: 'GAS_STATION', label: 'Gas station', hint: 'Fuel station operations' },
   { value: 'GAS_STATION_ENT', label: 'Gas station enterprise', hint: 'Multi-site fuel operations' },
   { value: 'LIQUOR_STORE', label: 'Liquor store', hint: 'Beer, wine, and spirits shop' },
   { value: 'DUNKIN_DONUTS', label: 'Dunkin', hint: 'Dunkin shop' },
   { value: 'SEVEN_ELEVEN', label: 'Seven-Eleven', hint: 'Convenience store' },
+  { value: 'RESTAURANT', label: 'Restaurant', hint: 'Restaurant chain' },
+  { value: 'CLINIC', label: 'Clinic', hint: 'Clinic placeholder until a visit file exists' },
 ];
 
 export const DOMAIN_OWNERSHIP_OPTIONS: { value: DomainOwnership; label: string }[] = [

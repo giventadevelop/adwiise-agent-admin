@@ -203,9 +203,12 @@ export const TENANT_SITE_TYPE_LABELS: Record<string, string> = {
   CHURCH_ORG: 'Church / organization',
   PERSONAL_PROFILE: 'Personal profile / portfolio',
   HYBRID: 'Hybrid (profile + events)',
+  RETAIL: 'Retail',
   GAS_STATION: 'Gas station (AI COO)',
   GAS_STATION_ENT: 'Gas station enterprise',
   LIQUOR_STORE: 'Liquor store',
   DUNKIN_DONUTS: 'Dunkin',
   SEVEN_ELEVEN: 'Seven-Eleven',
+  RESTAURANT: 'Restaurant',
+  CLINIC: 'Clinic',
 };

@@ -32,8 +32,10 @@ export interface TenantOrganizationDTO {
   zipCode?: string | null;
   country?: string | null;
   websiteUrl?: string | null;
-  /** Product archetype: EVENT_ORG | SPORTS_TEAM | MUSIC_BAND | CHURCH_ORG | PERSONAL_PROFILE | HYBRID | GAS_STATION | LIQUOR_STORE */
+  /** Product archetype. Shops use RETAIL. The pack is retailerTypeCode. */
   siteType?: TenantSiteType;
+  /** Shop pack when siteType is RETAIL: GAS_STATION, GAS_STATION_ENT, LIQUOR_STORE, DUNKIN_DONUTS, SEVEN_ELEVEN, RESTAURANT, or CLINIC. */
+  retailerTypeCode?: string;
   /** Optional theme/template variant within a siteType */
   siteTemplateVersion?: string;
   createdAt: string; // ISO date-time

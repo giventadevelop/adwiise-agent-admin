@@ -155,11 +155,14 @@ export function getSiteTypePresetSettings(siteType: string, moduleKey?: string |
   if (
     moduleName === 'GAS_STATION' ||
     moduleName === 'RETAIL' ||
+    siteType === 'RETAIL' ||
     siteType === 'GAS_STATION' ||
     siteType === 'GAS_STATION_ENT' ||
     siteType === 'LIQUOR_STORE' ||
     siteType === 'DUNKIN_DONUTS' ||
-    siteType === 'SEVEN_ELEVEN'
+    siteType === 'SEVEN_ELEVEN' ||
+    siteType === 'RESTAURANT' ||
+    siteType === 'CLINIC'
   ) {
     return GAS_STATION_PRESET;
   }

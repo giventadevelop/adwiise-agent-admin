@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import BatchJobsClient from './BatchJobsClient';
+import RetailSampleRunPanel from './RetailSampleRunPanel';
 import { fetchBatchJobsDashboardServer } from './ApiServerActions';
 
 export default async function BatchJobsPage() {
@@ -59,7 +60,7 @@ export default async function BatchJobsPage() {
           </p>
         </div>
       </div>
-      <BatchJobsClient
+      <RetailSampleRunPanel />
         initialSummary={summary}
         initialExecutions={executions}
         initialTotalCount={totalCount}

@@ -91,6 +91,7 @@ export default function TenantOrganizationForm({
       country: initialData?.country || '',
       websiteUrl: initialData?.websiteUrl || '',
       siteType: initialData?.siteType || 'EVENT_ORG',
+      retailerTypeCode: initialData?.retailerTypeCode || '',
     }
   });
 
@@ -556,7 +557,29 @@ export default function TenantOrganizationForm({
                 )}
               </select>
               <p className="mt-1 text-sm text-gray-500">
-                Changing the site type re-applies the matching homepage section presets to tenant settings
+                Changing the site type re-applies the matching homepage section presets to tenant settings. A shop is RETAIL.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Retailer pack
+              </label>
+              <select
+                {...register('retailerTypeCode')}
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+              >
+                <option value="">None</option>
+                <option value="GAS_STATION">Gas station</option>
+                <option value="GAS_STATION_ENT">Gas station enterprise</option>
+                <option value="LIQUOR_STORE">Liquor store</option>
+                <option value="DUNKIN_DONUTS">Dunkin</option>
+                <option value="SEVEN_ELEVEN">Seven-Eleven</option>
+                <option value="RESTAURANT">Restaurant</option>
+                <option value="CLINIC">Clinic</option>
+              </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Used when the site type is RETAIL. Gas uses a fuel file. The other packs use a register file only.
               </p>
             </div>
           </div>
