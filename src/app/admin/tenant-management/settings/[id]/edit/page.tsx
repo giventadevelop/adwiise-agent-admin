@@ -9,6 +9,7 @@ import TenantConfigurationContextLabel from '@/app/admin/tenant-management/compo
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { parseTenantSettingsTab, tenantSettingsTabQuery } from '@/lib/tenantSettingsTabs';
 import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 interface PageProps {
   params: { id: string };
@@ -54,19 +55,7 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>
         <div className="mb-8">
-          <Link
-            href="/admin/tenant-management/settings"
-            className="flex-shrink-0 h-14 rounded-xl bg-sky-100 hover:bg-sky-200 inline-flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-            title="Back to Settings"
-            aria-label="Back to Settings"
-          >
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-sky-200 flex items-center justify-center">
-              <svg className="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </div>
-            <span className="font-semibold text-sky-700">Back to Settings</span>
-          </Link>
+          <AdminBackButton href="/admin/tenant-management/settings" label="Back to Settings" />
         </div>
 
         <div className="bg-red-50 border border-red-200 rounded-md p-4">

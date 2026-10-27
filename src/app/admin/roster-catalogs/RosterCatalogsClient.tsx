@@ -86,7 +86,7 @@ function CatalogSection({
   };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+    <section id={resource} className="scroll-mt-44 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
       <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
       <p className="mt-1 mb-4 text-sm text-gray-600">{hint}</p>
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
@@ -249,6 +249,12 @@ export default function RosterCatalogsClient({
   canEditGlobal,
 }: RosterCatalogsClientProps) {
   const tenantId = useAdminTenantId();
+  useEffect(() => {
+    const id = window.location.hash.replace('#', '');
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const [sports, setSports] = useState(initialSports);
   const [achievements, setAchievements] = useState(initialAchievements);
   const [teamTypes, setTeamTypes] = useState(initialTeamTypes);

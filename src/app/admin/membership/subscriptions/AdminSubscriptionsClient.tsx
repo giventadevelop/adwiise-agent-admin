@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import AdminNavigation from '@/components/AdminNavigation';
@@ -11,6 +10,7 @@ import { cancelUserSubscriptionServer, getSubscriptionDetailsServer } from './Ap
 import type { MembershipSubscriptionDTO } from '@/types';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 import AdminTenantFilterField from '@/app/admin/AdminTenantFilterField';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 interface AdminSubscriptionsClientProps {
   subscriptions: MembershipSubscriptionDTO[];
@@ -147,19 +147,7 @@ export function AdminSubscriptionsClient({
     <div className="max-w-5xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
       {/* Header with back button */}
       <div className="flex items-center mb-8">
-        <Link
-          href="/admin"
-          className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-          title="Back to Admin"
-          aria-label="Back to Admin"
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-200 flex items-center justify-center">
-            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </div>
-          <span className="font-semibold text-indigo-700">Back to Admin</span>
-        </Link>
+        <AdminBackButton href="/admin" label="Back to Admin" />
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">User Subscriptions</h1>
           <p className="text-gray-600">

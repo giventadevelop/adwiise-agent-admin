@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { assertPlatformSuperAdmin } from '@/app/admin/adminAccessServer';
 import { fetchOnboardingRequestServer } from '../ApiServerActions';
 import OnboardingRequestReviewClient from './OnboardingRequestReviewClient';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +18,7 @@ export default async function OnboardingRequestReviewPage({ params }: { params: 
           <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
             <p className="text-sm font-medium text-red-700">{result && !result.ok ? result.error : 'Invalid request id'}</p>
           </div>
-          <Link href="/admin/onboarding-requests" className="inline-block mt-4 text-blue-600 hover:underline">
-            ← Back to onboarding requests
-          </Link>
+          <AdminBackButton href="/admin/onboarding-requests" label="Back to onboarding requests" />
         </div>
       </div>
     );

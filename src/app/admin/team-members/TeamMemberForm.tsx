@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { TeamGroupDTO } from '@/types/teamGroup';
 import type { TeamMemberDTO, TeamMemberFormData } from '@/types/teamMember';
@@ -10,6 +10,7 @@ import {
   createTeamMemberAchievement,
   deleteTeamMemberAchievement,
   fetchTeamMemberAchievements,
+  resolveTeamMemberPortraitUrl,
   updateTeamMember,
   updateTeamMemberAchievement,
 } from './ApiServerActions';
@@ -20,6 +21,7 @@ import { fetchRosterCatalog } from '../roster-catalogs/ApiServerActions';
 import { selectedSportIds } from '@/lib/sportsCategories';
 import {
   FOOTBALL_CODE,
+  emptySportProfile,
   parseRecentMatches,
   parseSportProfiles,
   serializeRecentMatches,
@@ -27,7 +29,21 @@ import {
   type RecentMatchesState,
   type SportProfileDocument,
 } from '@/lib/sportProfileForm';
-import { RecentMatchEditor, SportProfileCards } from './SportProfileSections';
+import {
+  RecentMatchEditor,
+  SportDetailsDialog,
+  SportProfileCards,
+  buildFootballDetailGroup,
+  buildSportDetailGroup,
+  type DetailGroup,
+} from './SportProfileSections';
+import { FieldHint, HintMark } from './FieldHint';
+
+function seasonNumberHint(label: string): string {
+  if (label.includes('%')) return 'Percent from 0 to 100. Decimals are allowed. Example: 84.5. Leave blank if unknown.';
+  if (label.includes('km/h')) return 'Kilometres per hour. Decimals are allowed. Example: 32.4. Leave blank if unknown.';
+  return 'Whole number. Example: 12. Leave blank if unknown.';
+}
 import type { RosterCatalogDTO } from '@/types/rosterCatalog';
 
 interface TeamMemberFormProps {
@@ -85,7 +101,11 @@ export default function TeamMemberForm({
 }: TeamMemberFormProps) {
   const tenantId = useAdminTenantId();
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(member?.profileImageUrl || null);
+  const localPortraitRef = useRef(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(() => {
+    const raw = member?.profileImageUrl?.trim() || '';
+    return /^(https?:|data:|blob:)/i.test(raw) ? raw : null;
+  });
   const [expertiseItems, setExpertiseItems] = useState<string[]>(() => parseExpertise(member?.expertise));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -98,6 +118,33 @@ export default function TeamMemberForm({
   const [recentMatchState, setRecentMatchState] = useState<RecentMatchesState>(() =>
     parseRecentMatches(member?.recentMatches)
   );
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailGroups, setDetailGroups] = useState<DetailGroup[]>([]);
+
+  useEffect(() => {
+    const raw = member?.profileImageUrl?.trim() || '';
+    const portraitTenantId = member?.tenantId || tenantId;
+    localPortraitRef.current = false;
+    if (!raw) {
+      setImagePreview(null);
+      return;
+    }
+    if (/^(https?:|data:|blob:)/i.test(raw)) {
+      setImagePreview(raw);
+      return;
+    }
+    let cancelled = false;
+    resolveTeamMemberPortraitUrl(raw, portraitTenantId)
+      .then((resolved) => {
+        if (!cancelled && !localPortraitRef.current) setImagePreview(resolved);
+      })
+      .catch(() => {
+        if (!cancelled && !localPortraitRef.current) setImagePreview(raw);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [member?.id, member?.profileImageUrl, member?.tenantId, tenantId]);
 
   const { register, handleSubmit, setValue, watch } = useForm<TeamMemberFormData>({
     defaultValues: {
@@ -143,6 +190,52 @@ export default function TeamMemberForm({
   });
 
   const watchedGroupId = watch('teamGroupId');
+
+  function openEnteredDetails() {
+    const chosen = sportOptions.filter((sport) => sport.id != null && selectedSports.includes(sport.id));
+    const values = watch();
+    const groups: DetailGroup[] = [];
+    if (chosen.some((sport) => sport.code === FOOTBALL_CODE)) {
+      groups.push(
+        buildFootballDetailGroup({
+          position: values.position,
+          jerseyNumber: values.jerseyNumber,
+          nationality: values.nationality,
+          preferredFoot: values.preferredFoot,
+          heightCm: values.heightCm,
+          seasonLabel: values.seasonLabel,
+          seasonAppearances: values.seasonAppearances,
+          seasonGoals: values.seasonGoals,
+          seasonAssists: values.seasonAssists,
+          seasonMinutes: values.seasonMinutes,
+          seasonWins: values.seasonWins,
+          seasonDraws: values.seasonDraws,
+          seasonLosses: values.seasonLosses,
+          passAccuracyPct: values.passAccuracyPct,
+          shotAccuracyPct: values.shotAccuracyPct,
+          topSpeedKmh: values.topSpeedKmh,
+          careerAppearances: values.careerAppearances,
+          careerGoals: values.careerGoals,
+          careerAssists: values.careerAssists,
+          coachName: values.coachName,
+          coachEmail: values.coachEmail,
+          coachPhone: values.coachPhone,
+          matches: recentMatchState.rows,
+        })
+      );
+    }
+    for (const sport of chosen) {
+      if (!sport.code || sport.code === FOOTBALL_CODE) continue;
+      groups.push(
+        buildSportDetailGroup(
+          { code: sport.code, label: sport.label || sport.code },
+          profileDoc.profiles[sport.code] ?? emptySportProfile(sport.code)
+        )
+      );
+    }
+    setDetailGroups(groups);
+    setDetailsOpen(true);
+  }
   const isMusic = groups.find((g) => g.id === Number(watchedGroupId))?.teamType === 'MUSIC';
 
   useEffect(() => {
@@ -317,8 +410,10 @@ export default function TeamMemberForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-3xl max-h-[70vh] overflow-y-auto pr-2">
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Team group *</label>
+      <FieldHint
+        label="Team group *"
+        hint="Choose the squad this player belongs to. The name in brackets is the group type, such as football or music."
+      >
         <select {...register('teamGroupId', { valueAsNumber: true })} className={inputClass}>
           {groups.map((g) => (
             <option key={g.id} value={g.id ?? ''}>
@@ -326,60 +421,65 @@ export default function TeamMemberForm({
             </option>
           ))}
         </select>
-      </div>
+      </FieldHint>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">First name *</label>
+        <FieldHint label="First name *" hint="Given name as it should appear on the roster. Example: Arun.">
           <input {...register('firstName')} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Last name *</label>
+        </FieldHint>
+        <FieldHint label="Last name *" hint="Family name as it should appear on the roster. Example: Nair.">
           <input {...register('lastName')} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Title</label>
+        </FieldHint>
+        <FieldHint label="Title" hint="Optional courtesy title. Example: Mr, Ms, or Dr. Leave blank if unused.">
           <input {...register('title')} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Priority order</label>
+        </FieldHint>
+        <FieldHint
+          label="Priority order"
+          hint="Whole number. Lower numbers appear first. Example: 1 is shown before 10."
+        >
           <input type="number" {...register('priorityOrder', { valueAsNumber: true })} className={inputClass} />
-          <p className="text-xs text-gray-500 mt-1">Lower number = appears first in carousel.</p>
-        </div>
+        </FieldHint>
         {!isMusic && (
           <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jersey number</label>
+            <FieldHint label="Jersey number" hint="Shirt number for football. Whole number. Example: 7. Leave blank if unknown.">
               <input type="number" {...register('jerseyNumber', { valueAsNumber: true })} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Position</label>
+            </FieldHint>
+            <FieldHint label="Position" hint="Football role. Example: Striker, Midfielder, or Goalkeeper.">
               <input {...register('position')} className={inputClass} />
-            </div>
+            </FieldHint>
           </>
         )}
         {isMusic && (
           <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Instrument</label>
+            <FieldHint label="Instrument" hint="Instrument this member plays. Example: Violin.">
               <input {...register('instrument')} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Vocal role</label>
+            </FieldHint>
+            <FieldHint label="Vocal role" hint="Singing part, if any. Example: Soprano. Leave blank for instrumentalists.">
               <input {...register('vocalRole')} className={inputClass} />
-            </div>
+            </FieldHint>
           </>
         )}
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Lineup subtitle</label>
-          <input {...register('lineupSubtitle')} placeholder="e.g. FIRST TEAM" className={inputClass} />
+          <FieldHint label="Lineup subtitle" hint="Short line under the name. Example: FIRST TEAM. Use capitals if that is the house style.">
+            <input {...register('lineupSubtitle')} placeholder="e.g. FIRST TEAM" className={inputClass} />
+          </FieldHint>
         </div>
         <div className="md:col-span-2">
           <fieldset className="rounded-xl border border-gray-300 bg-gray-50 p-4">
-            <legend className="px-2 text-sm font-semibold text-gray-900">Sports categories</legend>
-            <p className="mb-3 text-sm text-gray-600">
-              Select every sport this member plays. More than one can be selected.
-            </p>
+            <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-gray-900">
+              Sports categories
+              <HintMark text="Tick every sport this player takes part in. Each ticked sport gets its own section below, except football, which uses Season and career." />
+            </legend>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-gray-600">Select every sport this member plays. More than one can be selected.</p>
+              <button
+                type="button"
+                onClick={openEnteredDetails}
+                className="h-10 rounded-xl bg-green-100 px-4 text-sm font-semibold text-green-700 hover:bg-green-200"
+              >
+                View entered details
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {sportOptions.length === 0 && (
                 <p className="text-sm text-gray-500">No active sports yet. Add them under Roster catalogs.</p>
@@ -391,20 +491,30 @@ export default function TeamMemberForm({
                   <label
                     key={sportId}
                     className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 ${
-                      checked ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:bg-blue-50'
+                      checked ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white hover:bg-yellow-50'
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        setSelectedSports((prev) =>
-                          prev.includes(sportId) ? prev.filter((id) => id !== sportId) : [...prev, sportId]
-                        );
-                      }}
-                      className="h-4 w-4 rounded border-gray-400 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-medium text-gray-800">{sport.label}</span>
+                    <span className="relative flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSelectedSports((prev) =>
+                            prev.includes(sportId) ? prev.filter((id) => id !== sportId) : [...prev, sportId]
+                          );
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="custom-checkbox"
+                      />
+                      <span className="custom-checkbox-tick">
+                        {checked && (
+                          <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" strokeWidth="4" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l5 5L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </span>
+                    <span className="text-sm font-medium text-gray-700 select-none">{sport.label}</span>
                   </label>
                 );
               })}
@@ -426,56 +536,60 @@ export default function TeamMemberForm({
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+        <FieldHint label="Email" hint="Player email, if they have one. Example: arun@club.com. Leave blank if unknown.">
           <input type="email" {...register('email')} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">User profile ID (optional)</label>
+        </FieldHint>
+        <FieldHint
+          label="User profile ID (optional)"
+          hint="Number of an existing login profile, only when this player already has a site account. Leave blank otherwise."
+        >
           <input type="number" {...register('userProfileId', { valueAsNumber: true })} className={inputClass} />
+        </FieldHint>
+        <div className="md:col-span-2">
+          <FieldHint label="Role" hint="How the club describes them. Example: Captain, Coach, or Forward.">
+            <input {...register('designation')} placeholder="Captain, Coach, Forward" className={inputClass} />
+          </FieldHint>
         </div>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Role</label>
-          <input {...register('designation')} placeholder="Captain, Coach, Forward" className={inputClass} />
+          <FieldHint label="Biography" hint="A short paragraph in plain sentences. This is the public bio.">
+            <textarea {...register('bio')} rows={4} className={inputClass} />
+          </FieldHint>
         </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Biography</label>
-          <textarea {...register('bio')} rows={4} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Nationality</label>
+        <FieldHint label="Nationality" hint="Country name. Example: India.">
           <input {...register('nationality')} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Date of birth</label>
+        </FieldHint>
+        <FieldHint label="Date of birth" hint="Pick the date from the calendar. Leave blank if it should stay private.">
           <input type="date" {...register('dateOfBirth')} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Preferred foot</label>
+        </FieldHint>
+        <FieldHint label="Preferred foot" hint="Choose Left, Right, or Both. Leave as Not set if it does not apply.">
           <select {...register('preferredFoot')} className={inputClass}>
             <option value="">Not set</option>
             <option value="LEFT">Left</option>
             <option value="RIGHT">Right</option>
             <option value="BOTH">Both</option>
           </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
+        </FieldHint>
+        <FieldHint label="Height (cm)" hint="Height in centimetres. Whole number. Example: 178.">
           <input type="number" {...register('heightCm', { valueAsNumber: true })} className={inputClass} />
-        </div>
+        </FieldHint>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Instagram</label>
-          <input {...register('instagramUrl')} placeholder="https://instagram.com/…" className={inputClass} />
+          <FieldHint label="Instagram" hint="Full web address, starting with https://. Example: https://instagram.com/mdstrikers.">
+            <input {...register('instagramUrl')} placeholder="https://instagram.com/…" className={inputClass} />
+          </FieldHint>
         </div>
       </div>
 
       {!isMusic && (
         <fieldset className="rounded-xl border border-gray-300 bg-gray-50 p-4">
-          <legend className="px-2 text-sm font-semibold text-gray-900">Season and career</legend>
+          <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-gray-900">
+            Season and career
+            <HintMark text="Football totals for this player. Other sports use the sport cards above. Leave a number blank when you do not have it." />
+          </legend>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700">Season label</label>
-              <input {...register('seasonLabel')} placeholder="2026" className={inputClass} />
+              <FieldHint label="Season label" hint="Season name or year. Example: 2026.">
+                <input {...register('seasonLabel')} placeholder="2026" className={inputClass} />
+              </FieldHint>
             </div>
             {(
               [
@@ -494,34 +608,33 @@ export default function TeamMemberForm({
                 ['careerAssists', 'Career assists'],
               ] as const
             ).map(([name, label]) => (
-              <div key={name}>
-                <label className="block text-sm font-medium text-gray-700">{label}</label>
+              <FieldHint key={name} label={label} hint={seasonNumberHint(label)}>
                 <input type="number" step="any" {...register(name, { valueAsNumber: true })} className={inputClass} />
-              </div>
+              </FieldHint>
             ))}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Coach name</label>
+            <FieldHint label="Coach name" hint="Coach’s full name. Example: Priya Menon.">
               <input {...register('coachName')} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Coach email</label>
+            </FieldHint>
+            <FieldHint label="Coach email" hint="Coach email. Example: coach@club.com.">
               <input type="email" {...register('coachEmail')} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Coach phone</label>
+            </FieldHint>
+            <FieldHint label="Coach phone" hint="Phone with area code. Example: +1 202 555 0100.">
               <input {...register('coachPhone')} className={inputClass} />
-            </div>
+            </FieldHint>
             <RecentMatchEditor state={recentMatchState} onChange={setRecentMatchState} />
           </div>
         </fieldset>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Achievements</label>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Achievements</span>
+          <HintMark text="One card per award. Title is the award name, date is when it was won, and category comes from the roster catalog." />
+        </div>
         {achievements.map((row, index) => (
           <div key={row.key} className="mb-3 grid grid-cols-1 md:grid-cols-2 gap-3 rounded-xl border border-gray-200 p-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Title</label>
+              <FieldHint label="Title" hint="Name of the award. Example: League top scorer.">
               <input
                 value={row.title}
                 onChange={(e) => {
@@ -531,9 +644,10 @@ export default function TeamMemberForm({
                 }}
                 className={inputClass}
               />
+              </FieldHint>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Date</label>
+              <FieldHint label="Date" hint="Date the award was given. Pick it from the calendar.">
               <input
                 type="date"
                 value={row.achievementDate}
@@ -544,9 +658,10 @@ export default function TeamMemberForm({
                 }}
                 className={inputClass}
               />
+              </FieldHint>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Category</label>
+              <FieldHint label="Category" hint="Choose a category from the list. Add new categories under Roster catalogs if one is missing.">
               <select
                 value={row.category}
                 onChange={(e) => {
@@ -566,9 +681,10 @@ export default function TeamMemberForm({
                   </option>
                 ))}
               </select>
+              </FieldHint>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <FieldHint label="Description" hint="One or two sentences about the award. Plain language.">
               <textarea
                 value={row.description}
                 rows={2}
@@ -579,6 +695,7 @@ export default function TeamMemberForm({
                 }}
                 className={inputClass}
               />
+              </FieldHint>
             </div>
             <button
               type="button"
@@ -598,7 +715,10 @@ export default function TeamMemberForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Skills / expertise</label>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Skills / expertise</span>
+          <HintMark text="One skill per box. Example: Free kicks. Blank boxes are ignored." />
+        </div>
         {expertiseItems.map((item, i) => (
           <div key={i} className="flex gap-2 mb-2">
             <input
@@ -623,27 +743,49 @@ export default function TeamMemberForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Portrait image</label>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Portrait image</span>
+          <HintMark text="A clear head-and-shoulders photo. JPG or PNG. The face should be fully visible." />
+        </div>
         <DragDropImageUpload
           selectedFile={imageFile}
           previewUrl={imagePreview}
           onFileSelect={(file) => {
+            localPortraitRef.current = true;
             setImageFile(file);
             const reader = new FileReader();
             reader.onload = () => setImagePreview(reader.result as string);
             reader.readAsDataURL(file);
           }}
           onFileRemove={() => {
+            localPortraitRef.current = true;
             setImageFile(null);
             setImagePreview(null);
           }}
         />
       </div>
 
-      <label className="flex items-center gap-2">
-        <input type="checkbox" {...register('isActive')} />
-        <span className="text-sm">Active on roster</span>
+      <div className="flex items-center gap-3">
+      <label className="flex items-center gap-3 cursor-pointer">
+        <span className="relative flex items-center justify-center">
+          <input
+            type="checkbox"
+            {...register('isActive')}
+            className="custom-checkbox"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <span className="custom-checkbox-tick">
+            {watch('isActive') && (
+              <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" strokeWidth="4" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l5 5L19 7" />
+              </svg>
+            )}
+          </span>
+        </span>
+        <span className="text-sm font-medium text-gray-700 select-none">Active on roster</span>
       </label>
+      <HintMark text="Leave this ticked to show the player on the public roster. Untick to hide them without deleting the profile." />
+      </div>
 
       <div className="flex gap-3 pt-2">
         <button
@@ -673,6 +815,7 @@ export default function TeamMemberForm({
           <span className="font-semibold text-blue-700">Cancel</span>
         </button>
       </div>
+      {detailsOpen && <SportDetailsDialog groups={detailGroups} onClose={() => setDetailsOpen(false)} />}
     </form>
   );
 }

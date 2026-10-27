@@ -137,6 +137,8 @@ This guide provides standards for creating consistent and maintainable UI compon
 
 ### Checkboxes
 
+- **Canonical look:** The yellow square on [`/admin/focus-groups/[id]/edit`](mdc:src/app/admin/focus-groups/[id]/edit/FocusGroupEditForm.tsx) (Active, Show member gallery publicly). White box, gray border, yellow fill, thick black tick, label beside the box.
+- **Global:** Every native `input[type="checkbox"]` gets that box from [`src/app/globals.css`](mdc:src/app/globals.css), including older `h-4 w-4` markup. New checkboxes should still use the markup below so the tick is the SVG overlay and clicks do not bubble.
 - **Rule:** Use large **square** admin checkboxes (`custom-checkbox` + optional `custom-checkbox--yellow`) with a custom SVG tick overlay. Do **not** use `rounded-lg` or `rounded-full` — shape must stay a square with only slight rounding (`rounded` = 4px).
 - **Size:** Always `w-7 h-7` (28×28px). Width must equal height.
 - **Yellow variant (admin forms):** Add `custom-checkbox--yellow` for thick gray border unchecked / solid yellow-500 fill+border when checked (EventForm, Tenant Settings “Add site footer”, newsletter “Template is active”, etc.).

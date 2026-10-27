@@ -10,6 +10,7 @@ import { formatOrganizationAddress } from '@/lib/formatOrganizationAddress';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import TenantConfigurationContextLabel from '@/app/admin/tenant-management/components/TenantConfigurationContextLabel';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 interface PageProps {
   params: { id: string };
@@ -52,13 +53,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>
         <div className="mb-8">
-          <Link
-            href="/admin/tenant-management/organizations"
-            className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600"
-          >
-            <FaArrowLeft className="w-4 h-4 mr-2" />
-            Back to Organizations
-          </Link>
+          <AdminBackButton href="/admin/tenant-management/organizations" label="Back to Organizations" />
         </div>
 
         <div className="bg-red-50 border border-red-200 rounded-md p-4">

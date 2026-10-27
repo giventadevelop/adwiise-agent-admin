@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaArrowLeft, FaSpinner } from 'react-icons/fa';
+import { FaSpinner } from 'react-icons/fa';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminNavigation from '@/components/AdminNavigation';
 import PerformerImageUploadArea from '@/components/performers/PerformerImageUploadArea';
 import type { EventFeaturedPerformersDTO, EventMediaDTO } from '@/types';
@@ -84,13 +85,7 @@ export default function PerformerEditClient({
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => router.push('/admin/event-featured-performers')}
-            className="flex items-center space-x-2 text-foreground hover:text-primary reverent-transition"
-          >
-            <FaArrowLeft className="h-4 w-4" />
-            <span>Back to Performers</span>
-          </button>
+          <AdminBackButton href="/admin/event-featured-performers" label="Back to Performers" />
         </div>
       </div>
 

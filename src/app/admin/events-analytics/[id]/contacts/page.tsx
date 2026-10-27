@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaArrowLeft, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import Modal, { ConfirmModal } from '@/components/ui/Modal';
 import type { EventContactsDTO, EventDetailsDTO } from '@/types';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
   fetchEventContactsServer,
   createEventContactServer,
@@ -264,13 +265,7 @@ export default function EventContactsPage() {
     <div className="max-w-5xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
       {/* Header with back button */}
       <div className="flex items-center mb-6">
-        <Link
-          href={`/admin/events/${eventId}/edit`}
-          className="flex items-center text-blue-600 hover:text-blue-800 mr-4 transition-colors"
-        >
-          <FaArrowLeft className="mr-2" />
-          Back to Event
-        </Link>
+        <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             📞 Event Contacts

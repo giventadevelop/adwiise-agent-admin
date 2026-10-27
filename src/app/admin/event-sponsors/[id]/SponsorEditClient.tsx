@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaArrowLeft, FaSpinner } from 'react-icons/fa';
+import { FaSpinner } from 'react-icons/fa';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminNavigation from '@/components/AdminNavigation';
 import SponsorImageUploadDialog from '@/components/sponsors/SponsorImageUploadDialog';
 import SponsorMediaGallery from '@/components/sponsors/SponsorMediaGallery';
@@ -121,18 +122,7 @@ export default function SponsorEditClient({
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => router.push('/admin/event-sponsors')}
-            className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-            title="Back to Sponsors"
-            aria-label="Back to Sponsors"
-            type="button"
-          >
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-200 flex items-center justify-center">
-              <FaArrowLeft className="w-6 h-6 text-indigo-600" />
-            </div>
-            <span className="font-semibold text-indigo-700">Back to Sponsors</span>
-          </button>
+          <AdminBackButton href="/admin/event-sponsors" label="Back to Sponsors" />
         </div>
       </div>
 

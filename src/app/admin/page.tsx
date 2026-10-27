@@ -5,13 +5,76 @@ import { useAuth } from "@clerk/nextjs";
 import { useAdminAccess } from './AdminTenantContext';
 import AdminTenantWorkspacePicker from './AdminTenantWorkspacePicker';
 import { fetchTenantSiteTypeServer } from './tournaments/ApiServerActions';
-// Icons removed - using inline SVGs instead
+
+const BUTTON_GUIDES: Record<string, string> = {
+  'admin-home': 'Returns to this dashboard so you can open another admin area. It does not edit tenant data.',
+  'manage-usage': 'People in the selected organization. Change role, approval, and contact details. This is the member list, not the sports squad.',
+  'manage-events': 'Create, edit, and publish events. Set dates, tickets, and whether the event is visible on the public site.',
+  'event-analytics': 'Attendance and ticket activity across events. Use it to compare how events performed.',
+  'event-registrations': 'Who signed up for events, including guests. Open this for the attendee list rather than sales totals.',
+  'poll-management': 'Create polls, answer choices, and the dates they stay open. Responses are collected on the public site.',
+  'focus-groups': 'Discussion circles and the events attached to them. Use this for committees, not for sports squads or bands.',
+  'membership-plans': 'Plans people can buy: name, price, and benefits. This screen does not list who already subscribed.',
+  'membership-subscriptions': 'Who has an active, pending, or canceled membership. Check a person here; create the plan on Membership Plans.',
+  'tenant-email-addresses': 'Official email addresses for this organization, used as senders or public contacts. Not a one-off campaign.',
+  'bulk-email': 'Send one announcement to many people. Use Email Addresses for the organization inbox, and this screen for the send.',
+  'test-stripe': 'Run a test card payment in Stripe. Confirm checkout works before a real ticket sale.',
+  'media-management': 'Upload images and files used by events and pages. Public photo albums are managed under Gallery Albums.',
+  'gallery-albums': 'Group public photos into albums shown on the gallery page.',
+  'executive-committee': 'Officers shown on the public site: name, title, order, and photo. These are leaders, not squad players.',
+  'team-groups': 'Containers for a sports club or band, such as First XI, Under-16, or Choir. Create the group here, then add people on Squad roster. Whether the group is sports or music comes from team types in Roster catalogs.',
+  'team-members': 'People inside a squad: name, sports, skills, achievements, and portrait. Choose their squad group on this form. Sport and achievement choices come from Roster catalogs.',
+  'roster-catalogs': 'Dropdown lists used by squads: sports, achievement categories, and team types. A shared row is offered to every tenant. Only a platform super admin should change shared rows.',
+  'access-catalogs': 'Two shared dropdowns on one page: access roles, and site or retailer types. Shared rows apply to every tenant and are edited by a platform super admin.',
+  'access-roles': 'Roles such as ADMIN and any custom role you add. They decide who sees the admin menu and which locations a person can open. Change shared roles only as platform super admin.',
+  'retailer-types': 'Shop and brand kinds such as liquor store, Dunkin, and Seven-Eleven, plus the module they belong to. These codes are stored as the organization site type and appear in onboarding and organization dropdowns.',
+  'site-types': 'Organization kinds such as events, church, sports team, music band, personal profile, hybrid, and gas station. They are stored in the same list as retailer types. Adding a row adds a choice to onboarding and the organization site-type dropdown.',
+  'sports-categories': 'Sports such as football or cricket, shown as checkboxes on a squad member. A shared sport is available to every tenant. Edit shared rows only as platform super admin.',
+  'tournaments': 'Seasons or cups for a sports-team site. This tile appears only when the organization site type is a sports team.',
+  'homepage-cache': 'Refresh stored homepage content after heroes, events, or sections change and the public page still looks old.',
+  'event-sponsors': 'Sponsor names and logos that can be attached to events.',
+  'tenant-organizations': 'Create and edit tenant organizations: name, domain, and website. Platform super admin only.',
+  'satellite-domains': 'Extra public domains that sign in through this hub. Platform super admin only.',
+  'onboarding-requests': 'New customer applications. Approve one to create a tenant. The site type chosen here decides which tools that tenant sees.',
+  'tenant-settings': 'Homepage sections, hero images, and feature flags for a tenant. Platform super admin only.',
+  'profile-site': 'A personal or hybrid profile site: writings, projects, services, and contact blocks.',
+  'gas-station': 'Tools for gas-station tenants: locations, daily numbers, and recommendations.',
+  'platform-bill': 'What this tenant owes the platform for the software. This is not ticket revenue.',
+  'platform-plans': 'The fee catalog used to charge tenants. Platform super admin only.',
+  'tenant-test': 'Try create and update calls against tenant records. For checking the API, not for everyday content.',
+  'global-performers': 'A shared performer list you can attach to many events.',
+  'global-contacts': 'A shared contact list you can attach to events.',
+  'global-emails': 'Shared email contacts used on events.',
+  'global-directors': 'Shared program directors you can assign to events.',
+  'qr-scanner': 'Scan a ticket QR code at the door and mark that person checked in.',
+  'check-in-analytics': 'Who has arrived compared with who bought a ticket.',
+  'sales-analytics': 'Ticket revenue and sales totals.',
+  'manual-payments': 'Payments that skipped the card form, such as Zelle or Venmo.',
+  'official-documents': 'Official files such as bylaws or notices for the public documents area.',
+  'official-document-categories': 'Folder names those official documents are filed under.',
+  'batch-jobs-dashboard': 'Whether scheduled jobs ran, failed, or are still waiting.',
+  'homepage-youtube-live': 'The live or featured YouTube video on the homepage.',
+  'gallery-youtube-videos': 'YouTube videos that appear in the gallery.',
+  'news-advertisements': 'Turn MD Strikers news advertisements on or off. The main switch hides every slot. When it is on, each of the four news ad rows (top, between sections, and the two sidebars) can be shown or hidden on its own. This tile is only for tenant md_strikers_10.',
+};
 
 export default function AdminPage() {
   const { userId } = useAuth();
   const { isPlatformSuperAdmin, tenantId } = useAdminAccess();
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [isSportsTeam, setIsSportsTeam] = useState(false);
+  const [cursorTip, setCursorTip] = useState<{ text: string; x: number; y: number } | null>(null);
+
+  function moveCursorTip(text: string, event: React.MouseEvent) {
+    const offset = 16;
+    const width = 320;
+    const height = Math.min(240, 56 + Math.ceil(text.length / 48) * 20);
+    let x = event.clientX + offset;
+    let y = event.clientY + offset;
+    if (x + width > window.innerWidth - 8) x = Math.max(8, event.clientX - width - 8);
+    if (y + height > window.innerHeight - 8) y = Math.max(8, event.clientY - height - 8);
+    setCursorTip({ text, x, y });
+  }
 
   useEffect(() => {
     if (!tenantId) {
@@ -35,6 +98,7 @@ export default function AdminPage() {
       href: '/admin',
       icon: 'home',
       label: 'Admin Home',
+      hint: 'Open the admin dashboard',
       color: 'blue',
       key: 'admin-home'
     },
@@ -42,6 +106,7 @@ export default function AdminPage() {
       href: '/admin/manage-usage',
       icon: 'users',
       label: 'Manage Users',
+      hint: 'Edit member user accounts',
       color: 'indigo',
       key: 'manage-usage'
     },
@@ -49,6 +114,7 @@ export default function AdminPage() {
       href: '/admin/manage-events',
       icon: 'calendar',
       label: 'Manage Events',
+      hint: 'Create and edit events',
       color: 'green',
       key: 'manage-events'
     },
@@ -56,6 +122,7 @@ export default function AdminPage() {
       href: '/admin/events/dashboard',
       icon: 'chart',
       label: 'Event Analytics',
+      hint: 'View event attendance stats',
       color: 'teal',
       key: 'event-analytics'
     },
@@ -63,6 +130,7 @@ export default function AdminPage() {
       href: '/admin/events/registrations',
       icon: 'users',
       label: 'Registrations',
+      hint: 'Review event signup lists',
       color: 'purple',
       key: 'event-registrations'
     },
@@ -70,6 +138,7 @@ export default function AdminPage() {
       href: '/admin/polls',
       icon: 'chartBar',
       label: 'Poll Management',
+      hint: 'Create and manage polls',
       color: 'violet',
       key: 'poll-management'
     },
@@ -77,6 +146,7 @@ export default function AdminPage() {
       href: '/admin/focus-groups',
       icon: 'userFriends',
       label: 'Focus Groups',
+      hint: 'Manage discussion focus groups',
       color: 'orange',
       key: 'focus-groups'
     },
@@ -84,6 +154,7 @@ export default function AdminPage() {
       href: '/admin/membership/plans',
       icon: 'addressCard',
       label: 'Membership Plans',
+      hint: 'Set membership plan prices',
       color: 'pink',
       key: 'membership-plans'
     },
@@ -91,6 +162,7 @@ export default function AdminPage() {
       href: '/admin/membership/subscriptions',
       icon: 'fileInvoice',
       label: 'Membership Subscriptions',
+      hint: 'View active member subscriptions',
       color: 'rose',
       key: 'membership-subscriptions'
     },
@@ -98,6 +170,7 @@ export default function AdminPage() {
       href: '/admin/tenant-email-addresses',
       icon: 'mailBulk',
       label: 'Email Addresses',
+      hint: 'Manage tenant email addresses',
       sublabel: '[tenant email ids]',
       color: 'lime',
       key: 'tenant-email-addresses'
@@ -106,6 +179,7 @@ export default function AdminPage() {
       href: '/admin/bulk-email',
       icon: 'envelope',
       label: 'Bulk Email',
+      hint: 'Send bulk email campaigns',
       color: 'yellow',
       key: 'bulk-email'
     },
@@ -113,6 +187,7 @@ export default function AdminPage() {
       href: '/admin/test-stripe',
       icon: 'creditCard',
       label: 'Test Stripe',
+      hint: 'Test Stripe payment flows',
       color: 'fuchsia',
       key: 'test-stripe'
     },
@@ -120,6 +195,7 @@ export default function AdminPage() {
       href: '/admin/media',
       icon: 'image',
       label: 'Media Management',
+      hint: 'Upload and organize media',
       color: 'cyan',
       key: 'media-management'
     },
@@ -127,6 +203,7 @@ export default function AdminPage() {
       href: '/admin/gallery/albums',
       icon: 'photoAlbum',
       label: 'Gallery Albums',
+      hint: 'Manage public photo albums',
       color: 'deepTeal',
       key: 'gallery-albums'
     },
@@ -134,6 +211,7 @@ export default function AdminPage() {
       href: '/admin/executive-committee',
       icon: 'userTie',
       label: 'Executive Committee',
+      hint: 'Edit leadership team roster',
       color: 'amber',
       key: 'executive-committee'
     },
@@ -141,6 +219,7 @@ export default function AdminPage() {
       href: '/admin/team-groups',
       icon: 'userFriends',
       label: 'Squad groups',
+      hint: 'Create squads for a team or band',
       sublabel: 'Sports / bands',
       color: 'squadGroups',
       key: 'team-groups'
@@ -149,6 +228,7 @@ export default function AdminPage() {
       href: '/admin/team-members',
       icon: 'addressCard',
       label: 'Squad roster',
+      hint: 'Add players and their profiles',
       sublabel: 'Members',
       color: 'squadRoster',
       key: 'team-members'
@@ -157,6 +237,7 @@ export default function AdminPage() {
       href: '/admin/roster-catalogs',
       icon: 'listChecks',
       label: 'Roster catalogs',
+      hint: 'Sports, awards, and team types',
       sublabel: 'Sports and types',
       color: 'sky',
       key: 'roster-catalogs'
@@ -165,14 +246,52 @@ export default function AdminPage() {
       href: '/admin/access-catalogs',
       icon: 'keyRound',
       label: 'Access catalogs',
+      hint: 'Roles plus site and shop types',
       sublabel: 'Roles and retailers',
       color: 'accessCatalog',
       key: 'access-catalogs'
     },
     {
+      href: '/admin/access-catalogs#access-roles',
+      icon: 'keyRound',
+      label: 'Access roles',
+      hint: 'Add roles for the admin menu',
+      color: 'accessRolesBtn',
+      key: 'access-roles',
+      platformOnly: true,
+    },
+    {
+      href: '/admin/access-catalogs#retailer-types',
+      icon: 'building',
+      label: 'Retailer types',
+      hint: 'Add shop and brand kinds',
+      color: 'retailerTypesBtn',
+      key: 'retailer-types',
+      platformOnly: true,
+    },
+    {
+      href: '/admin/access-catalogs#retailer-types',
+      icon: 'globe',
+      label: 'Site types',
+      hint: 'Add organization site kinds',
+      color: 'siteTypesBtn',
+      key: 'site-types',
+      platformOnly: true,
+    },
+    {
+      href: '/admin/roster-catalogs#sports-categories',
+      icon: 'listChecks',
+      label: 'Sports categories',
+      hint: 'Add sports for squad members',
+      color: 'sportsCategoryBtn',
+      key: 'sports-categories',
+      platformOnly: true,
+    },
+    {
       href: '/admin/tournaments',
       icon: 'trophy',
       label: 'Tournaments',
+      hint: 'Manage sports tournament editions',
       sublabel: 'Sports editions',
       color: 'tournamentCup',
       key: 'tournaments',
@@ -182,6 +301,7 @@ export default function AdminPage() {
       href: '/admin/homepage-cache',
       icon: 'refresh',
       label: 'Cache records',
+      hint: 'Refresh cached homepage content',
       color: 'cacheRecords',
       key: 'homepage-cache'
     },
@@ -189,6 +309,7 @@ export default function AdminPage() {
       href: '/admin/event-sponsors',
       icon: 'handshake',
       label: 'Event Sponsors',
+      hint: 'Manage event sponsor listings',
       color: 'emerald',
       key: 'event-sponsors'
     },
@@ -196,6 +317,7 @@ export default function AdminPage() {
       href: '/admin/tenant-management/organizations',
       icon: 'building',
       label: 'Organizations',
+      hint: 'Manage tenant organizations',
       color: 'sky',
       key: 'tenant-organizations',
       platformOnly: true,
@@ -204,6 +326,7 @@ export default function AdminPage() {
       href: '/admin/satellite-domains',
       icon: 'globe',
       label: 'Satellite Domains',
+      hint: 'Configure extra site domains',
       color: 'sky',
       key: 'satellite-domains',
       platformOnly: true,
@@ -212,6 +335,7 @@ export default function AdminPage() {
       href: '/admin/onboarding-requests',
       icon: 'userPlus',
       label: 'Onboarding Requests',
+      hint: 'Review new customer signups',
       sublabel: 'New customers',
       color: 'onboardingRequests',
       key: 'onboarding-requests',
@@ -221,6 +345,7 @@ export default function AdminPage() {
       href: '/admin/tenant-management/settings',
       icon: 'cog',
       label: 'Tenant Settings',
+      hint: 'Configure tenant site settings',
       color: 'red',
       key: 'tenant-settings',
       platformOnly: true,
@@ -229,6 +354,7 @@ export default function AdminPage() {
       href: '/admin/profile-site',
       icon: 'users',
       label: 'Personal Profile',
+      hint: 'Edit public profile pages',
       color: 'violet',
       key: 'profile-site'
     },
@@ -236,6 +362,7 @@ export default function AdminPage() {
       href: '/admin/gas-station',
       icon: 'chart',
       label: 'Gas Stations',
+      hint: 'Open gas station tools',
       color: 'orange',
       key: 'gas-station',
       platformOnly: true,
@@ -244,6 +371,7 @@ export default function AdminPage() {
       href: '/admin/billing',
       icon: 'creditCard',
       label: 'Platform Bill',
+      hint: 'View tenant platform invoice',
       color: 'platformBill',
       key: 'platform-bill',
     },
@@ -251,6 +379,7 @@ export default function AdminPage() {
       href: '/admin/platform-billing/plans',
       icon: 'fileInvoice',
       label: 'Billing Plans',
+      hint: 'Manage platform fee plans',
       color: 'platformPlans',
       key: 'platform-plans',
       platformOnly: true,
@@ -259,6 +388,7 @@ export default function AdminPage() {
       href: '/admin/tenant-management/test',
       icon: 'chart',
       label: 'Test CRUD',
+      hint: 'Test tenant record APIs',
       color: 'warmOrange',
       key: 'tenant-test',
       platformOnly: true,
@@ -267,6 +397,7 @@ export default function AdminPage() {
       href: '/admin/event-featured-performers',
       icon: 'microphone',
       label: 'Global Performers',
+      hint: 'Manage shared event performers',
       color: 'coolBlue',
       key: 'global-performers'
     },
@@ -274,6 +405,7 @@ export default function AdminPage() {
       href: '/admin/event-contacts',
       icon: 'phone',
       label: 'Global Contacts',
+      hint: 'Manage shared event contacts',
       color: 'vibrantPurple',
       key: 'global-contacts'
     },
@@ -281,6 +413,7 @@ export default function AdminPage() {
       href: '/admin/event-emails',
       icon: 'mailBulk',
       label: 'Global Emails',
+      hint: 'Manage shared event emails',
       color: 'softPink',
       key: 'global-emails'
     },
@@ -288,6 +421,7 @@ export default function AdminPage() {
       href: '/admin/event-program-directors',
       icon: 'userCheck',
       label: 'Global Directors',
+      hint: 'Manage shared program directors',
       color: 'brightYellow',
       key: 'global-directors'
     },
@@ -295,6 +429,7 @@ export default function AdminPage() {
       href: '/admin/qr-scanner',
       icon: 'qrcode',
       label: 'QR Scanner',
+      hint: 'Scan tickets at check-in',
       color: 'lightCyan',
       key: 'qr-scanner'
     },
@@ -302,6 +437,7 @@ export default function AdminPage() {
       href: '/admin/check-in-analytics',
       icon: 'clipboardCheck',
       label: 'Check-In Analytics',
+      hint: 'Review ticket arrival stats',
       color: 'cyan',
       key: 'check-in-analytics'
     },
@@ -309,6 +445,7 @@ export default function AdminPage() {
       href: '/admin/sales-analytics',
       icon: 'chartLine',
       label: 'Sales Analytics',
+      hint: 'Review ticket sales revenue',
       color: 'sky',
       key: 'sales-analytics'
     },
@@ -316,6 +453,7 @@ export default function AdminPage() {
       href: '/admin/manual-payments',
       icon: 'moneyBill',
       label: 'Manual Payments [Zelle, Venmo…]',
+      hint: 'Record offline manual payments',
       color: 'mintGreen',
       key: 'manual-payments'
     },
@@ -323,6 +461,7 @@ export default function AdminPage() {
       href: '/admin/official-documents',
       icon: 'folderOpen',
       label: 'Official Documents',
+      hint: 'Manage official document files',
       color: 'documentOfficial',
       key: 'official-documents'
     },
@@ -330,6 +469,7 @@ export default function AdminPage() {
       href: '/admin/official-document-categories',
       icon: 'listBullet',
       label: 'Document categories',
+      hint: 'Organize official document types',
       sublabel: 'Official library',
       color: 'docCategories',
       key: 'official-document-categories'
@@ -338,6 +478,7 @@ export default function AdminPage() {
       href: '/admin/batch-jobs',
       icon: 'chartBar',
       label: 'Batch Job Dashboard',
+      hint: 'Monitor scheduled batch jobs',
       color: 'indigo',
       key: 'batch-jobs-dashboard'
     },
@@ -345,6 +486,7 @@ export default function AdminPage() {
       href: '/admin/homepage-youtube-live',
       icon: 'youtube',
       label: 'Homepage YouTube',
+      hint: 'Set homepage live stream',
       color: 'youtubeLive',
       key: 'homepage-youtube-live'
     },
@@ -352,8 +494,19 @@ export default function AdminPage() {
       href: '/admin/gallery-youtube-videos',
       icon: 'youtube',
       label: 'Gallery YouTube',
+      hint: 'Manage gallery video links',
       color: 'galleryVideos',
       key: 'gallery-youtube-videos'
+    },
+    {
+      href: '/admin/news-advertisements',
+      icon: 'newspaper',
+      label: 'News ads',
+      hint: 'Show or hide news page ads',
+      sublabel: 'MD Strikers',
+      color: 'newsAdsBtn',
+      key: 'news-advertisements',
+      strikersOnly: true,
     }
   ];
 
@@ -396,7 +549,12 @@ export default function AdminPage() {
       galleryVideos: 'bg-[#fff1f2] hover:bg-[#ffe4e6] text-[#9f1239]',
       onboardingRequests: 'bg-[#eaf6fb] hover:bg-[#d3ecf7] text-[#075985]',
       platformBill: 'bg-[#ffd8a8] hover:bg-[#ffc078] text-[#d9480f]',
-      platformPlans: 'bg-[#d0ebff] hover:bg-[#a5d8ff] text-[#1864ab]'
+      platformPlans: 'bg-[#d0ebff] hover:bg-[#a5d8ff] text-[#1864ab]',
+      accessRolesBtn: 'bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#0c4a6e]',
+      retailerTypesBtn: 'bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e]',
+      siteTypesBtn: 'bg-[#fae8ff] hover:bg-[#f5d0fe] text-[#86198f]',
+      sportsCategoryBtn: 'bg-[#d1fae5] hover:bg-[#a7f3d0] text-[#065f46]',
+      newsAdsBtn: 'bg-[#e0f7fa] hover:bg-[#b2ebf2] text-[#006064]'
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -439,7 +597,12 @@ export default function AdminPage() {
       galleryVideos: 'bg-[#fecdd3]',
       onboardingRequests: 'bg-[#bfe3f3]',
       platformBill: 'bg-[#ffc078]',
-      platformPlans: 'bg-[#a5d8ff]'
+      platformPlans: 'bg-[#a5d8ff]',
+      accessRolesBtn: 'bg-[#bae6fd]',
+      retailerTypesBtn: 'bg-[#fde68a]',
+      siteTypesBtn: 'bg-[#f5d0fe]',
+      sportsCategoryBtn: 'bg-[#a7f3d0]',
+      newsAdsBtn: 'bg-[#b2ebf2]'
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -482,7 +645,12 @@ export default function AdminPage() {
       galleryVideos: 'text-[#be123c]',
       onboardingRequests: 'text-[#0369a1]',
       platformBill: 'text-[#d9480f]',
-      platformPlans: 'text-[#1864ab]'
+      platformPlans: 'text-[#1864ab]',
+      accessRolesBtn: 'text-[#0369a1]',
+      retailerTypesBtn: 'text-[#b45309]',
+      siteTypesBtn: 'text-[#a21caf]',
+      sportsCategoryBtn: 'text-[#047857]',
+      newsAdsBtn: 'text-[#00838f]'
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -555,6 +723,8 @@ export default function AdminPage() {
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
       case 'userPlus':
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
+      case 'newspaper':
+        return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V9a2 2 0 012-2h2a2 2 0 012 2v9a2 2 0 01-2 2h-2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h6M7 12h6M7 16h4" /></svg>;
       default:
         return null;
     }
@@ -611,28 +781,62 @@ export default function AdminPage() {
           {adminButtons.filter((button) => {
             if ('platformOnly' in button && button.platformOnly && !isPlatformSuperAdmin) return false;
             if ('sportsOnly' in button && button.sportsOnly && !isSportsTeam) return false;
+            if ('strikersOnly' in button && button.strikersOnly && tenantId !== 'md_strikers_10') return false;
             return true;
           }).map((button) => {
             const colorClasses = getColorClasses(button.color);
             const iconBgColor = getIconBgColor(button.color);
             const iconTextColor = getIconTextColor(button.color);
+            const guide = BUTTON_GUIDES[button.key] || button.hint;
 
             return (
               <Link
                 key={button.key}
                 href={button.href}
-                className={`flex flex-col items-center justify-center ${colorClasses} rounded-lg shadow-md p-4 text-xs transition-all group`}
-                title={
-                  'sublabel' in button && button.sublabel
-                    ? `${button.label} ${button.sublabel}`
-                    : button.label
-                }
-                aria-label={
-                  'sublabel' in button && button.sublabel
-                    ? `${button.label} ${button.sublabel}`
-                    : button.label
-                }
+                className={`relative flex flex-col items-center justify-center ${colorClasses} rounded-lg shadow-md p-4 text-xs transition-all group`}
+                aria-label={`${button.label}: ${button.hint}`}
+                onMouseEnter={(event) => moveCursorTip(button.hint, event)}
+                onMouseMove={(event) => moveCursorTip(button.hint, event)}
+                onMouseLeave={() => setCursorTip(null)}
+                onFocus={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  moveCursorTip(button.hint, {
+                    clientX: rect.left + rect.width / 2,
+                    clientY: rect.top + rect.height / 2,
+                  } as React.MouseEvent);
+                }}
+                onBlur={() => setCursorTip(null)}
               >
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Guide for ${button.label}`}
+                  className="absolute top-2 right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-sky-400 text-sm font-bold text-sky-500 hover:border-sky-500 hover:text-sky-600"
+                  onMouseEnter={(event) => {
+                    event.stopPropagation();
+                    moveCursorTip(guide, event);
+                  }}
+                  onMouseMove={(event) => {
+                    event.stopPropagation();
+                    moveCursorTip(guide, event);
+                  }}
+                  onMouseLeave={(event) => {
+                    event.stopPropagation();
+                    setCursorTip(null);
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }
+                  }}
+                >
+                  ?
+                </span>
                 <div className={`flex-shrink-0 w-14 h-14 rounded-xl ${iconBgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
                   {renderIcon(button.icon, `w-10 h-10 ${iconTextColor}`)}
                 </div>
@@ -650,6 +854,16 @@ export default function AdminPage() {
           })}
         </div>
       </div>
+
+      {cursorTip && (
+        <div
+          role="tooltip"
+          className="pointer-events-none fixed z-[80] max-w-[320px] rounded-xl border border-white/20 bg-gradient-to-b from-indigo-800 to-indigo-950 px-3 py-2 text-left text-xs font-semibold leading-snug tracking-wide text-indigo-50 shadow-[0_10px_24px_rgba(49,46,129,0.32)]"
+          style={{ left: cursorTip.x, top: cursorTip.y }}
+        >
+          {cursorTip.text}
+        </div>
+      )}
     </div>
   );
 }

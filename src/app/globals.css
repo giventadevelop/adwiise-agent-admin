@@ -970,6 +970,74 @@ To use a consistent, modern checkbox style with a custom tick mark, use:
   @apply pointer-events-none absolute inset-0 flex items-center justify-center;
 }
 
+/*
+  Global checkbox — same yellow square as /admin/focus-groups/[id]/edit.
+  Applies to every native checkbox, including ones that still use h-4 w-4.
+  .custom-checkbox keeps its SVG tick overlay, so the painted check is turned off there.
+*/
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  flex-shrink: 0;
+  margin: 0;
+  border: 2px solid #9ca3af;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 1.35rem 1.35rem;
+  cursor: pointer;
+  vertical-align: middle;
+  accent-color: #facc15;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #facc15;
+  border-color: #eab308;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l5 5L19 7'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:indeterminate {
+  background-color: #facc15;
+  border-color: #eab308;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: #4b5563;
+}
+
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #facc15;
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input.custom-checkbox:checked,
+input.custom-checkbox:indeterminate {
+  background-image: none;
+}
+
+input.custom-checkbox--yellow {
+  border-width: 4px;
+  border-color: #6b7280;
+}
+
+input.custom-checkbox--yellow:checked {
+  background-color: #eab308;
+  border-color: #eab308;
+  border-width: 4px;
+  background-image: none;
+}
+
 .custom-grid-table {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

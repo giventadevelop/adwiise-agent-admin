@@ -84,21 +84,29 @@ export default function FormField({
 
       case 'checkbox':
         return (
-          <div className="flex items-center">
-            <input
-              id={name}
-              name={name}
-              type="checkbox"
-              checked={Boolean(value)}
-              onChange={onChange}
-              onBlur={onBlur}
-              disabled={disabled}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor={name} className="ml-2 block text-sm text-gray-900">
-              {label}
-            </label>
-          </div>
+          <label htmlFor={name} className="flex items-center gap-3 cursor-pointer">
+            <span className="relative flex items-center justify-center">
+              <input
+                id={name}
+                name={name}
+                type="checkbox"
+                checked={Boolean(value)}
+                onChange={onChange}
+                onBlur={onBlur}
+                disabled={disabled}
+                onClick={(e) => e.stopPropagation()}
+                className="custom-checkbox"
+              />
+              <span className="custom-checkbox-tick">
+                {Boolean(value) && (
+                  <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" strokeWidth="4" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l5 5L19 7" />
+                  </svg>
+                )}
+              </span>
+            </span>
+            <span className="text-sm font-medium text-gray-700 select-none">{label}</span>
+          </label>
         );
 
       default:

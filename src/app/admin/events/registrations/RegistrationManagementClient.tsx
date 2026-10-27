@@ -28,6 +28,7 @@ import {
 } from 'react-icons/fa';
 import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 interface RegistrationManagementClientProps {
   data: RegistrationManagementData;
@@ -374,19 +375,7 @@ export default function RegistrationManagementClient({ data }: RegistrationManag
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header with back button - Moved to top, single line on mobile */}
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
-          <Link
-            href="/admin"
-            className="flex-shrink-0 h-10 sm:h-12 md:h-14 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 flex items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all duration-300 hover:scale-105 px-2 sm:px-3 md:px-6"
-            title="Back to Admin"
-            aria-label="Back to Admin"
-          >
-            <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </div>
-            <span className="font-semibold text-gray-700 dark:text-gray-300 text-[10px] sm:text-xs md:text-sm lg:text-base hidden sm:inline">Back to Admin</span>
-          </Link>
+          <AdminBackButton href="/admin" label="Back to Admin" />
           <div className="flex-1 min-w-0">
             <h1 className="text-sm sm:text-base md:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900 dark:text-white truncate">Registration Management</h1>
             <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 truncate hidden sm:block">
@@ -989,19 +978,7 @@ export default function RegistrationManagementClient({ data }: RegistrationManag
 
         {/* Action Buttons */}
         <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
-          <Link
-            href="/admin/manage-events"
-            className="flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 transition-all duration-300 hover:scale-105"
-            title="Back to Manage Events"
-            aria-label="Back to Manage Events"
-          >
-            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-200 dark:bg-green-800 flex items-center justify-center">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="font-semibold text-green-700 dark:text-green-300 text-xs sm:text-sm lg:text-base whitespace-nowrap">Back to Manage Events</span>
-          </Link>
+          <AdminBackButton href="/admin/manage-events" label="Back to Manage Events" />
           <Link
             href="/admin/event-analytics"
             className="flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-900 dark:hover:bg-teal-800 transition-all duration-300 hover:scale-105"

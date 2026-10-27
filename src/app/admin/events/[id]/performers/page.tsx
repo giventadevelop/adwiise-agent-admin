@@ -12,6 +12,7 @@ import ImageUpload from '@/components/ui/ImageUpload';
 import EventPerformerPosterUploadDialog from '@/components/performers/EventPerformerPosterUploadDialog';
 import EventPerformerMediaGallery from '@/components/performers/EventPerformerMediaGallery';
 import type { EventFeaturedPerformersDTO, EventDetailsDTO } from '@/types';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
   fetchEventFeaturedPerformersServer,
   createEventFeaturedPerformerServer,
@@ -770,19 +771,7 @@ export default function EventPerformersPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '180px' }}>
       {/* Header with back button */}
       <div className="flex items-center mb-6">
-        <Link
-          href={`/admin/events/${eventId}/edit`}
-          className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-          title="Back to Event"
-          aria-label="Back to Event"
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
-            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </div>
-          <span className="font-semibold text-blue-700">Back to Event</span>
-        </Link>
+        <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />
         <div className="ml-4">
           <h1 className="text-3xl font-bold text-gray-900">
             Event Performers
