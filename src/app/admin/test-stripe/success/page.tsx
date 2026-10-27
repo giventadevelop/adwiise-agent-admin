@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { FaCheckCircle, FaArrowLeft, FaHome } from 'react-icons/fa';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 export default async function TestStripeSuccessPage({
   searchParams,
@@ -54,12 +55,7 @@ export default async function TestStripeSuccessPage({
                 <FaArrowLeft />
                 Test Another Payment
               </Link>
-              <Link
-                href="/admin"
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                Back to Admin
-              </Link>
+              <AdminBackButton href="/admin" label="Back to Admin" />
             </div>
           </div>
         </div>

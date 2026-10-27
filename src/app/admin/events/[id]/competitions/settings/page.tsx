@@ -5,6 +5,7 @@ import CompetitionAdminHelpStrip from '@/components/admin/competitions/Competiti
 import EventCompetitionSettingsForm from '@/components/admin/competitions/EventCompetitionSettingsForm';
 import { fetchCompetitionSettingsForEventServer } from '../ApiServerActions';
 import Link from 'next/link';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 export default async function CompetitionSettingsPage(props: {
   params: Promise<{ id: string }> | { id: string };
@@ -26,9 +27,7 @@ export default async function CompetitionSettingsPage(props: {
           <Link href={`/admin/events/${eventId}/competitions/list`} className="text-blue-600 hover:underline">
             ← Competitions catalog
           </Link>
-          <Link href={`/admin/events/${eventId}`} className="text-blue-600 hover:underline">
-            ← Back to event
-          </Link>
+          <AdminBackButton href={`/admin/events/${eventId}`} label="Back to event" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mt-2">
           Competition settings{event?.title ? ` — ${event.title}` : ''}

@@ -5,7 +5,6 @@ import { useAuth } from '@clerk/nextjs';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  FaArrowLeft,
   FaEdit,
   FaImage,
   FaDollarSign,
@@ -20,6 +19,7 @@ import {
   FaTrophy
 } from 'react-icons/fa';
 import type { EventDetailsDTO } from '@/types';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 export default function EventOverviewPage() {
   const { userId } = useAuth();
@@ -91,14 +91,8 @@ export default function EventOverviewPage() {
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
       {/* Header with back button */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Link
-            href="/admin/manage-events"
-            className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
-          >
-            <FaArrowLeft className="mr-2" />
-            Back to Manage Events
-          </Link>
+        <div className="flex items-center gap-4">
+          <AdminBackButton href="/admin/manage-events" label="Back to Manage Events" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               Event Overview

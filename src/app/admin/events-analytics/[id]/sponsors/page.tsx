@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaArrowLeft, FaUserPlus, FaHandshake, FaBan, FaFolderOpen, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaUserPlus, FaHandshake, FaBan, FaFolderOpen, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ import DataTable, { Column } from '@/components/ui/DataTable';
 import Modal, { ConfirmModal } from '@/components/ui/Modal';
 import ImageUpload from '@/components/ui/ImageUpload';
 import type { EventSponsorsDTO, EventSponsorsJoinDTO, EventDetailsDTO } from '@/types';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
   fetchEventSponsorsServer,
   fetchEventSponsorsJoinServer,
@@ -548,13 +549,7 @@ export default function EventSponsorsPage() {
       {/* Header with back button */}
       <div className="flex items-center mb-6">
         <div className="flex items-center">
-          <Link
-            href={`/admin/events/${eventId}/edit`}
-            className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
-          >
-            <FaArrowLeft className="mr-2" />
-            Back to Event
-          </Link>
+          <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               Event Sponsors

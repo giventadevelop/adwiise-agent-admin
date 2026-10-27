@@ -2,12 +2,12 @@
 
 import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { validateOnboardingSubmit } from '@/lib/onboarding/onboardingShared';
 import OnboardingRequestFields, { EMPTY_ONBOARDING_FIELDS, type OnboardingFieldValues } from '../OnboardingRequestFields';
 import { createManualOnboardingRequestServer } from '../ApiServerActions';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
@@ -87,9 +87,7 @@ export default function NewOnboardingRequestClient() {
         <AdminNavigation currentPage="onboarding-requests" />
         <form onSubmit={handleSubmit} noValidate className="bg-white rounded-lg shadow mt-8 p-6 space-y-6">
           <div>
-            <Link href="/admin/onboarding-requests" className="text-sm text-blue-600 hover:underline">
-              ← Back to onboarding requests
-            </Link>
+            <AdminBackButton href="/admin/onboarding-requests" label="Back to onboarding requests" />
             <h1 className="text-2xl font-bold text-gray-900 mt-2">Add onboarding request</h1>
             <p className="text-gray-600 mt-1">
               For customers who reached you by phone or email. The request is saved as PENDING and approved from the review screen.

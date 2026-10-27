@@ -10,6 +10,7 @@ import Image from 'next/image';
 import DeleteConfirmationDialog, { type DeleteStatus } from '@/components/DeleteConfirmationDialog';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
   fetchEventsFilteredServer,
   fetchEventTypesServer,
@@ -437,19 +438,7 @@ export default function ManageEventsPage() {
     <div className="max-w-5xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
       {/* Header with back button */}
       <div className="flex items-center mb-8 gap-4">
-        <Link
-          href="/admin"
-          className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-3 sm:px-6"
-          title="Back to Admin"
-          aria-label="Back to Admin"
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-200 flex items-center justify-center">
-            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </div>
-          <span className="font-semibold text-indigo-700 hidden sm:inline">Back to Admin</span>
-        </Link>
+        <AdminBackButton href="/admin" label="Back to Admin" />
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Manage Events</h1>
           <p className="text-gray-600 text-sm sm:text-base">
