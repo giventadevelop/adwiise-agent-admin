@@ -25,6 +25,7 @@ import {
 import { suggestTenantIdPrefixFromName } from '@/lib/tenantIdGeneration';
 import type { TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import OnboardingRequestFields, { onboardingInputClass, type OnboardingFieldValues } from '../OnboardingRequestFields';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
   approveOnboardingRequestServer,
   checkOnboardingAvailabilityServer,
@@ -323,9 +324,7 @@ export default function OnboardingRequestReviewClient({ initialRequest }: { init
 
         <div className="mt-8 space-y-6">
           <div className="bg-white rounded-lg shadow p-6">
-            <Link href="/admin/onboarding-requests" className="text-sm text-blue-600 hover:underline">
-              ← Back to onboarding requests
-            </Link>
+            <AdminBackButton href="/admin/onboarding-requests" label="Back to onboarding requests" />
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-2">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{request.organizationName}</h1>

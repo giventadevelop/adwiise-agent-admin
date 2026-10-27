@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 import type { AccessRoleDTO, RetailerTypeDTO } from '@/types/accessCatalog';
 import {
@@ -69,7 +69,7 @@ function AccessRoleSection({
   };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+    <section id="access-roles" className="scroll-mt-44 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
       <h2 className="text-xl font-semibold text-gray-900">Access roles</h2>
       <p className="mt-1 mb-4 text-sm text-gray-600">
         A new role can open the admin menu or a location scope from here. Platform super stays limited to the shared catalog.
@@ -225,7 +225,7 @@ function RetailerSection({
   };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+    <section id="retailer-types" className="scroll-mt-44 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
       <h2 className="text-xl font-semibold text-gray-900">Site and retailer types</h2>
       <p className="mt-1 mb-4 text-sm text-gray-600">
         These values are stored as the organization site type. Gas station enterprise, liquor, Dunkin, and Seven-Eleven are already seeded. Add the next kind here.
@@ -339,6 +339,12 @@ export default function AccessCatalogsClient({
 }) {
   const [roles, setRoles] = useState(initialRoles);
   const [retailers, setRetailers] = useState(initialRetailers);
+
+  useEffect(() => {
+    const id = window.location.hash.replace('#', '');
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
   return (
     <div className="space-y-8">
       <AccessRoleSection rows={roles} canEditGlobal={canEditGlobal} onChange={setRoles} />

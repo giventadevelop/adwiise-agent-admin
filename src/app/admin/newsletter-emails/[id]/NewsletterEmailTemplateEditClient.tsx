@@ -24,6 +24,7 @@ import { useTenantSettings } from '@/components/TenantSettingsProvider';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import { buildSiteFooterEmailHtmlFromTenant } from '@/lib/newsletter/siteFooterEmailHtml';
 import type { TenantOrganizationDTO } from '@/types';
+import AdminBackButton from '@/components/admin/AdminBackButton';
 // Event selection is no longer editable for newsletter templates.
 
 interface NewsletterEmailTemplateEditClientProps {
@@ -457,9 +458,7 @@ export default function NewsletterEmailTemplateEditClient({
           <div className="text-center py-8 text-gray-500">
             Template not found
           </div>
-          <Link href="/admin/promotion-emails" className="text-blue-600 hover:underline">
-            ← Back to Promotion Emails
-          </Link>
+          <AdminBackButton href="/admin/promotion-emails" label="Back to Promotion Emails" />
         </div>
       </div>
     );
@@ -471,12 +470,7 @@ export default function NewsletterEmailTemplateEditClient({
 
       <div className="mb-6">
         <div className="flex items-center gap-4">
-          <Link
-            href="/admin/promotion-emails"
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            ← Back to Promotion Emails
-          </Link>
+          <AdminBackButton href="/admin/promotion-emails" label="Back to Promotion Emails" />
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Edit Newsletter Email Template
           </h1>
