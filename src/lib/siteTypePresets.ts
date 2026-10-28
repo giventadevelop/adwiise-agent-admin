@@ -30,6 +30,8 @@ export interface SiteTypePresetSettings {
   showHeaderProjects?: boolean;
   showHeaderFamily?: boolean;
   showHeaderTournament?: boolean;
+  showLeagueStandingsSectionInHomePage?: boolean;
+  showHeaderLeagues?: boolean;
 }
 
 const EVENT_ORG_PRESET: SiteTypePresetSettings = {
@@ -62,6 +64,8 @@ const EVENT_ORG_PRESET: SiteTypePresetSettings = {
   showHeaderProjects: false,
   showHeaderFamily: false,
   showHeaderTournament: false,
+  showLeagueStandingsSectionInHomePage: false,
+  showHeaderLeagues: false,
 };
 
 const SPORTS_PRESET: SiteTypePresetSettings = {
@@ -106,6 +110,8 @@ const PERSONAL_PROFILE_PRESET: SiteTypePresetSettings = {
   showHeaderProjects: true,
   showHeaderFamily: true,
   showHeaderTournament: false,
+  showLeagueStandingsSectionInHomePage: false,
+  showHeaderLeagues: false,
 };
 
 const HYBRID_PRESET: SiteTypePresetSettings = {
@@ -148,6 +154,8 @@ const GAS_STATION_PRESET: SiteTypePresetSettings = {
   showHeaderProjects: false,
   showHeaderFamily: false,
   showHeaderTournament: false,
+  showLeagueStandingsSectionInHomePage: false,
+  showHeaderLeagues: false,
 };
 
 export function getSiteTypePresetSettings(siteType: string, moduleKey?: string | null): SiteTypePresetSettings {

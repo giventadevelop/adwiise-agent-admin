@@ -55,7 +55,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'batch-jobs-dashboard': 'Whether scheduled jobs ran, failed, or are still waiting.',
   'homepage-youtube-live': 'The live or featured YouTube video on the homepage.',
   'gallery-youtube-videos': 'YouTube videos that appear in the gallery.',
-  'news-advertisements': 'Turn MD Strikers news advertisements on or off. The main switch hides every slot. When it is on, each of the four news ad rows (top, between sections, and the two sidebars) can be shown or hidden on its own. This tile is only for tenant md_strikers_10.',
+  'news-advertisements': 'Turn MD Strikers news advertisements on or off. The main switch hides every slot. When it is on, each advertisement on the news page can be shown or hidden on its own. This tile is only for tenant md_strikers_10.',
 };
 
 export default function AdminPage() {
@@ -458,6 +458,22 @@ export default function AdminPage() {
       key: 'manual-payments'
     },
     {
+      href: '/admin/leagues',
+      icon: 'chartBar',
+      label: 'Leagues',
+      hint: 'Clubs, results, and standings',
+      color: 'leagueTables',
+      key: 'leagues'
+    },
+    {
+      href: '/admin/squads',
+      icon: 'userFriends',
+      label: 'Squad membership',
+      hint: 'Put a player on more than one squad',
+      color: 'squadMembership',
+      key: 'squad-membership'
+    },
+    {
       href: '/admin/official-documents',
       icon: 'folderOpen',
       label: 'Official Documents',
@@ -542,6 +558,8 @@ export default function AdminPage() {
       documentOfficial: 'bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#5b21b6]',
       docCategories: 'bg-[#fdf2f8] hover:bg-[#fce7f3] text-[#9d174d]',
       squadGroups: 'bg-[#f3e8ff] hover:bg-[#e9d5ff] text-[#6b21a8]',
+      leagueTables: 'bg-[#fff7ed] hover:bg-[#ffedd5] text-[#9a3412]',
+      squadMembership: 'bg-[#f0fdfa] hover:bg-[#ccfbf1] text-[#115e59]',
       tournamentCup: 'bg-[#ecfeff] hover:bg-[#cffafe] text-[#155e75]',
       squadRoster: 'bg-[#fff1f2] hover:bg-[#ffe4e6] text-[#9f1239]',
       cacheRecords: 'bg-[#ecfeff] hover:bg-[#cffafe] text-[#0e7490]',
@@ -590,6 +608,8 @@ export default function AdminPage() {
       documentOfficial: 'bg-[#ddd6fe]',
       docCategories: 'bg-[#fbcfe8]',
       squadGroups: 'bg-[#e9d5ff]',
+      leagueTables: 'bg-[#ffedd5]',
+      squadMembership: 'bg-[#ccfbf1]',
       tournamentCup: 'bg-[#a5f3fc]',
       squadRoster: 'bg-[#fecdd3]',
       cacheRecords: 'bg-[#a5f3fc]',
@@ -638,6 +658,8 @@ export default function AdminPage() {
       documentOfficial: 'text-violet-600',
       docCategories: 'text-pink-600',
       squadGroups: 'text-[#7c3aed]',
+      leagueTables: 'text-[#c2410c]',
+      squadMembership: 'text-[#0f766e]',
       tournamentCup: 'text-[#0e7490]',
       squadRoster: 'text-[#e11d48]',
       cacheRecords: 'text-[#0891b2]',

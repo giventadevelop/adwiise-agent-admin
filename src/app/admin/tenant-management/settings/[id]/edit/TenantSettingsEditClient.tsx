@@ -92,6 +92,8 @@ export default function TenantSettingsEditClient({
           showEventsSectionInHomePage: settings?.showEventsSectionInHomePage ?? true,
           showTeamMembersSectionInHomePage: settings?.showTeamMembersSectionInHomePage ?? true,
           showSponsorsSectionInHomePage: settings?.showSponsorsSectionInHomePage ?? true,
+          showLeagueStandingsSectionInHomePage: settings?.showLeagueStandingsSectionInHomePage ?? false,
+          showHeaderLeagues: settings?.showHeaderLeagues === true,
           isMembershipSubscriptionEnabled: settings?.isMembershipSubscriptionEnabled ?? false,
           emailFooterHtmlUrl: settings?.emailFooterHtmlUrl || '',
           emailHeaderImageUrl: settings?.emailHeaderImageUrl || '',

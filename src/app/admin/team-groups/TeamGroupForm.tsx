@@ -21,6 +21,7 @@ export default function TeamGroupForm({ group, onSuccess, onCancel }: TeamGroupF
   const [form, setForm] = useState({
     teamType: (group?.teamType as string) || 'SPORTS',
     name: group?.name || '',
+    categoryLabel: group?.categoryLabel || '',
     slug: group?.slug || '',
     sectionLabel: group?.sectionLabel || 'SQUAD',
     headline: group?.headline || '',
@@ -66,6 +67,7 @@ export default function TeamGroupForm({ group, onSuccess, onCancel }: TeamGroupF
       const payload = {
         ...form,
         name: form.name.trim(),
+        categoryLabel: form.categoryLabel.trim() || undefined,
         slug: form.slug.trim() || undefined,
         sectionLabel: form.sectionLabel.trim() || undefined,
         headline: form.headline.trim() || undefined,
@@ -117,6 +119,15 @@ export default function TeamGroupForm({ group, onSuccess, onCancel }: TeamGroupF
           <input
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
+            className="mt-1 w-full border border-gray-400 rounded-xl px-4 py-3"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Category label</label>
+          <input
+            value={form.categoryLabel}
+            onChange={(e) => set('categoryLabel', e.target.value)}
+            placeholder="Kids, Over 40, Over 50"
             className="mt-1 w-full border border-gray-400 rounded-xl px-4 py-3"
           />
         </div>

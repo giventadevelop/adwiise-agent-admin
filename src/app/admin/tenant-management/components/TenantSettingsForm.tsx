@@ -142,6 +142,7 @@ export default function TenantSettingsForm({
       showEventsSectionInHomePage: initialData?.showEventsSectionInHomePage ?? true,
       showTeamMembersSectionInHomePage: initialData?.showTeamMembersSectionInHomePage ?? true,
       showSponsorsSectionInHomePage: initialData?.showSponsorsSectionInHomePage ?? true,
+      showLeagueStandingsSectionInHomePage: initialData?.showLeagueStandingsSectionInHomePage ?? false,
       isMembershipSubscriptionEnabled: initialData?.isMembershipSubscriptionEnabled ?? false,
       // Personal profile homepage sections (PERSONAL_PROFILE / HYBRID site types)
       showPublicProfileHeroSection: initialData?.showPublicProfileHeroSection ?? false,
@@ -170,6 +171,7 @@ export default function TenantSettingsForm({
       showHeaderProjects: initialData?.showHeaderProjects ?? false,
       showHeaderFamily: initialData?.showHeaderFamily ?? false,
       showHeaderTournament: initialData?.showHeaderTournament ?? false,
+      showHeaderLeagues: initialData?.showHeaderLeagues ?? false,
       // Gas station COO module (GAS_STATION site type)
       enableGasStationModule: initialData?.enableGasStationModule ?? false,
       gasAiEngineBaseUrl: initialData?.gasAiEngineBaseUrl || '',
@@ -1047,6 +1049,16 @@ export default function TenantSettingsForm({
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <ToggleSwitch
+                  name="showLeagueStandingsSectionInHomePage"
+                  label="League standings on homepage"
+                  description="Shows each league marked for the homepage. While this is off, the site keeps the table built from recent results."
+                  checked={watchedValues.showLeagueStandingsSectionInHomePage || false}
+                  onChange={(checked) => setValue('showLeagueStandingsSectionInHomePage', checked)}
+                />
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <ToggleSwitch
                   name="isMembershipSubscriptionEnabled"
                   label="Enable Membership Subscription"
                   description="Enable membership subscription functionality"
@@ -1089,6 +1101,7 @@ export default function TenantSettingsForm({
                   ['showHeaderProjects', 'Projects', 'Show Projects (case studies)'],
                   ['showHeaderFamily', 'Family', 'Show Family (spouse, children, parents, siblings)'],
                   ['showHeaderTournament', 'Tournament', 'Show the featured tournament in the header (sports team sites)'],
+                  ['showHeaderLeagues', 'Leagues', 'Show Leagues in the header (sports team sites)'],
                   ['showHeaderLinks', 'Links', 'Show Links (social URLs + external-link writings)'],
                 ] as const
               ).map(([name, label, description]) => (

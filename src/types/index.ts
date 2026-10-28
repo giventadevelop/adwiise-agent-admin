@@ -702,6 +702,10 @@ export interface TenantSettingsDTO {
   showEventsSectionInHomePage?: boolean;
   showTeamMembersSectionInHomePage?: boolean;
   showSponsorsSectionInHomePage?: boolean;
+  /** League standings blocks on the sports homepage. */
+  showLeagueStandingsSectionInHomePage?: boolean;
+  /** Leagues item in the sports header. */
+  showHeaderLeagues?: boolean;
   isMembershipSubscriptionEnabled?: boolean;
   emailFooterHtmlUrl?: string;
   emailHeaderImageUrl?: string;

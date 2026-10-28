@@ -5,8 +5,8 @@ import { useAdminTenantId } from '../AdminTenantContext';
 import { fetchNewsAdVisibility, saveNewsAdVisibility } from './ApiServerActions';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
-  MD_STRIKERS_NEWS_AD_SLOTS,
   MD_STRIKERS_TENANT_ID,
+  type NewsAdSlotRow,
   type NewsAdVisibility,
 } from './newsAdSlots';
 
@@ -72,6 +72,7 @@ export default function NewsAdvertisementsClient() {
   const tenantId = useAdminTenantId();
   const isMdStrikers = tenantId === MD_STRIKERS_TENANT_ID;
   const [settings, setSettings] = useState<NewsAdVisibility | null>(null);
+  const [slots, setSlots] = useState<NewsAdSlotRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -79,6 +80,7 @@ export default function NewsAdvertisementsClient() {
   useEffect(() => {
     if (!isMdStrikers) {
       setSettings(null);
+      setSlots([]);
       setStatus(null);
       return;
     }
@@ -87,6 +89,7 @@ export default function NewsAdvertisementsClient() {
     fetchNewsAdVisibility(tenantId).then((result) => {
       if (cancelled) return;
       setSettings(result.settings);
+      setSlots(result.slots);
       setStatus(result.error);
       setLoading(false);
     });
@@ -106,7 +109,8 @@ export default function NewsAdvertisementsClient() {
       return;
     }
     setSettings(result.settings);
-    setStatus('Saved for MD Strikers.');
+    setSlots(result.slots);
+    setStatus('Saved. The MD Strikers news page will show this the next time it loads.');
   }
 
   return (
@@ -115,7 +119,7 @@ export default function NewsAdvertisementsClient() {
         <AdminBackButton href={`/admin?tenant=${MD_STRIKERS_TENANT_ID}`} label="Back to admin home" />
         <h1 className="mt-3 text-2xl sm:text-3xl font-bold text-indigo-800">News advertisements</h1>
         <p className="mt-2 max-w-3xl text-sm text-gray-600">
-          MD Strikers only. The highlighted switch controls the whole news page. The table below turns each ad slot on or off. Sidebar is listed twice because those are two different ads.
+          MD Strikers only. The highlighted switch controls every advertisement on the news page. Each row is one advertisement already published there.
         </p>
       </div>
 
@@ -160,6 +164,9 @@ export default function NewsAdvertisementsClient() {
                 <h2 className="text-lg font-semibold text-gray-900">Ad slots</h2>
                 <p className="text-sm text-gray-500">One row for each advertisement already on the news page.</p>
               </div>
+              {slots.length === 0 ? (
+                <p className="px-6 py-6 text-sm text-gray-600">No advertisements are published on the MD Strikers news page.</p>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
@@ -171,7 +178,7 @@ export default function NewsAdvertisementsClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {MD_STRIKERS_NEWS_AD_SLOTS.map((slot) => {
+                    {slots.map((slot) => {
                       const key = String(slot.id);
                       const shown = settings.slots[key] !== false;
                       return (
@@ -211,15 +218,17 @@ export default function NewsAdvertisementsClient() {
                   </tbody>
                 </table>
               </div>
+              )}
             </section>
           )}
 
-          {(status || saving) && (
-            <p className={`text-sm ${status?.startsWith('Saved') ? 'text-emerald-700' : status ? 'text-red-600' : 'text-gray-500'}`}>
-              {saving ? 'Saving...' : status}
-            </p>
-          )}
         </div>
+      )}
+
+      {isMdStrikers && !loading && (status || saving) && (
+        <p className={`mt-4 text-sm ${status?.startsWith('Saved') ? 'text-emerald-700' : status ? 'text-red-600' : 'text-gray-500'}`}>
+          {saving ? 'Saving...' : status}
+        </p>
       )}
     </div>
   );

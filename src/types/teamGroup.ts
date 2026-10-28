@@ -5,6 +5,7 @@ export interface TeamGroupDTO {
   id: number | null;
   tenantId?: string;
   teamType: 'SPORTS' | 'MUSIC' | 'OTHER' | string;
+  categoryLabel?: string;
   name: string;
   slug?: string;
   sectionLabel?: string;
