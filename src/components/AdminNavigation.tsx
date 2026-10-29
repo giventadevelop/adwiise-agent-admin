@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useAdminAccess } from '@/app/admin/AdminTenantContext';
+import { useAdminAccess, useAdminTenantId } from '@/app/admin/AdminTenantContext';
+import { getRetailMorningAccess } from '@/app/admin/retail/retailServer';
+import type { RetailLocationScope } from '@/lib/retailAccess';
 
 interface AdminNavigationProps {
   currentPage?: string;
@@ -20,7 +22,19 @@ const PLATFORM_ONLY_NAV_KEYS = new Set([
 
 export default function AdminNavigation({ currentPage, showHome = true }: AdminNavigationProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { isPlatformSuperAdmin } = useAdminAccess();
+  const { isPlatformSuperAdmin, limitNavToRetail } = useAdminAccess();
+  const tenantId = useAdminTenantId();
+  const [retailScope, setRetailScope] = useState<RetailLocationScope | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getRetailMorningAccess(tenantId).then(access => {
+      if (!cancelled) setRetailScope(access.scope);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   // Prevent layout shifts after hydration
   useEffect(() => {
@@ -135,6 +149,22 @@ export default function AdminNavigation({ currentPage, showHome = true }: AdminN
       color: 'orange',
       active: currentPage === 'gas-station',
       key: 'gas-station'
+    },
+    {
+      href: tenantId ? `/admin/retail?tenant=${encodeURIComponent(tenantId)}` : '/admin/retail',
+      icon: 'chart',
+      label: 'Retail morning',
+      color: 'teal',
+      active: currentPage === 'retail',
+      key: 'retail'
+    },
+    {
+      href: tenantId ? `/admin/retail/access?tenant=${encodeURIComponent(tenantId)}` : '/admin/retail/access',
+      icon: 'users',
+      label: 'Retail access',
+      color: 'teal',
+      active: currentPage === 'retail-access',
+      key: 'retail-access'
     },
     {
       href: '/admin/tenant-management/test',
@@ -310,7 +340,13 @@ export default function AdminNavigation({ currentPage, showHome = true }: AdminN
     <div ref={containerRef} className="w-full overflow-hidden box-border admin-navigation-container" style={{ maxWidth: '100%', width: '100%' }}>
       <div className="bg-white rounded-xl shadow-lg p-2.5 sm:p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden box-border" style={{ maxWidth: '100%', width: '100%' }}>
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6 w-full box-border" style={{ maxWidth: '100%', width: '100%' }}>
-          {buttons.filter((button) => isPlatformSuperAdmin || !PLATFORM_ONLY_NAV_KEYS.has(button.key)).map((button) => {
+          {buttons.filter((button) => {
+            if (!isPlatformSuperAdmin && PLATFORM_ONLY_NAV_KEYS.has(button.key)) return false;
+            if (limitNavToRetail && button.key !== 'retail' && button.key !== 'retail-access') return false;
+            if (button.key === 'retail') return retailScope !== 'NONE';
+            if (button.key === 'retail-access') return retailScope === 'ALL';
+            return true;
+          }).map((button) => {
             const colorClasses = getColorClasses(button.color, button.active);
             const iconBgColor = getIconBgColor(button.color);
             const iconTextColor = getIconTextColor(button.color);

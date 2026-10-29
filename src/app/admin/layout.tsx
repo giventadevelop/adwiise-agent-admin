@@ -5,6 +5,7 @@ import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { bootstrapUserProfile } from '@/components/ProfileBootstrapperApiServerActions';
 import { AdminTenantLayoutClient } from './AdminTenantContext';
 import { fetchAdminAccessForClerkUser, resolveSessionTenantForAccess } from './adminAccessServer';
+import { fetchRetailProfilesForClerkUser } from './retail/retailServer';
 import { isPlatformOnlyAdminPath } from '@/lib/adminTenantAccess';
 import { tenantHasLockedPlatformBilling } from '@/app/admin/platform-billing/ApiServerActions';
 
@@ -74,11 +75,27 @@ export default async function AdminLayout({
       redirect('/');
     }
 
-    if (!access.isAdmin) {
+    const retailProfiles = await fetchRetailProfilesForClerkUser(userId, clerkEmail);
+    const retailTenantIds = retailProfiles
+      .map(profile => profile.tenantId?.trim())
+      .filter((tenantId): tenantId is string => Boolean(tenantId));
+    const retailOnly = !access.isAdmin && retailTenantIds.length > 0;
+    if (!access.isAdmin && !retailOnly) {
       console.warn(
         `[AdminLayout] User ${userId} attempted to access admin route but has no ADMIN/SUPER_ADMIN profile.`
       );
       redirect('/');
+    }
+
+    const pathOnlyEarly = pathname.split('?')[0] || '';
+    if (
+      retailOnly &&
+      pathOnlyEarly &&
+      pathOnlyEarly !== '/admin/retail' &&
+      !pathOnlyEarly.startsWith('/admin/retail/')
+    ) {
+      const retailTenant = retailTenantIds[0];
+      redirect(retailTenant ? `/admin/retail?tenant=${encodeURIComponent(retailTenant)}` : '/admin/retail');
     }
 
     if (isPlatformOnlyAdminPath(pathname) && !access.isPlatformSuperAdmin) {
@@ -108,8 +125,9 @@ export default async function AdminLayout({
         showTenantSelector={true}
         isPlatformSuperAdmin={access.isPlatformSuperAdmin}
         canQueryAllTenants={access.canQueryAllTenants}
-        allowedTenantIds={access.allowedTenantIds}
-        defaultTenantId={session.tenantId ?? access.defaultTenantId}
+        allowedTenantIds={Array.from(new Set([...access.allowedTenantIds, ...retailTenantIds]))}
+        defaultTenantId={session.tenantId ?? access.defaultTenantId ?? retailTenantIds[0]}
+        limitNavToRetail={retailOnly}
       >
         {children}
       </AdminTenantLayoutClient>

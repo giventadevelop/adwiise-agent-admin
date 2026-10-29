@@ -10,6 +10,7 @@ export type AdminAccessContextValue = {
   canQueryAllTenants: boolean;
   allowedTenantIds: string[];
   defaultTenantId?: string;
+  limitNavToRetail: boolean;
 };
 
 const AdminAccessContext = createContext<AdminAccessContextValue>({
@@ -17,6 +18,7 @@ const AdminAccessContext = createContext<AdminAccessContextValue>({
   isPlatformSuperAdmin: false,
   canQueryAllTenants: false,
   allowedTenantIds: [],
+  limitNavToRetail: false,
 });
 
 export function useAdminAccess(): AdminAccessContextValue {
@@ -33,6 +35,7 @@ interface AdminTenantLayoutClientProps {
   canQueryAllTenants?: boolean;
   allowedTenantIds?: string[];
   defaultTenantId?: string;
+  limitNavToRetail?: boolean;
   children: React.ReactNode;
 }
 
@@ -104,6 +107,7 @@ export function AdminTenantLayoutClient({
   canQueryAllTenants = false,
   allowedTenantIds = [],
   defaultTenantId,
+  limitNavToRetail = false,
   children,
 }: AdminTenantLayoutClientProps) {
   const pathname = usePathname();
@@ -138,10 +142,9 @@ export function AdminTenantLayoutClient({
       canQueryAllTenants,
       allowedTenantIds,
       defaultTenantId,
+      limitNavToRetail,
     }),
-    [tenantId, isPlatformSuperAdmin, canQueryAllTenants, allowedTenantIds, defaultTenantId],
-  );
-
+    [tenantId, isPlatformSuperAdmin, canQueryAllTenants, allowedTenantIds, defaultTenantId, limitNavToRetail],
   return (
     <AdminAccessContext.Provider value={value}>
       {showTopTenantBar && (

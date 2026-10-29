@@ -45,6 +45,7 @@ export interface RetailLocationDTO {
   tenantId: string;
   locationName: string;
   locationCode: string;
+  retailerTypeCode?: string;
   brand?: string;
   region?: string;
   city?: string;
@@ -112,6 +113,28 @@ export interface RetailRecommendationDTO {
   status?: RetailRecommendationStatus;
   ownerFeedback?: string;
   sourceModelRunId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RetailUserLocationAssignmentDTO {
+  id?: number;
+  tenantId: string;
+  userProfileId: number;
+  locationId: number;
+  assignedByUserProfileId?: number | null;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RetailUserRegionAssignmentDTO {
+  id?: number;
+  tenantId: string;
+  userProfileId: number;
+  region: string;
+  assignedByUserProfileId?: number | null;
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
 }
