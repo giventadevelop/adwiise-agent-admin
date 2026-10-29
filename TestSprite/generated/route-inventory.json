@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-10-24T21:59:33.278Z",
+  "generatedAt": "2026-10-29T15:47:06.044Z",
   "root": "src/app",
-  "totalPages": 410,
-  "totalUniqueRoutes": 410,
+  "totalPages": 417,
+  "totalUniqueRoutes": 417,
   "byKind": {
     "public": 104,
-    "admin": 114,
+    "admin": 121,
     "mosc": 192
   },
   "routes": [
@@ -22,6 +22,13 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/admin/page.tsx"
+    },
+    {
+      "path": "/admin/access-catalogs",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/access-catalogs/page.tsx"
     },
     {
       "path": "/admin/batch-jobs",
@@ -572,6 +579,13 @@
       "sourceFile": "src/app/admin/homepage-youtube-live/page.tsx"
     },
     {
+      "path": "/admin/leagues",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/leagues/page.tsx"
+    },
+    {
       "path": "/admin/manage-events",
       "kind": "admin",
       "dynamic": false,
@@ -630,6 +644,13 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/admin/membership/subscriptions/page.tsx"
+    },
+    {
+      "path": "/admin/news-advertisements",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/news-advertisements/page.tsx"
     },
     {
       "path": "/admin/newsletter-emails",
@@ -748,6 +769,27 @@
       "sourceFile": "src/app/admin/qrcode-scan/tickets/events/[eventId]/transactions/[transactionId]/page.tsx"
     },
     {
+      "path": "/admin/retail",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/retail/page.tsx"
+    },
+    {
+      "path": "/admin/retail/access",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/retail/access/page.tsx"
+    },
+    {
+      "path": "/admin/roster-catalogs",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/roster-catalogs/page.tsx"
+    },
+    {
       "path": "/admin/sales-analytics",
       "kind": "admin",
       "dynamic": false,
@@ -760,6 +802,13 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/admin/satellite-domains/page.tsx"
+    },
+    {
+      "path": "/admin/squads",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/squads/page.tsx"
     },
     {
       "path": "/admin/team-groups",
