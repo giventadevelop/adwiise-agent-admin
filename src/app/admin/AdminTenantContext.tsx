@@ -145,6 +145,8 @@ export function AdminTenantLayoutClient({
       limitNavToRetail,
     }),
     [tenantId, isPlatformSuperAdmin, canQueryAllTenants, allowedTenantIds, defaultTenantId, limitNavToRetail],
+  );
+
   return (
     <AdminAccessContext.Provider value={value}>
       {showTopTenantBar && (
