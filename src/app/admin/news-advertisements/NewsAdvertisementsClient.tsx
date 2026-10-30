@@ -5,7 +5,6 @@ import { useAdminTenantId } from '../AdminTenantContext';
 import { fetchNewsAdVisibility, saveNewsAdVisibility } from './ApiServerActions';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
-  MD_STRIKERS_TENANT_ID,
   type NewsAdSlotRow,
   type NewsAdVisibility,
 } from './newsAdSlots';
@@ -70,7 +69,6 @@ function Switch({
 
 export default function NewsAdvertisementsClient() {
   const tenantId = useAdminTenantId();
-  const isMdStrikers = tenantId === MD_STRIKERS_TENANT_ID;
   const [settings, setSettings] = useState<NewsAdVisibility | null>(null);
   const [slots, setSlots] = useState<NewsAdSlotRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,10 +76,11 @@ export default function NewsAdvertisementsClient() {
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isMdStrikers) {
+    if (!tenantId) {
       setSettings(null);
       setSlots([]);
       setStatus(null);
+      setLoading(false);
       return;
     }
     let cancelled = false;
@@ -96,7 +95,7 @@ export default function NewsAdvertisementsClient() {
     return () => {
       cancelled = true;
     };
-  }, [isMdStrikers, tenantId]);
+  }, [tenantId]);
 
   async function persist(next: NewsAdVisibility) {
     setSettings(next);
@@ -110,30 +109,30 @@ export default function NewsAdvertisementsClient() {
     }
     setSettings(result.settings);
     setSlots(result.slots);
-    setStatus('Saved. The MD Strikers news page will show this the next time it loads.');
+    setStatus('Saved. The news page will show this the next time it loads.');
   }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8" style={{ paddingTop: '120px' }}>
       <div className="mb-6">
-        <AdminBackButton href={`/admin?tenant=${MD_STRIKERS_TENANT_ID}`} label="Back to admin home" />
+        <AdminBackButton href={tenantId ? `/admin?tenant=${encodeURIComponent(tenantId)}` : '/admin'} label="Back to admin home" />
         <h1 className="mt-3 text-2xl sm:text-3xl font-bold text-indigo-800">News advertisements</h1>
         <p className="mt-2 max-w-3xl text-sm text-gray-600">
-          MD Strikers only. The highlighted switch controls every advertisement on the news page. Each row is one advertisement already published there.
+          The highlighted switch controls every advertisement on this tenant&apos;s news page. Each row is one advertisement already published there.
         </p>
       </div>
 
-      {!isMdStrikers && (
+      {!tenantId && (
         <div className="bg-white rounded-lg shadow-md p-6 text-gray-700">
-          Select tenant {MD_STRIKERS_TENANT_ID} to change news advertisements. This page does not change any other organization.
+          Select a tenant to change news advertisements.
         </div>
       )}
 
-      {isMdStrikers && loading && (
+      {tenantId && loading && (
         <div className="bg-white rounded-lg shadow-md p-6 text-gray-600">Loading news advertisement switches...</div>
       )}
 
-      {isMdStrikers && !loading && settings && (
+      {tenantId && !loading && settings && (
         <div className="space-y-6">
           <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-700 shadow-lg">
             <div className="flex flex-col gap-6 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-7">
@@ -165,7 +164,7 @@ export default function NewsAdvertisementsClient() {
                 <p className="text-sm text-gray-500">One row for each advertisement already on the news page.</p>
               </div>
               {slots.length === 0 ? (
-                <p className="px-6 py-6 text-sm text-gray-600">No advertisements are published on the MD Strikers news page.</p>
+                <p className="px-6 py-6 text-sm text-gray-600">No advertisements are published on this tenant&apos;s news page.</p>
               ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -225,7 +224,7 @@ export default function NewsAdvertisementsClient() {
         </div>
       )}
 
-      {isMdStrikers && !loading && (status || saving) && (
+      {tenantId && !loading && (status || saving) && (
         <p className={`mt-4 text-sm ${status?.startsWith('Saved') ? 'text-emerald-700' : status ? 'text-red-600' : 'text-gray-500'}`}>
           {saving ? 'Saving...' : status}
         </p>

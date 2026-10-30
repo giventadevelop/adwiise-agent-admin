@@ -1,18 +1,14 @@
 'use server';
 
-import { promises as fs } from 'fs';
-import path from 'path';
 import { resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import { fetchWithJwtRetry } from '@/lib/proxyHandler';
+import { getApiBaseUrl } from '@/lib/env';
 import {
-  MD_STRIKERS_TENANT_ID,
   newsAdPositionLabel,
   normalizeNewsAdVisibility,
-  slotIsShown,
   type NewsAdSlotRow,
   type NewsAdVisibility,
 } from './newsAdSlots';
-
-const STORE_PATH = path.join(process.cwd(), 'data', 'md-strikers-10-news-ad-visibility.json');
 
 export type NewsAdVisibilityResult = {
   settings: NewsAdVisibility | null;
@@ -27,30 +23,6 @@ function strapiBase(): string {
 
 function strapiToken(): string {
   return process.env.STRAPI_API_TOKEN || process.env.AMPLIFY_STRAPI_API_TOKEN || '';
-}
-
-async function requireMdStrikersTenant(requested?: string): Promise<string> {
-  const tenant = await resolveAdminMutationTenantId(requested);
-  if (tenant !== MD_STRIKERS_TENANT_ID) {
-    throw new Error('News advertisement switches are only available for MD Strikers.');
-  }
-  return tenant;
-}
-
-async function readStore(): Promise<NewsAdVisibility> {
-  try {
-    const raw = await fs.readFile(STORE_PATH, 'utf8');
-    return normalizeNewsAdVisibility(JSON.parse(raw));
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') return normalizeNewsAdVisibility(null);
-    throw error;
-  }
-}
-
-async function writeStore(settings: NewsAdVisibility): Promise<void> {
-  await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
-  await fs.writeFile(STORE_PATH, JSON.stringify(normalizeNewsAdVisibility(settings), null, 2), 'utf8');
 }
 
 async function strapiJson(pathAndQuery: string, init?: RequestInit): Promise<{ ok: boolean; status: number; body: unknown }> {
@@ -90,11 +62,20 @@ function mapSlot(raw: Record<string, unknown>): NewsAdSlotRow | null {
     position,
     label: newsAdPositionLabel(position),
     priority: Number(attrs.priority ?? 0),
+    isVisible: attrs.isVisible !== false,
   };
 }
 
-async function fetchStrapiSlots(): Promise<NewsAdSlotRow[]> {
-  const query = `/advertisement-slots?filters[tenant][tenantId][$eq]=${encodeURIComponent(MD_STRIKERS_TENANT_ID)}&pagination[pageSize]=50&sort=priority:asc`;
+function listRows(data: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(data)) return data as Array<Record<string, unknown>>;
+  if (data && typeof data === 'object' && Array.isArray((data as { content?: unknown }).content)) {
+    return (data as { content: Array<Record<string, unknown>> }).content;
+  }
+  return [];
+}
+
+async function fetchStrapiSlots(tenantId: string): Promise<NewsAdSlotRow[]> {
+  const query = `/advertisement-slots?filters[tenant][tenantId][$eq]=${encodeURIComponent(tenantId)}&pagination[pageSize]=50&sort=priority:asc`;
   const result = await strapiJson(query);
   if (!result.ok) {
     throw new Error('Could not load the advertisements from the news page.');
@@ -107,25 +88,70 @@ async function fetchStrapiSlots(): Promise<NewsAdSlotRow[]> {
     .sort((a, b) => a.priority - b.priority || a.id - b.id);
 }
 
-async function publishVisibility(settings: NewsAdVisibility, slots: NewsAdSlotRow[]): Promise<void> {
-  for (const slot of slots) {
-    const isVisible = slotIsShown(settings, slot.id);
-    const result = await strapiJson(`/advertisement-slots/${encodeURIComponent(slot.documentId)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ data: { isVisible } }),
-    });
-    if (!result.ok) {
-      throw new Error('The switch was saved, but the news page did not accept the change. Restart Strapi if this is the first time the visibility field is used.');
+async function fetchTenantAdFlag(tenantId: string): Promise<{ id: number; adsEnabled: boolean }> {
+  const response = await fetchWithJwtRetry(
+    `${getApiBaseUrl()}/api/tenant-settings?tenantId.equals=${encodeURIComponent(tenantId)}&size=1`,
+    {
+      cache: 'no-store',
+      headers: { 'X-Tenant-ID': tenantId },
     }
+  );
+  if (!response.ok) {
+    throw new Error('Could not load news advertisement settings for this tenant.');
   }
+  const row = listRows(await response.json())[0];
+  const id = Number(row?.id);
+  if (!id) {
+    throw new Error('This tenant has no settings row for news advertisements.');
+  }
+  return { id, adsEnabled: row.showNewsAdvertisements !== false };
+}
+
+async function saveTenantAdFlag(tenantId: string, settingsId: number, adsEnabled: boolean): Promise<void> {
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-settings/${settingsId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/merge-patch+json',
+      'X-Tenant-ID': tenantId,
+    },
+    body: JSON.stringify({
+      id: settingsId,
+      tenantId,
+      showNewsAdvertisements: adsEnabled,
+      updatedAt: new Date().toISOString(),
+    }),
+  });
+  if (!response.ok) {
+    throw new Error('Could not save the news advertisement switch for this tenant.');
+  }
+}
+
+async function publishSlot(slot: NewsAdSlotRow, isVisible: boolean): Promise<void> {
+  if (slot.isVisible === isVisible) return;
+  const result = await strapiJson(`/advertisement-slots/${encodeURIComponent(slot.documentId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ data: { isVisible } }),
+  });
+  if (!result.ok) {
+    throw new Error('The switch was saved, but the news page did not accept the change. Restart Strapi if this is the first time the visibility field is used.');
+  }
+}
+
+function visibilityFrom(adsEnabled: boolean, slots: NewsAdSlotRow[]): NewsAdVisibility {
+  return normalizeNewsAdVisibility(
+    {
+      adsEnabled,
+      slots: Object.fromEntries(slots.map((slot) => [String(slot.id), slot.isVisible])),
+    },
+    slots.map((slot) => String(slot.id))
+  );
 }
 
 export async function fetchNewsAdVisibility(tenantId?: string): Promise<NewsAdVisibilityResult> {
   try {
-    await requireMdStrikersTenant(tenantId);
-    const [stored, slots] = await Promise.all([readStore(), fetchStrapiSlots()]);
-    const settings = normalizeNewsAdVisibility(stored, slots.map((slot) => String(slot.id)));
-    return { settings, slots, error: null };
+    const tenant = await resolveAdminMutationTenantId(tenantId);
+    const [flag, slots] = await Promise.all([fetchTenantAdFlag(tenant), fetchStrapiSlots(tenant)]);
+    return { settings: visibilityFrom(flag.adsEnabled, slots), slots, error: null };
   } catch (error) {
     return {
       settings: null,
@@ -140,12 +166,18 @@ export async function saveNewsAdVisibility(
   settings: NewsAdVisibility
 ): Promise<NewsAdVisibilityResult> {
   try {
-    await requireMdStrikersTenant(tenantId);
-    const slots = await fetchStrapiSlots();
+    const tenant = await resolveAdminMutationTenantId(tenantId);
+    const [flag, slots] = await Promise.all([fetchTenantAdFlag(tenant), fetchStrapiSlots(tenant)]);
     const next = normalizeNewsAdVisibility(settings, slots.map((slot) => String(slot.id)));
-    await writeStore(next);
-    await publishVisibility(next, slots);
-    return { settings: next, slots, error: null };
+    await saveTenantAdFlag(tenant, flag.id, next.adsEnabled);
+    for (const slot of slots) {
+      await publishSlot(slot, next.slots[String(slot.id)] !== false);
+    }
+    const savedSlots = slots.map((slot) => ({
+      ...slot,
+      isVisible: next.slots[String(slot.id)] !== false,
+    }));
+    return { settings: visibilityFrom(next.adsEnabled, savedSlots), slots: savedSlots, error: null };
   } catch (error) {
     return {
       settings: null,

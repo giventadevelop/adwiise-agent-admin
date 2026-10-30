@@ -1,56 +1,61 @@
-"use server";
+'use server';
 
 import {
   associateEventWithFocusGroup,
   unlinkEventFromFocusGroup,
 } from '@/app/admin/focus-groups/[id]/edit/ApiServerActions';
+import { appendAdminTenantFilter } from '@/app/admin/adminAccessServer';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import { getAppUrl } from '@/lib/env';
+import { getBackendApiUrl } from '@/lib/env';
 import type { EventFocusGroupDTO, FocusGroupDTO } from '@/types';
 
-function normalizeEventFocusGroups(data: unknown): EventFocusGroupDTO[] {
-  if (Array.isArray(data)) return data as EventFocusGroupDTO[];
+function normalizeList<T>(data: unknown, embeddedKey?: string): T[] {
+  if (Array.isArray(data)) return data as T[];
   if (data && typeof data === 'object') {
-    const o = data as { content?: unknown; _embedded?: { eventFocusGroups?: unknown } };
-    if (Array.isArray(o.content)) return o.content as EventFocusGroupDTO[];
-    if (Array.isArray(o._embedded?.eventFocusGroups)) {
-      return o._embedded!.eventFocusGroups as EventFocusGroupDTO[];
+    const o = data as { content?: unknown; _embedded?: Record<string, unknown> };
+    if (Array.isArray(o.content)) return o.content as T[];
+    if (embeddedKey && Array.isArray(o._embedded?.[embeddedKey])) {
+      return o._embedded![embeddedKey] as T[];
     }
   }
   return [];
 }
 
 /**
- * Fetch event-focus-groups associations for this event (for event-centric admin page).
- * Uses proxy + fetchWithJwtRetry per event-site-manager nextjs_api_routes rules.
+ * Fetch event-focus-groups associations for this event (admin listing).
+ * Direct backend + JWT; tenant filter via appendAdminTenantFilter.
  */
 export async function fetchLinkedEventFocusGroupsServer(
-  eventId: number
+  eventId: number,
+  tenantId?: string
 ): Promise<EventFocusGroupDTO[]> {
-  const baseUrl = getAppUrl();
-  const params = new URLSearchParams({
-    'eventId.equals': String(eventId),
-    size: '100',
-  });
+  const params = new URLSearchParams();
+  params.set('eventId.equals', String(eventId));
+  params.set('size', '100');
+  await appendAdminTenantFilter(params, tenantId);
   const res = await fetchWithJwtRetry(
-    `${baseUrl}/api/proxy/event-focus-groups?${params.toString()}`,
+    `${getBackendApiUrl()}/api/event-focus-groups?${params.toString()}`,
     { cache: 'no-store' }
   );
   if (!res.ok) return [];
-  return normalizeEventFocusGroups(await res.json());
+  return normalizeList<EventFocusGroupDTO>(await res.json(), 'eventFocusGroups');
 }
 
 /**
- * Fetch all focus groups (for "Link focus group" dropdown).
- * Do not add tenantId.equals — proxy injects it.
+ * Fetch focus groups for the "Link focus group" dropdown.
+ * Direct backend + JWT; respects selected tenant / all-tenants admin cache.
  */
-export async function fetchAllFocusGroupsServer(): Promise<FocusGroupDTO[]> {
-  const baseUrl = getAppUrl();
-  const url = `${baseUrl}/api/proxy/focus-groups?size=500&sort=name,asc`;
-  const res = await fetchWithJwtRetry(url, { cache: 'no-store' });
+export async function fetchAllFocusGroupsServer(tenantId?: string): Promise<FocusGroupDTO[]> {
+  const params = new URLSearchParams();
+  params.set('size', '500');
+  params.set('sort', 'name,asc');
+  await appendAdminTenantFilter(params, tenantId);
+  const res = await fetchWithJwtRetry(
+    `${getBackendApiUrl()}/api/focus-groups?${params.toString()}`,
+    { cache: 'no-store' }
+  );
   if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data) ? data : [data];
+  return normalizeList<FocusGroupDTO>(await res.json(), 'focusGroups');
 }
 
 /**

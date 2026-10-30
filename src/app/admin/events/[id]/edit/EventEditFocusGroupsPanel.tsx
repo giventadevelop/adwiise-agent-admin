@@ -12,22 +12,38 @@ import {
 
 type Props = {
   eventId: number;
+  /** Preloaded on the server page to avoid mount server-action POSTs */
+  initialFocusGroups?: FocusGroupDTO[];
+  initialLinkedFocusGroups?: EventFocusGroupDTO[];
 };
 
 /**
  * Compact focus-group selector for the event edit page.
  * Selecting a group creates an event_focus_groups row so the event appears on that group's public page.
  */
-export default function EventEditFocusGroupsPanel({ eventId }: Props) {
-  const [allGroups, setAllGroups] = useState<FocusGroupDTO[]>([]);
-  const [linked, setLinked] = useState<EventFocusGroupDTO[]>([]);
+export default function EventEditFocusGroupsPanel({
+  eventId,
+  initialFocusGroups,
+  initialLinkedFocusGroups,
+}: Props) {
+  const hasInitial =
+    Array.isArray(initialFocusGroups) && Array.isArray(initialLinkedFocusGroups);
+  const [allGroups, setAllGroups] = useState<FocusGroupDTO[]>(() =>
+    hasInitial
+      ? initialFocusGroups!.filter((g) => g.id != null && g.isActive !== false)
+      : []
+  );
+  const [linked, setLinked] = useState<EventFocusGroupDTO[]>(() =>
+    hasInitial ? initialLinkedFocusGroups! : []
+  );
   const [selectedId, setSelectedId] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasInitial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (hasInitial) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -48,7 +64,7 @@ export default function EventEditFocusGroupsPanel({ eventId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, hasInitial]);
 
   const linkedIds = new Set(linked.map((l) => l.focusGroupId));
   const candidates = allGroups.filter((g) => g.id != null && !linkedIds.has(g.id!));

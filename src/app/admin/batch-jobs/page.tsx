@@ -60,7 +60,10 @@ export default async function BatchJobsPage() {
           </p>
         </div>
       </div>
-      <RetailSampleRunPanel />
+      <div className="mb-8">
+        <RetailSampleRunPanel />
+      </div>
+      <BatchJobsClient
         initialSummary={summary}
         initialExecutions={executions}
         initialTotalCount={totalCount}

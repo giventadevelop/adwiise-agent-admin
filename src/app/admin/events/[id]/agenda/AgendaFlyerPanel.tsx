@@ -14,9 +14,17 @@ function todayIsoDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function AgendaFlyerPanel({ eventId }: { eventId: string | number }) {
-  const [flyer, setFlyer] = useState<EventMediaDTO | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function AgendaFlyerPanel({
+  eventId,
+  initialFlyer,
+}: {
+  eventId: string | number;
+  /** Preloaded on the server page to avoid mount server-action POSTs */
+  initialFlyer?: EventMediaDTO | null;
+}) {
+  const hasInitial = initialFlyer !== undefined;
+  const [flyer, setFlyer] = useState<EventMediaDTO | null>(hasInitial ? initialFlyer : null);
+  const [loading, setLoading] = useState(!hasInitial);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,8 +43,9 @@ export default function AgendaFlyerPanel({ eventId }: { eventId: string | number
   }, [eventId]);
 
   useEffect(() => {
+    if (hasInitial) return;
     void loadFlyer();
-  }, [loadFlyer]);
+  }, [loadFlyer, hasInitial]);
 
   const handleUpload = async (file: File) => {
     const eventIdNum = Number(eventId);

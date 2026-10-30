@@ -4,6 +4,13 @@ import React, { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
+import MorningMetricTile from '@/components/retail/MorningMetricTile';
+import {
+  METRIC_TILES,
+  ORIGIN_CHIP_STYLES,
+  categoryDisplayLabel,
+  originForRecommendationCategory,
+} from '@/lib/retail/metricDisplay';
 import { useAdminTenantId } from '../AdminTenantContext';
 import TenantSiteTypePicker from '../TenantSiteTypePicker';
 import type {
@@ -41,10 +48,6 @@ export type UpdateGasStationRecommendation = (
 function formatUsd(value?: number | null): string {
   if (value == null) return '—';
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-}
-
-function categoryLabel(category: string): string {
-  return category.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase());
 }
 
 export default function GasStationDashboardClient({
@@ -104,7 +107,9 @@ export default function GasStationDashboardClient({
     return {
       expectedProfit: sum((m) => m.expectedProfitUsd),
       fuelGallons: sum((m) => m.fuelGallonsSold),
+      fuelRevenue: sum((m) => m.fuelRevenueUsd),
       inStoreSales: sum((m) => m.inStoreSalesUsd),
+      transactions: sum((m) => m.transactionsCount),
       laborCost: sum((m) => m.laborCostUsd),
       wasteCost: sum((m) => (m.wasteCostUsd ?? 0) + (m.shrinkCostUsd ?? 0)),
       hasData: visibleMetrics.length > 0,
@@ -153,6 +158,8 @@ export default function GasStationDashboardClient({
 
   const renderRecCard = (rec: GasStationRecommendationDTO) => {
     const expanded = expandedId === rec.id;
+    const isChain = rec.stationId == null;
+    const origin = originForRecommendationCategory(rec.category, { isChain });
     return (
       <div
         key={rec.id}
@@ -164,9 +171,19 @@ export default function GasStationDashboardClient({
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-semibold ${CATEGORY_STYLES[rec.category] ?? CATEGORY_STYLES.OTHER}`}
               >
-                {categoryLabel(rec.category)}
+                {categoryDisplayLabel(rec.category)}
               </span>
-              {rec.stationId == null && (
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ORIGIN_CHIP_STYLES[origin]}`}
+                title={
+                  isChain
+                    ? 'This card compares stores across the chain for this brief date.'
+                    : `This action is driven by ${origin.toLowerCase()} data for this store.`
+                }
+              >
+                {origin}
+              </span>
+              {isChain && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-800">
                   Chain-level
                 </span>
@@ -333,37 +350,46 @@ export default function GasStationDashboardClient({
               {isPending && <span className="text-sm text-gray-500 pb-2">Loading…</span>}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:col-span-1 col-span-2">
-                <p className="text-sm text-gray-500">Today&apos;s expected profit</p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {headline.hasData ? formatUsd(headline.expectedProfit) : '—'}
-                </p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-                <p className="text-sm text-gray-500">Fuel gallons</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {headline.hasData ? headline.fuelGallons.toLocaleString() : '—'}
-                </p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-                <p className="text-sm text-gray-500">In-store sales</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {headline.hasData ? formatUsd(headline.inStoreSales) : '—'}
-                </p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-                <p className="text-sm text-gray-500">Labor cost</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {headline.hasData ? formatUsd(headline.laborCost) : '—'}
-                </p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-                <p className="text-sm text-gray-500">Waste + shrink</p>
-                <p className="text-xl font-semibold text-red-600">
-                  {headline.hasData ? formatUsd(headline.wasteCost) : '—'}
-                </p>
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <MorningMetricTile
+                copy={METRIC_TILES.expectedProfit}
+                value={formatUsd(headline.expectedProfit)}
+                hasData={headline.hasData}
+                wide
+                valueTone="profit"
+                valueClassName="text-2xl font-bold"
+              />
+              <MorningMetricTile
+                copy={METRIC_TILES.fuelGallons}
+                value={headline.fuelGallons.toLocaleString()}
+                hasData={headline.hasData}
+              />
+              <MorningMetricTile
+                copy={METRIC_TILES.fuelRevenue}
+                value={formatUsd(headline.fuelRevenue)}
+                hasData={headline.hasData}
+              />
+              <MorningMetricTile
+                copy={METRIC_TILES.inStoreSales}
+                value={formatUsd(headline.inStoreSales)}
+                hasData={headline.hasData}
+              />
+              <MorningMetricTile
+                copy={METRIC_TILES.transactions}
+                value={headline.transactions.toLocaleString()}
+                hasData={headline.hasData}
+              />
+              <MorningMetricTile
+                copy={METRIC_TILES.laborCost}
+                value={formatUsd(headline.laborCost)}
+                hasData={headline.hasData}
+              />
+              <MorningMetricTile
+                copy={METRIC_TILES.wasteShrink}
+                value={formatUsd(headline.wasteCost)}
+                hasData={headline.hasData}
+                valueTone="alert"
+              />
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">

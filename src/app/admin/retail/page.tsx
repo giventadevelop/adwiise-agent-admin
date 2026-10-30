@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
+import MorningMetricTile from '@/components/retail/MorningMetricTile';
+import {
+  METRIC_TILES,
+  ORIGIN_CHIP_STYLES,
+  categoryDisplayLabel,
+  originForRecommendationCategory,
+} from '@/lib/retail/metricDisplay';
 import { useAdminTenantId } from '../AdminTenantContext';
 import TenantSiteTypePicker from '../TenantSiteTypePicker';
 import type { RetailDailyMetricsDTO, RetailFuelDayDTO, RetailLocationDTO, RetailRecommendationDTO } from '@/types/retail';
@@ -22,6 +29,11 @@ const GAS_PACKS = new Set(['GAS_STATION', 'GAS_STATION_ENT']);
 function formatUsd(value?: number | null): string {
   if (value == null) return '—';
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+}
+
+function formatCount(value?: number | null): string {
+  if (value == null) return '—';
+  return value.toLocaleString();
 }
 
 export default function RetailMorningPage() {
@@ -172,20 +184,68 @@ export default function RetailMorningPage() {
             </div>
 
             {selected && (
-              <div className="bg-white rounded-lg shadow-md p-4">
-                <p className="text-lg font-semibold text-gray-900">
-                  {selected.locationName} · {selected.locationCode}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Pack {selected.retailerTypeCode || 'not set'}
-                  {selected.region ? ` · Region ${selected.region}` : ''}
-                </p>
-                <p className="mt-3 text-gray-800">Sales {formatUsd(metric?.salesUsd)}</p>
-                {sellsFuel ? (
-                  <p className="mt-2 text-gray-800">
-                    Fuel day: {fuel?.fuelGallonsSold != null ? `${fuel.fuelGallonsSold} gallons` : 'no fuel day yet'}
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg shadow-md p-4">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selected.locationName} · {selected.locationCode}
                   </p>
-                ) : null}
+                  <p className="text-sm text-gray-600">
+                    Pack {selected.retailerTypeCode || 'not set'}
+                    {selected.region ? ` · Region ${selected.region}` : ''}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    One brief date, one store. Day numbers come from the register and, for gas packs, the fuel controller.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <MorningMetricTile
+                    copy={METRIC_TILES.inStoreSales}
+                    value={formatUsd(metric?.salesUsd)}
+                    hasData={metric?.salesUsd != null}
+                  />
+                  <MorningMetricTile
+                    copy={METRIC_TILES.transactions}
+                    value={formatCount(metric?.transactionsCount)}
+                    hasData={metric?.transactionsCount != null}
+                  />
+                  {sellsFuel && (
+                    <>
+                      <MorningMetricTile
+                        copy={METRIC_TILES.fuelGallons}
+                        value={
+                          fuel?.fuelGallonsSold != null
+                            ? fuel.fuelGallonsSold.toLocaleString()
+                            : 'no fuel day yet'
+                        }
+                        hasData={fuel?.fuelGallonsSold != null}
+                      />
+                      <MorningMetricTile
+                        copy={METRIC_TILES.fuelRevenue}
+                        value={formatUsd(fuel?.fuelRevenueUsd)}
+                        hasData={fuel?.fuelRevenueUsd != null}
+                      />
+                    </>
+                  )}
+                  {(metric?.laborCostUsd != null || metric?.expectedProfitUsd != null) && (
+                    <>
+                      {metric?.laborCostUsd != null && (
+                        <MorningMetricTile
+                          copy={METRIC_TILES.laborCost}
+                          value={formatUsd(metric.laborCostUsd)}
+                          hasData
+                        />
+                      )}
+                      {metric?.expectedProfitUsd != null && (
+                        <MorningMetricTile
+                          copy={METRIC_TILES.expectedProfit}
+                          value={formatUsd(metric.expectedProfitUsd)}
+                          hasData
+                          valueTone="profit"
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -221,31 +281,68 @@ export default function RetailMorningPage() {
             )}
 
             <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-gray-900">Morning action list</h2>
               {cards.length === 0 && <p className="text-gray-600">No cards for this store on this date.</p>}
-              {cards.map(card => (
-                <article key={card.id ?? card.title} className="bg-white rounded-lg shadow-md p-4">
-                  <p className="text-xs font-semibold text-blue-800">{card.category}</p>
-                  <p className="mt-1 font-medium text-gray-900">{card.title}</p>
-                  {card.detail && <p className="mt-1 text-sm text-gray-600">{card.detail}</p>}
-                  <p className="mt-2 text-xs text-gray-500">{card.status || 'NEW'}</p>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800"
-                      onClick={() => setStatus(card, 'ACCEPTED')}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700"
-                      onClick={() => setStatus(card, 'DISMISSED')}
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </article>
-              ))}
+              {cards.map(card => {
+                const isChain = card.locationId == null;
+                const origin = originForRecommendationCategory(card.category, { isChain });
+                return (
+                  <article key={card.id ?? card.title} className="bg-white rounded-lg shadow-md p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                            {categoryDisplayLabel(card.category)}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ORIGIN_CHIP_STYLES[origin]}`}
+                            title={
+                              isChain
+                                ? 'This card compares stores across the chain for this brief date.'
+                                : `This action is driven by ${origin.toLowerCase()} data for this store.`
+                            }
+                          >
+                            {origin}
+                          </span>
+                          {isChain && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-800">
+                              Chain-level
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500">{card.status || 'NEW'}</span>
+                        </div>
+                        <p className="mt-2 font-medium text-gray-900">{card.title}</p>
+                        {card.detail && <p className="mt-1 text-sm text-gray-600">{card.detail}</p>}
+                        {card.explanation && (
+                          <p className="mt-2 text-sm text-gray-700" title={card.explanation}>
+                            {card.explanation}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-900">{formatUsd(card.estimatedImpactUsd)}</p>
+                        <p className="text-xs text-gray-500">est. impact</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800"
+                        onClick={() => setStatus(card, 'ACCEPTED')}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700"
+                        onClick={() => setStatus(card, 'DISMISSED')}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         )}

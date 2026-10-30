@@ -172,6 +172,7 @@ export default function TenantSettingsForm({
       showHeaderFamily: initialData?.showHeaderFamily ?? false,
       showHeaderTournament: initialData?.showHeaderTournament ?? false,
       showHeaderLeagues: initialData?.showHeaderLeagues ?? false,
+      showNewsAdvertisements: initialData?.showNewsAdvertisements !== false,
       // Gas station COO module (GAS_STATION site type)
       enableGasStationModule: initialData?.enableGasStationModule ?? false,
       gasAiEngineBaseUrl: initialData?.gasAiEngineBaseUrl || '',
@@ -1102,6 +1103,7 @@ export default function TenantSettingsForm({
                   ['showHeaderFamily', 'Family', 'Show Family (spouse, children, parents, siblings)'],
                   ['showHeaderTournament', 'Tournament', 'Show the featured tournament in the header (sports team sites)'],
                   ['showHeaderLeagues', 'Leagues', 'Show Leagues in the header (sports team sites)'],
+                  ['showNewsAdvertisements', 'News advertisements', 'Show advertisement slots on the news page. Off hides every ad for this tenant.'],
                   ['showHeaderLinks', 'Links', 'Show Links (social URLs + external-link writings)'],
                 ] as const
               ).map(([name, label, description]) => (

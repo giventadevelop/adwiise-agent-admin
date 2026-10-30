@@ -173,10 +173,30 @@ export const useEventsData = () => {
   }, []);
 
   useEffect(() => {
+    // Admin hub root must not load tenant event/media catalogs (no public home content).
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname || '';
+      if (path === '/' || path === '/home') {
+        setData({
+          events: [],
+          eventsWithMedia: [],
+          upcomingEvents: [],
+          isLoading: false,
+          error: null,
+        });
+        return;
+      }
+    }
     void fetchEventsData(false);
   }, [fetchEventsData]);
 
-  useSilentListingRefresh((signal) => fetchEventsData(true, signal));
+  useSilentListingRefresh((signal) => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname || '';
+      if (path === '/' || path === '/home') return Promise.resolve();
+    }
+    return fetchEventsData(true, signal);
+  });
 
   return data;
 };

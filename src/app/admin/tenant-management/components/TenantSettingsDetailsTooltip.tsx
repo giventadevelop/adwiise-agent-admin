@@ -37,6 +37,7 @@ const DETAIL_FIELDS: { key: keyof TenantSettingsDTO | 'organizationName'; label:
   { key: 'showSponsorsSectionInHomePage', label: 'Show Sponsors Section' },
   { key: 'showLeagueStandingsSectionInHomePage', label: 'League standings on homepage' },
   { key: 'showHeaderLeagues', label: 'Leagues in header' },
+  { key: 'showNewsAdvertisements', label: 'News advertisements' },
   { key: 'createdAt', label: 'Created At' },
   { key: 'updatedAt', label: 'Updated At' },
 ];

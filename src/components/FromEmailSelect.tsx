@@ -12,6 +12,8 @@ interface FromEmailSelectProps {
   showDisplayName?: boolean; // Show display name in dropdown
   onEmptyListChange?: (isEmpty: boolean) => void; // Callback to notify parent when list is empty
   error?: boolean; // Whether to show error styling (red border)
+  /** Preloaded emails — skips mount server-action fetch when provided */
+  initialEmailAddresses?: TenantEmailAddressDTO[];
 }
 
 export default function FromEmailSelect({
@@ -22,9 +24,12 @@ export default function FromEmailSelect({
   showDisplayName = true,
   onEmptyListChange,
   error = false,
+  initialEmailAddresses,
 }: FromEmailSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [emailAddresses, setEmailAddresses] = useState<TenantEmailAddressDTO[]>([]);
+  const [emailAddresses, setEmailAddresses] = useState<TenantEmailAddressDTO[]>(
+    () => (Array.isArray(initialEmailAddresses) ? initialEmailAddresses : [])
+  );
   const [filteredEmails, setFilteredEmails] = useState<TenantEmailAddressDTO[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,9 +38,17 @@ export default function FromEmailSelect({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Load tenant email addresses on mount
+    if (Array.isArray(initialEmailAddresses)) {
+      setEmailAddresses(initialEmailAddresses);
+      const empty = initialEmailAddresses.length === 0;
+      setIsEmptyList(empty);
+      onEmptyListChange?.(empty);
+      return;
+    }
+    // Load tenant email addresses on mount when not preloaded
     loadEmailAddresses();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEmailAddresses]);
 
   useEffect(() => {
     // Filter emails based on search term and optional type filter

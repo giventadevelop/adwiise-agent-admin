@@ -598,6 +598,16 @@ export default function TenantSettingsViewClient({ settings, settingsId, organiz
                 </dd>
               </div>
               <div>
+                <dt className="text-sm font-medium text-gray-500">News advertisements</dt>
+                <dd className="mt-1">
+                  {settings?.showNewsAdvertisements !== false ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Visible</span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Hidden</span>
+                  )}
+                </dd>
+              </div>
+              <div>
                 <dt className="text-sm font-medium text-gray-500">Membership Subscription Enabled</dt>
                 <dd className="mt-1">
                   {settings?.isMembershipSubscriptionEnabled ? (

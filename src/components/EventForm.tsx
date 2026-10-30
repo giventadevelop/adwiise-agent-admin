@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
-import type { EventDetailsDTO, EventTypeDetailsDTO } from '@/types';
+import type { EventDetailsDTO, EventTypeDetailsDTO, TenantEmailAddressDTO } from '@/types';
 import timezones from '@/lib/timezones'; // (We'll create this file for the IANA timezone list)
 import { FaCalendarAlt, FaEnvelope } from 'react-icons/fa';
 import { parseEventMetadata, serializeEventMetadata, createFundraiserMetadata, createRecurrenceMetadata, getRecurrenceConfig, createDonationMetadata, removeNullUndefined } from '@/lib/eventUtils';
@@ -21,6 +21,8 @@ interface EventFormProps {
   onSubmit: (event: EventDetailsDTO) => void;
   loading?: boolean;
   onCancel?: () => void;
+  /** Preloaded tenant emails — skips mount server-action fetch when provided */
+  initialEmailAddresses?: TenantEmailAddressDTO[];
 }
 
 export const defaultEvent: EventDetailsDTO = {
@@ -119,7 +121,14 @@ function toDateOnlyYmd(dateStr: string | undefined | null): string {
   return '';
 }
 
-export function EventForm({ event, eventTypes, onSubmit, loading, onCancel }: EventFormProps) {
+export function EventForm({
+  event,
+  eventTypes,
+  onSubmit,
+  loading,
+  onCancel,
+  initialEmailAddresses,
+}: EventFormProps) {
   const router = useRouter();
   const [form, setForm] = useState<EventDetailsDTO>(() => ({
     ...defaultEvent,
@@ -169,8 +178,9 @@ export function EventForm({ event, eventTypes, onSubmit, loading, onCancel }: Ev
         // Only validate if fromEmail has a value
         if (validFromEmail && validFromEmail.trim() !== '') {
           try {
-            // Fetch all email addresses (use a large page size to get all)
-            const emailAddresses = await fetchTenantEmailAddressesServer(0, 1000);
+            const emailAddresses = Array.isArray(initialEmailAddresses)
+              ? initialEmailAddresses
+              : await fetchTenantEmailAddressesServer(0, 1000);
 
             // Check if the fromEmail exists in the list
             const emailExists = emailAddresses.some(
@@ -288,7 +298,7 @@ export function EventForm({ event, eventTypes, onSubmit, loading, onCancel }: Ev
       // Call the async function to validate and set fromEmail
       void validateAndSetFromEmail();
     }
-  }, [event]);
+  }, [event, initialEmailAddresses]);
 
   // CRITICAL: Automatically set zero-fee provider configuration when fundraiser/charity is enabled
   useEffect(() => {
@@ -1985,6 +1995,7 @@ export function EventForm({ event, eventTypes, onSubmit, loading, onCancel }: Ev
         </div>
         <FromEmailSelect
           value={form.fromEmail}
+          initialEmailAddresses={initialEmailAddresses}
           onChange={(email) => {
             // DEBUG: Log onChange event
             console.log('[EventForm FromEmailSelect onChange]', {

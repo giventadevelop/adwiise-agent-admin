@@ -1,12 +1,11 @@
-/** News advertisement switches for MD Strikers. Rows come from the live Strapi ad slots. */
-export const MD_STRIKERS_TENANT_ID = 'md_strikers_10';
-
+/** News advertisement slots for the selected tenant. Rows come from Strapi. */
 export type NewsAdSlotRow = {
   id: number;
   documentId: string;
   position: string;
   label: string;
   priority: number;
+  isVisible: boolean;
 };
 
 export type NewsAdVisibility = {
@@ -46,10 +45,4 @@ export function normalizeNewsAdVisibility(value: unknown, slotIds: string[] = []
     adsEnabled: record.adsEnabled !== false,
     slots,
   };
-}
-
-/** What the news page should show: master switch and the row switch both have to be on. */
-export function slotIsShown(settings: NewsAdVisibility, slotId: number): boolean {
-  if (!settings.adsEnabled) return false;
-  return settings.slots[String(slotId)] !== false;
 }

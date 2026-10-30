@@ -55,7 +55,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'batch-jobs-dashboard': 'Whether scheduled jobs ran, failed, or are still waiting.',
   'homepage-youtube-live': 'The live or featured YouTube video on the homepage.',
   'gallery-youtube-videos': 'YouTube videos that appear in the gallery.',
-  'news-advertisements': 'Turn MD Strikers news advertisements on or off. The main switch hides every slot. When it is on, each advertisement on the news page can be shown or hidden on its own. This tile is only for tenant md_strikers_10.',
+  'news-advertisements': 'Turn this tenant’s news advertisements on or off. The main switch hides every slot. When it is on, each advertisement on the news page can be shown or hidden on its own.',
 };
 
 export default function AdminPage() {
@@ -519,10 +519,8 @@ export default function AdminPage() {
       icon: 'newspaper',
       label: 'News ads',
       hint: 'Show or hide news page ads',
-      sublabel: 'MD Strikers',
       color: 'newsAdsBtn',
       key: 'news-advertisements',
-      strikersOnly: true,
     }
   ];
 
@@ -803,7 +801,6 @@ export default function AdminPage() {
           {adminButtons.filter((button) => {
             if ('platformOnly' in button && button.platformOnly && !isPlatformSuperAdmin) return false;
             if ('sportsOnly' in button && button.sportsOnly && !isSportsTeam) return false;
-            if ('strikersOnly' in button && button.strikersOnly && tenantId !== 'md_strikers_10') return false;
             return true;
           }).map((button) => {
             const colorClasses = getColorClasses(button.color);
