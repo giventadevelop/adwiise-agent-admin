@@ -20,3 +20,24 @@ export interface RetailerTypeDTO {
   sortOrder?: number | null;
   isActive?: boolean | null;
 }
+
+export interface RetailerSizeBandDTO {
+  id?: number | null;
+  tenantId?: string | null;
+  retailerTypeCode: string;
+  code: string;
+  label: string;
+  minLocations?: number | null;
+  maxLocations?: number | null;
+  sortOrder?: number | null;
+  isActive?: boolean | null;
+}
+
+export interface RecommendationCategoryDTO {
+  id?: number | null;
+  tenantId?: string | null;
+  code: string;
+  label: string;
+  sortOrder?: number | null;
+  isActive?: boolean | null;
+}

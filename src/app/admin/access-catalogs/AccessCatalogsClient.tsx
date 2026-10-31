@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
-import type { AccessRoleDTO, RetailerTypeDTO } from '@/types/accessCatalog';
+import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO } from '@/types/accessCatalog';
 import {
   deleteAccessRole,
+  deleteRecommendationCategory,
+  deleteRetailerSizeBand,
   deleteRetailerType,
   fetchAccessRoles,
+  fetchRecommendationCategories,
+  fetchRetailerSizeBands,
   fetchRetailerTypes,
   saveAccessRole,
+  saveRecommendationCategory,
+  saveRetailerSizeBand,
   saveRetailerType,
 } from './ApiServerActions';
 
@@ -328,17 +334,289 @@ function RetailerSection({
   );
 }
 
+function SizeBandSection({
+  rows,
+  retailers,
+  canEditGlobal,
+  onChange,
+}: {
+  rows: RetailerSizeBandDTO[];
+  retailers: RetailerTypeDTO[];
+  canEditGlobal: boolean;
+  onChange: (rows: RetailerSizeBandDTO[]) => void;
+}) {
+  const packs = retailers.filter((row) => row.isActive !== false && row.moduleKey === 'RETAIL' && row.code !== 'RETAIL' && row.code !== 'GAS_STATION_ENT');
+  const [draft, setDraft] = useState<RetailerSizeBandDTO>({
+    retailerTypeCode: packs[0]?.code || 'GAS_STATION',
+    code: '',
+    label: '',
+    minLocations: 1,
+    maxLocations: null,
+    sortOrder: rows.length,
+    isActive: true,
+  });
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const reload = async () => onChange(await fetchRetailerSizeBands());
+
+  const persist = async (row: RetailerSizeBandDTO) => {
+    setSaving(true);
+    setError('');
+    try {
+      await saveRetailerSizeBand(row);
+      await reload();
+      setDraft({
+        retailerTypeCode: packs[0]?.code || 'GAS_STATION',
+        code: '',
+        label: '',
+        minLocations: 1,
+        maxLocations: null,
+        sortOrder: 0,
+        isActive: true,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section id="retailer-size-bands" className="scroll-mt-44 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <h2 className="text-xl font-semibold text-gray-900">Size bands</h2>
+      <p className="mt-1 mb-4 text-sm text-gray-600">
+        Each band belongs to one retailer type. Gas uses single, mid, and enterprise. Other packs start with one standard band. A blank upper limit means no maximum.
+      </p>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500">
+              <th className="py-2 pr-4">Retailer</th>
+              <th className="py-2 pr-4">Code</th>
+              <th className="py-2 pr-4">Label</th>
+              <th className="py-2 pr-4">Locations</th>
+              <th className="py-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.map((row) => (
+              <tr key={row.id ?? `${row.retailerTypeCode}-${row.code}`}>
+                <td className="py-2 pr-4 font-mono text-xs">{row.retailerTypeCode}</td>
+                <td className="py-2 pr-4 font-mono text-xs">{row.code}</td>
+                <td className="py-2 pr-4">{row.label}</td>
+                <td className="py-2 pr-4">{row.minLocations}–{row.maxLocations ?? 'no limit'}</td>
+                <td className="py-2 text-right space-x-3">
+                  {canEditGlobal ? (
+                    <>
+                      <button type="button" className="text-blue-700" onClick={() => setDraft(row)}>Edit</button>
+                      <button type="button" className="text-amber-700" onClick={() => persist({ ...row, isActive: false })}>Deactivate</button>
+                      <button
+                        type="button"
+                        className="text-red-700"
+                        onClick={async () => {
+                          setSaving(true);
+                          setError('');
+                          try {
+                            await deleteRetailerSizeBand(row);
+                            await reload();
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : 'Remove failed');
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Shared</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {canEditGlobal && (
+        <form
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            persist(draft);
+          }}
+        >
+          <label className="block text-sm font-medium text-gray-700">
+            Retailer type
+            <select className={inputClass} value={draft.retailerTypeCode} onChange={(e) => setDraft({ ...draft, retailerTypeCode: e.target.value })}>
+              {packs.map((pack) => (
+                <option key={pack.code} value={pack.code}>{pack.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-medium text-gray-700">
+            Code
+            <input className={inputClass} value={draft.code} disabled={draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
+          </label>
+          <label className="block text-sm font-medium text-gray-700">
+            Label
+            <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
+          </label>
+          <label className="block text-sm font-medium text-gray-700">
+            Minimum locations
+            <input className={inputClass} type="number" min={1} value={draft.minLocations ?? 1} onChange={(e) => setDraft({ ...draft, minLocations: Number(e.target.value) })} required />
+          </label>
+          <label className="block text-sm font-medium text-gray-700">
+            Maximum locations
+            <input className={inputClass} type="number" min={1} value={draft.maxLocations ?? ''} placeholder="No limit" onChange={(e) => setDraft({ ...draft, maxLocations: e.target.value === '' ? null : Number(e.target.value) })} />
+          </label>
+          <div className="md:col-span-2">
+            <button type="submit" disabled={saving} className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 disabled:opacity-50">
+              {draft.id != null ? 'Update band' : 'Add band'}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function CategorySection({
+  rows,
+  canEditGlobal,
+  onChange,
+}: {
+  rows: RecommendationCategoryDTO[];
+  canEditGlobal: boolean;
+  onChange: (rows: RecommendationCategoryDTO[]) => void;
+}) {
+  const [draft, setDraft] = useState<RecommendationCategoryDTO>({
+    code: '',
+    label: '',
+    sortOrder: rows.length,
+    isActive: true,
+  });
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const reload = async () => onChange(await fetchRecommendationCategories());
+
+  const persist = async (row: RecommendationCategoryDTO) => {
+    setSaving(true);
+    setError('');
+    try {
+      await saveRecommendationCategory(row);
+      await reload();
+      setDraft({ code: '', label: '', sortOrder: 0, isActive: true });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section id="recommendation-categories" className="scroll-mt-44 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <h2 className="text-xl font-semibold text-gray-900">Recommendation categories</h2>
+      <p className="mt-1 mb-4 text-sm text-gray-600">
+        Card kinds for the morning list. A new kind is a row here. The card status list stays fixed.
+      </p>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500">
+              <th className="py-2 pr-4">Code</th>
+              <th className="py-2 pr-4">Label</th>
+              <th className="py-2 pr-4">Active</th>
+              <th className="py-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.map((row) => (
+              <tr key={row.id ?? row.code}>
+                <td className="py-2 pr-4 font-mono text-xs">{row.code}</td>
+                <td className="py-2 pr-4">{row.label}</td>
+                <td className="py-2 pr-4">{row.isActive === false ? 'No' : 'Yes'}</td>
+                <td className="py-2 text-right space-x-3">
+                  {canEditGlobal ? (
+                    <>
+                      <button type="button" className="text-blue-700" onClick={() => setDraft(row)}>Edit</button>
+                      <button type="button" className="text-amber-700" onClick={() => persist({ ...row, isActive: false })}>Deactivate</button>
+                      <button
+                        type="button"
+                        className="text-red-700"
+                        onClick={async () => {
+                          setSaving(true);
+                          setError('');
+                          try {
+                            await deleteRecommendationCategory(row);
+                            await reload();
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : 'Remove failed');
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Shared</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {canEditGlobal && (
+        <form
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            persist(draft);
+          }}
+        >
+          <label className="block text-sm font-medium text-gray-700">
+            Code
+            <input className={inputClass} value={draft.code} disabled={draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
+          </label>
+          <label className="block text-sm font-medium text-gray-700">
+            Label
+            <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
+          </label>
+          <div className="md:col-span-2">
+            <button type="submit" disabled={saving} className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 disabled:opacity-50">
+              {draft.id != null ? 'Update category' : 'Add category'}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export default function AccessCatalogsClient({
   initialRoles,
   initialRetailers,
+  initialSizeBands,
+  initialCategories,
   canEditGlobal,
 }: {
   initialRoles: AccessRoleDTO[];
   initialRetailers: RetailerTypeDTO[];
+  initialSizeBands: RetailerSizeBandDTO[];
+  initialCategories: RecommendationCategoryDTO[];
   canEditGlobal: boolean;
 }) {
   const [roles, setRoles] = useState(initialRoles);
   const [retailers, setRetailers] = useState(initialRetailers);
+  const [sizeBands, setSizeBands] = useState(initialSizeBands);
+  const [categories, setCategories] = useState(initialCategories);
 
   useEffect(() => {
     const id = window.location.hash.replace('#', '');
@@ -349,6 +627,8 @@ export default function AccessCatalogsClient({
     <div className="space-y-8">
       <AccessRoleSection rows={roles} canEditGlobal={canEditGlobal} onChange={setRoles} />
       <RetailerSection rows={retailers} canEditGlobal={canEditGlobal} onChange={setRetailers} />
+      <SizeBandSection rows={sizeBands} retailers={retailers} canEditGlobal={canEditGlobal} onChange={setSizeBands} />
+      <CategorySection rows={categories} canEditGlobal={canEditGlobal} onChange={setCategories} />
     </div>
   );
 }

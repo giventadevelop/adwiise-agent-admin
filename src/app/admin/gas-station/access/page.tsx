@@ -84,7 +84,7 @@ export default function GasStationAccessPage() {
         </div>
 
         {!tenantId && (
-          <TenantSiteTypePicker siteTypes={['GAS_STATION', 'GAS_STATION_ENT']} title="Gas station tenants" />
+          <TenantSiteTypePicker siteTypes={['GAS_STATION', 'RETAIL']} title="Gas station tenants" />
         )}
 
         {tenantId && loading && (

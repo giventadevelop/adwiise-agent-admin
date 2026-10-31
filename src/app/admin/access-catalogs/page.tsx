@@ -3,16 +3,18 @@ import { redirect } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { getCurrentAdminAccess } from '../adminAccessServer';
 import AccessCatalogsClient from './AccessCatalogsClient';
-import { fetchAccessRoles, fetchRetailerTypes } from './ApiServerActions';
+import { fetchAccessRoles, fetchRecommendationCategories, fetchRetailerSizeBands, fetchRetailerTypes } from './ApiServerActions';
 
 export default async function AccessCatalogsPage() {
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
   const access = await getCurrentAdminAccess();
-  const [roles, retailers] = await Promise.all([
+  const [roles, retailers, sizeBands, categories] = await Promise.all([
     fetchAccessRoles().catch(() => []),
     fetchRetailerTypes().catch(() => []),
+    fetchRetailerSizeBands().catch(() => []),
+    fetchRecommendationCategories().catch(() => []),
   ]);
 
   return (
@@ -22,11 +24,17 @@ export default async function AccessCatalogsPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Access and retailer catalogs</h1>
         <div className="bg-gray-50 border-l-4 border-emerald-600 p-4 rounded-r-lg">
           <p className="text-gray-700">
-            Add an access role or a site type for the selected organization. Shared rows are edited by a platform super admin and stay available to every tenant.
+            Add an access role, a site type, a size band, or a recommendation category. Shared rows are edited by a platform super admin and stay available to every tenant. Billing prices stay on Billing Plans.
           </p>
         </div>
       </div>
-      <AccessCatalogsClient initialRoles={roles} initialRetailers={retailers} canEditGlobal={access.isPlatformSuperAdmin} />
+      <AccessCatalogsClient
+        initialRoles={roles}
+        initialRetailers={retailers}
+        initialSizeBands={sizeBands}
+        initialCategories={categories}
+        canEditGlobal={access.isPlatformSuperAdmin}
+      />
     </div>
   );
 }

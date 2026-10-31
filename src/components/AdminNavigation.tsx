@@ -18,6 +18,11 @@ const PLATFORM_ONLY_NAV_KEYS = new Set([
   'gas-station',
   'tenant-test',
   'onboarding-requests',
+  'access-roles',
+  'retailer-types',
+  'site-types',
+  'retailer-size-bands',
+  'recommendation-categories',
 ]);
 
 export default function AdminNavigation({ currentPage, showHome = true }: AdminNavigationProps) {
@@ -165,6 +170,38 @@ export default function AdminNavigation({ currentPage, showHome = true }: AdminN
       color: 'teal',
       active: currentPage === 'retail-access',
       key: 'retail-access'
+    },
+    {
+      href: '/admin/access-catalogs#access-roles',
+      icon: 'userCheck',
+      label: 'Access roles',
+      color: 'indigo',
+      active: currentPage === 'access-roles',
+      key: 'access-roles'
+    },
+    {
+      href: '/admin/access-catalogs#retailer-types',
+      icon: 'building',
+      label: 'Retailer types',
+      color: 'orange',
+      active: currentPage === 'retailer-types',
+      key: 'retailer-types'
+    },
+    {
+      href: '/admin/access-catalogs#retailer-size-bands',
+      icon: 'chart',
+      label: 'Size bands',
+      color: 'lime',
+      active: currentPage === 'retailer-size-bands',
+      key: 'retailer-size-bands'
+    },
+    {
+      href: '/admin/access-catalogs#recommendation-categories',
+      icon: 'userTie',
+      label: 'Card categories',
+      color: 'pink',
+      active: currentPage === 'recommendation-categories',
+      key: 'recommendation-categories'
     },
     {
       href: '/admin/tenant-management/test',

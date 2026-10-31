@@ -1,6 +1,5 @@
 export type RetailSamplePack =
   | 'GAS_STATION'
-  | 'GAS_STATION_ENT'
   | 'LIQUOR_STORE'
   | 'DUNKIN_DONUTS'
   | 'SEVEN_ELEVEN'

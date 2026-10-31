@@ -34,8 +34,10 @@ export interface TenantOrganizationDTO {
   websiteUrl?: string | null;
   /** Product archetype. Shops use RETAIL. The pack is retailerTypeCode. */
   siteType?: TenantSiteType;
-  /** Shop pack when siteType is RETAIL: GAS_STATION, GAS_STATION_ENT, LIQUOR_STORE, DUNKIN_DONUTS, SEVEN_ELEVEN, RESTAURANT, or CLINIC. */
+  /** Shop pack when siteType is RETAIL: GAS_STATION, LIQUOR_STORE, DUNKIN_DONUTS, SEVEN_ELEVEN, RESTAURANT, or CLINIC. */
   retailerTypeCode?: string;
+  /** Optional size-band override. Empty means the band is computed from the location count. */
+  retailerSizeBandCode?: string;
   /** Optional theme/template variant within a siteType */
   siteTemplateVersion?: string;
   createdAt: string; // ISO date-time

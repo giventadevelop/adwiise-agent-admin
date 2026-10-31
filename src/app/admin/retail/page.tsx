@@ -24,7 +24,7 @@ import {
   updateRetailRecommendationServer,
 } from './retailServer';
 
-const GAS_PACKS = new Set(['GAS_STATION', 'GAS_STATION_ENT']);
+const GAS_PACKS = new Set(['GAS_STATION']);
 
 function formatUsd(value?: number | null): string {
   if (value == null) return '—';

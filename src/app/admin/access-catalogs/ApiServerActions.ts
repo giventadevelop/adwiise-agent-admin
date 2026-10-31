@@ -3,9 +3,9 @@
 import { getCurrentAdminAccess, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import type { AccessRoleDTO, RetailerTypeDTO } from '@/types/accessCatalog';
+import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO } from '@/types/accessCatalog';
 
-type CatalogRow = AccessRoleDTO | RetailerTypeDTO;
+type CatalogRow = AccessRoleDTO | RetailerTypeDTO | RetailerSizeBandDTO | RecommendationCategoryDTO;
 
 function asList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -122,4 +122,28 @@ export async function deleteAccessRole(row: AccessRoleDTO) {
 
 export async function deleteRetailerType(row: RetailerTypeDTO) {
   return deleteCatalog('retailer-types', row);
+}
+
+export async function fetchRetailerSizeBands(): Promise<RetailerSizeBandDTO[]> {
+  return fetchCatalog<RetailerSizeBandDTO>('retailer-size-bands');
+}
+
+export async function saveRetailerSizeBand(row: RetailerSizeBandDTO) {
+  return saveCatalog('retailer-size-bands', row, true);
+}
+
+export async function deleteRetailerSizeBand(row: RetailerSizeBandDTO) {
+  return deleteCatalog('retailer-size-bands', row);
+}
+
+export async function fetchRecommendationCategories(): Promise<RecommendationCategoryDTO[]> {
+  return fetchCatalog<RecommendationCategoryDTO>('recommendation-categories');
+}
+
+export async function saveRecommendationCategory(row: RecommendationCategoryDTO) {
+  return saveCatalog('recommendation-categories', row, true);
+}
+
+export async function deleteRecommendationCategory(row: RecommendationCategoryDTO) {
+  return deleteCatalog('recommendation-categories', row);
 }

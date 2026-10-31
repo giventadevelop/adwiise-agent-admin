@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { RetailSamplePack, RetailSampleRunResponse } from '@/types/retailSampleRun';
 
-const FUEL_PACKS = new Set<RetailSamplePack>(['GAS_STATION', 'GAS_STATION_ENT']);
+const FUEL_PACKS = new Set<RetailSamplePack>(['GAS_STATION']);
 
 const PACKS: { value: RetailSamplePack; label: string }[] = [
   { value: 'GAS_STATION', label: 'Gas sample (register and fuel)' },

@@ -91,7 +91,8 @@ export default function TenantOrganizationForm({
       country: initialData?.country || '',
       websiteUrl: initialData?.websiteUrl || '',
       siteType: initialData?.siteType || 'EVENT_ORG',
-      retailerTypeCode: initialData?.retailerTypeCode || '',
+      retailerTypeCode: initialData?.retailerTypeCode === 'GAS_STATION_ENT' ? 'GAS_STATION' : (initialData?.retailerTypeCode || ''),
+      retailerSizeBandCode: initialData?.retailerSizeBandCode || '',
     }
   });
 
@@ -571,7 +572,6 @@ export default function TenantOrganizationForm({
               >
                 <option value="">None</option>
                 <option value="GAS_STATION">Gas station</option>
-                <option value="GAS_STATION_ENT">Gas station enterprise</option>
                 <option value="LIQUOR_STORE">Liquor store</option>
                 <option value="DUNKIN_DONUTS">Dunkin</option>
                 <option value="SEVEN_ELEVEN">Seven-Eleven</option>
@@ -579,8 +579,9 @@ export default function TenantOrganizationForm({
                 <option value="CLINIC">Clinic</option>
               </select>
               <p className="mt-1 text-sm text-gray-500">
-                Used when the site type is RETAIL. Gas uses a fuel file. The other packs use a register file only.
+                Used when the site type is RETAIL. Gas uses a fuel file. The other packs use a register file only. Size is a band on the pack, not a second pack.
               </p>
+              <input type="hidden" {...register('retailerSizeBandCode')} />
             </div>
           </div>
         </div>

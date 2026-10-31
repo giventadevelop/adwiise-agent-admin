@@ -28,6 +28,8 @@ const BUTTON_GUIDES: Record<string, string> = {
   'access-catalogs': 'Two shared dropdowns on one page: access roles, and site or retailer types. Shared rows apply to every tenant and are edited by a platform super admin.',
   'access-roles': 'Roles such as ADMIN and any custom role you add. They decide who sees the admin menu and which locations a person can open. Change shared roles only as platform super admin.',
   'retailer-types': 'Shop and brand kinds such as liquor store, Dunkin, and Seven-Eleven, plus the module they belong to. These codes are stored as the organization site type and appear in onboarding and organization dropdowns.',
+  'retailer-size-bands': 'Size bands for one retailer type. Gas uses single (1 to 4), mid (5 to 10), and enterprise (11 or more). Other packs start with one standard band.',
+  'recommendation-categories': 'Kinds of morning cards, such as fuel pricing, ordering, and staffing. A new kind is added here. Billing prices stay on Billing Plans.',
   'site-types': 'Organization kinds such as events, church, sports team, music band, personal profile, hybrid, and gas station. They are stored in the same list as retailer types. Adding a row adds a choice to onboarding and the organization site-type dropdown.',
   'sports-categories': 'Sports such as football or cricket, shown as checkboxes on a squad member. A shared sport is available to every tenant. Edit shared rows only as platform super admin.',
   'tournaments': 'Seasons or cups for a sports-team site. This tile appears only when the organization site type is a sports team.',
@@ -276,6 +278,24 @@ export default function AdminPage() {
       hint: 'Add organization site kinds',
       color: 'siteTypesBtn',
       key: 'site-types',
+      platformOnly: true,
+    },
+    {
+      href: '/admin/access-catalogs#retailer-size-bands',
+      icon: 'listChecks',
+      label: 'Size bands',
+      hint: 'Single, mid, and enterprise bands for each shop kind',
+      color: 'sizeBandsBtn',
+      key: 'retailer-size-bands',
+      platformOnly: true,
+    },
+    {
+      href: '/admin/access-catalogs#recommendation-categories',
+      icon: 'clipboardCheck',
+      label: 'Recommendation categories',
+      hint: 'Card kinds for the morning list',
+      color: 'recommendationCategoriesBtn',
+      key: 'recommendation-categories',
       platformOnly: true,
     },
     {
@@ -569,6 +589,8 @@ export default function AdminPage() {
       accessRolesBtn: 'bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#0c4a6e]',
       retailerTypesBtn: 'bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e]',
       siteTypesBtn: 'bg-[#fae8ff] hover:bg-[#f5d0fe] text-[#86198f]',
+      sizeBandsBtn: 'bg-[#ecfccb] hover:bg-[#d9f99d] text-[#3f6212]',
+      recommendationCategoriesBtn: 'bg-[#ffe4e6] hover:bg-[#fecdd3] text-[#9f1239]',
       sportsCategoryBtn: 'bg-[#d1fae5] hover:bg-[#a7f3d0] text-[#065f46]',
       newsAdsBtn: 'bg-[#e0f7fa] hover:bg-[#b2ebf2] text-[#006064]'
     };
@@ -619,6 +641,8 @@ export default function AdminPage() {
       accessRolesBtn: 'bg-[#bae6fd]',
       retailerTypesBtn: 'bg-[#fde68a]',
       siteTypesBtn: 'bg-[#f5d0fe]',
+      sizeBandsBtn: 'bg-[#d9f99d]',
+      recommendationCategoriesBtn: 'bg-[#fecdd3]',
       sportsCategoryBtn: 'bg-[#a7f3d0]',
       newsAdsBtn: 'bg-[#b2ebf2]'
     };
@@ -669,6 +693,8 @@ export default function AdminPage() {
       accessRolesBtn: 'text-[#0369a1]',
       retailerTypesBtn: 'text-[#b45309]',
       siteTypesBtn: 'text-[#a21caf]',
+      sizeBandsBtn: 'text-[#3f6212]',
+      recommendationCategoriesBtn: 'text-[#9f1239]',
       sportsCategoryBtn: 'text-[#047857]',
       newsAdsBtn: 'text-[#00838f]'
     };
