@@ -31,6 +31,7 @@ export interface RetailSampleRunResponse {
   posted?: boolean;
   stationCode?: string;
   metricDate?: string;
+  featurePath?: string;
   fuelDay?: { fuelGallonsSold?: number } | null;
   recommendations?: RetailSampleRecommendation[];
   message?: string;

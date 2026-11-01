@@ -21,10 +21,12 @@ export default async function RosterCatalogsPage() {
       <AdminNavigation currentPage="admin" />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Roster catalogs</h1>
-        <div className="bg-gray-50 border-l-4 border-sky-500 p-4 rounded-r-lg">
-          <p className="text-gray-700">
+        <div className="rounded-xl border-2 border-cyan-400 bg-cyan-50 p-4">
+          <h2 className="mb-1 text-lg font-semibold text-cyan-900">What these catalogs control</h2>
+          <p className="text-cyan-950">
             Add a sport, achievement category, or team type for the selected organization. Shared
-            rows are edited by a platform super admin and stay available to every tenant.
+            rows are edited by a platform super admin and stay available to every tenant. Each
+            catalog has a manage page for search, paging, and add, edit, and remove.
           </p>
         </div>
       </div>

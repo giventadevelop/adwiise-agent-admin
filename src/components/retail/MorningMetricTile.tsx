@@ -1,14 +1,24 @@
 'use client';
 
 import type { MetricOrigin, MetricTileCopy } from '@/lib/retail/metricDisplay';
-import { ORIGIN_CHIP_STYLES } from '@/lib/retail/metricDisplay';
+import { ORIGIN_CHIP_STYLES, ORIGIN_SURFACE } from '@/lib/retail/metricDisplay';
+import { RetailIcon } from '@/components/retail/RetailUi';
 
 type ValueTone = 'default' | 'profit' | 'alert';
 
 const VALUE_TONE: Record<ValueTone, string> = {
-  default: 'text-gray-900 dark:text-white',
-  profit: 'text-emerald-600',
-  alert: 'text-red-600',
+  default: 'text-current',
+  profit: 'text-current',
+  alert: 'text-red-900',
+};
+
+const ORIGIN_ICON: Record<MetricOrigin, { name: string; tile: string }> = {
+  Fuel: { name: 'fuel', tile: 'bg-orange-800 text-white' },
+  Register: { name: 'register', tile: 'bg-blue-800 text-white' },
+  Labor: { name: 'labor', tile: 'bg-indigo-800 text-white' },
+  Profit: { name: 'profit', tile: 'bg-emerald-800 text-white' },
+  Chain: { name: 'chain', tile: 'bg-violet-800 text-white' },
+  Other: { name: 'chart', tile: 'bg-amber-800 text-white' },
 };
 
 export default function MorningMetricTile({
@@ -28,22 +38,26 @@ export default function MorningMetricTile({
   valueClassName?: string;
 }) {
   const originClass = ORIGIN_CHIP_STYLES[copy.origin as MetricOrigin] ?? ORIGIN_CHIP_STYLES.Other;
+  const originIcon = ORIGIN_ICON[copy.origin] ?? ORIGIN_ICON.Other;
   return (
     <div
-      className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 ${wide ? 'md:col-span-1 col-span-2' : ''}`}
+      className={`relative rounded-lg shadow-md p-6 ${ORIGIN_SURFACE[copy.origin] ?? ORIGIN_SURFACE.Other} ${wide ? 'md:col-span-1 col-span-2' : ''}`}
       title={copy.tooltip}
     >
+      <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center mb-3 ${originIcon.tile}`}>
+        <RetailIcon name={originIcon.name} className="w-10 h-10" />
+      </div>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{copy.label}</p>
-          <p className="mt-0.5 text-xs text-gray-400">[{copy.detail}]</p>
+          <p className="text-base font-semibold">{copy.label}</p>
+          <p className="mt-1 text-sm font-medium opacity-90">[{copy.detail}]</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${originClass}`}>
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold uppercase tracking-wide ${originClass}`}>
             {copy.origin}
           </span>
           <span
-            className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-[10px] font-bold text-gray-500 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="group relative inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-current text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             tabIndex={0}
             aria-label={copy.tooltip}
           >
@@ -57,7 +71,7 @@ export default function MorningMetricTile({
           </span>
         </div>
       </div>
-      <p className={`mt-2 font-semibold ${valueClassName ?? 'text-xl'} ${VALUE_TONE[valueTone]}`}>
+      <p className={`mt-3 font-bold ${valueClassName ?? 'text-3xl'} ${VALUE_TONE[valueTone]}`}>
         {hasData ? value : '—'}
       </p>
     </div>

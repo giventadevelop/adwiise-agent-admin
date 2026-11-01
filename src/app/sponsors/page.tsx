@@ -151,7 +151,7 @@ export default function SponsorsPage() {
     <div className="min-h-screen bg-background" style={{ paddingTop: '100px' }}>
       {/* Header Section - MOSC Styling */}
       <section className="py-16 bg-card sacred-shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem]">
           <div className="text-center mb-8">
             <Link
               href="/"
@@ -174,7 +174,7 @@ export default function SponsorsPage() {
 
       {/* Main Content Section - MOSC Styling */}
       <section className="py-16 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem]">
           {/* Search Bar - MOSC Styling */}
           <div className="mb-12">
             <div className="relative max-w-md mx-auto">

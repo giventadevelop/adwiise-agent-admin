@@ -36,7 +36,7 @@ export async function fetchRosterCatalog(
   const scoped = tenantId?.trim();
   if (scoped) headers['X-Tenant-ID'] = scoped;
   const response = await fetchWithJwtRetry(
-    `${getApiBaseUrl()}/api/${resource}?size=500&sort=sortOrder,asc`,
+    `${getApiBaseUrl()}/api/${resource}?size=2000&sort=sortOrder,asc`,
     { cache: 'no-store', headers }
   );
   if (!response.ok) {

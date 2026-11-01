@@ -169,7 +169,7 @@ export function AdminTenantLayoutClient({
           </a>
         </div>
       )}
-      {children}
+      <div className="admin-page-shell w-full">{children}</div>
     </AdminAccessContext.Provider>
   );
 }

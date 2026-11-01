@@ -2,7 +2,7 @@ import { getApiBaseUrl, getAppUrlFromRequestHeaders } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { initStripeConfig } from '@/lib/stripe/init';
 import type { PlatformBillingPlanDTO, TenantProductBillingDTO } from '@/types/platformBilling';
-import type { GasStationLocationDTO } from '@/types/gasStation';
+import type { RetailLocationDTO } from '@/types/retail';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import type Stripe from 'stripe';
 
@@ -42,13 +42,13 @@ export async function countBillableLocations(tenantId: string): Promise<number> 
     'isActive.equals': 'true',
     size: '500',
   });
-  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/gas-station-locations?${params.toString()}`, {
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/retail-locations?${params.toString()}`, {
     cache: 'no-store',
     headers: { 'X-Tenant-ID': tenantId },
   });
   if (!response.ok) return 1;
   const data = await response.json();
-  const rows: GasStationLocationDTO[] = Array.isArray(data) ? data : data?.content ?? [];
+  const rows: RetailLocationDTO[] = Array.isArray(data) ? data : data?.content ?? [];
   const count = rows.filter((row) => row.includedInSubscription !== false).length;
   return Math.max(count, 1);
 }

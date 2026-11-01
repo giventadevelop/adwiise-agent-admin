@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { saveTenantProductBilling, setLocationIncludedInBilling } from '@/app/admin/platform-billing/ApiServerActions';
-import type { GasStationLocationDTO } from '@/types/gasStation';
+import { YellowCheckbox } from '@/components/retail/RetailUi';
+import type { RetailLocationDTO } from '@/types/retail';
 import type { PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 const money = (amount?: number | null) =>
@@ -27,7 +28,7 @@ export default function BillingDesk({
   canEditSwitch: boolean;
   initialRows: TenantProductBillingDTO[];
   plans: PlatformBillingPlanDTO[];
-  locations: GasStationLocationDTO[];
+  locations: RetailLocationDTO[];
   lockedNotice?: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
@@ -170,14 +171,11 @@ export default function BillingDesk({
                     onChange={(event) => updateRow(product, { graceDays: Number(event.target.value) })}
                   />
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!!row.chargeEnabled}
-                    onChange={(event) => updateRow(product, { chargeEnabled: event.target.checked })}
-                  />
-                  Charge switch
-                </label>
+                <YellowCheckbox
+                  checked={!!row.chargeEnabled}
+                  onChange={checked => updateRow(product, { chargeEnabled: checked })}
+                  label="Charge switch"
+                />
                 <button
                   type="button"
                   disabled={busy}
@@ -250,42 +248,35 @@ export default function BillingDesk({
       })}
       {locationRows.length > 0 && (
         <section className="bg-card rounded-lg sacred-shadow p-6">
-          <h2 className="text-xl font-semibold mb-3">Locations counted in the gas-station fee</h2>
-          <ul className="space-y-2 text-sm">
+          <h2 className="text-xl font-semibold mb-3">Locations counted in the location fee</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {locationRows.map((location) => (
-              <li key={location.id} className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={location.includedInSubscription !== false}
-                  disabled={busy || location.id == null}
-                  aria-label={`Include ${location.stationName || 'location'} in the subscription`}
-                  onChange={async (event) => {
-                    if (location.id == null) return;
-                    const included = event.target.checked;
-                    setBusy(true);
-                    setMessage('');
-                    try {
-                      await setLocationIncludedInBilling(tenantId, location.id, included);
-                      setLocationRows((current) =>
-                        current.map((item) =>
-                          item.id === location.id ? { ...item, includedInSubscription: included } : item
-                        )
-                      );
-                      setMessage('Location inclusion saved. Use Update location count to change the Stripe quantity.');
-                    } catch (error) {
-                      setMessage(error instanceof Error ? error.message : 'Could not update the location');
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                />
-                <span>
-                  {location.stationName} {location.includedInSubscription === false ? '(not included)' : '(included)'}{' '}
-                  {location.isActive === false ? 'inactive' : 'active'}
-                </span>
-              </li>
+              <YellowCheckbox
+                key={location.id}
+                checked={location.includedInSubscription !== false}
+                disabled={busy || location.id == null}
+                label={`${location.locationName || 'Location'} ${location.includedInSubscription === false ? '(not included)' : '(included)'}`}
+                onChange={async (included) => {
+                  if (location.id == null) return;
+                  setBusy(true);
+                  setMessage('');
+                  try {
+                    await setLocationIncludedInBilling(tenantId, location.id, included);
+                    setLocationRows((current) =>
+                      current.map((item) =>
+                        item.id === location.id ? { ...item, includedInSubscription: included } : item
+                      )
+                    );
+                    setMessage('Location inclusion saved. Use Update location count to change the Stripe quantity.');
+                  } catch (error) {
+                    setMessage(error instanceof Error ? error.message : 'Could not update the location');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
             ))}
-          </ul>
+          </div>
           <p className="text-sm text-muted-foreground mt-3">
             A custom flat fee uses quantity 1. Otherwise the count is active locations marked included. Update the count after you change locations.
           </p>

@@ -53,22 +53,36 @@ export default function SuccessDialog({
               </p>
               <button
                 onClick={onRefresh}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                type="button"
+                title="Refresh Page"
+                aria-label="Refresh Page"
+                className="flex h-14 w-full flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-blue-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-blue-200"
               >
-                Refresh Page
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-200">
+                  <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </div>
+                <span className="font-semibold text-blue-700">Refresh Page</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+        <div className="flex justify-end gap-3 border-t border-gray-200 p-6">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
             type="button"
+            title={buttonText}
+            aria-label={buttonText}
+            className="flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-green-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-green-200"
           >
-            {buttonText}
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-green-200">
+              <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <span className="font-semibold text-green-700">{buttonText}</span>
           </button>
         </div>
       </div>

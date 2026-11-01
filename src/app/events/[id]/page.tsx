@@ -570,7 +570,7 @@ export default function EventDetailsPage() {
       </section>
 
       {/* Event Details - Styled like events page */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem] py-8">
         <div
           className={`${getRandomBackground(event.id!)} rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden`}
           style={{

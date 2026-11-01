@@ -3,16 +3,17 @@ import { redirect } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { getCurrentAdminAccess } from '../adminAccessServer';
 import AccessCatalogsClient from './AccessCatalogsClient';
-import { fetchAccessRoles, fetchRecommendationCategories, fetchRetailerSizeBands, fetchRetailerTypes } from './ApiServerActions';
+import { fetchAccessRoles, fetchRecommendationCategories, fetchRetailerSizeBands, fetchRetailerTypes, fetchSiteTypes } from './ApiServerActions';
 
 export default async function AccessCatalogsPage() {
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
   const access = await getCurrentAdminAccess();
-  const [roles, retailers, sizeBands, categories] = await Promise.all([
+  const [roles, retailers, siteTypes, sizeBands, categories] = await Promise.all([
     fetchAccessRoles().catch(() => []),
     fetchRetailerTypes().catch(() => []),
+    fetchSiteTypes().catch(() => []),
     fetchRetailerSizeBands().catch(() => []),
     fetchRecommendationCategories().catch(() => []),
   ]);
@@ -22,15 +23,17 @@ export default async function AccessCatalogsPage() {
       <AdminNavigation currentPage="admin" />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Access and retailer catalogs</h1>
-        <div className="bg-gray-50 border-l-4 border-emerald-600 p-4 rounded-r-lg">
-          <p className="text-gray-700">
-            Add an access role, a site type, a size band, or a recommendation category. Shared rows are edited by a platform super admin and stay available to every tenant. Billing prices stay on Billing Plans.
+        <div className="rounded-xl border-2 border-sky-400 bg-sky-50 p-4">
+          <h2 className="mb-1 text-lg font-semibold text-sky-900">What these catalogs control</h2>
+          <p className="text-sky-950">
+            Add an access role, a site type, a retailer pack, a size band, or a recommendation category. Site type and retailer pack are separate catalogs. Shared rows are edited by a platform super admin. Each catalog has a manage page for search, paging, and add, edit, and remove. Billing prices stay on Billing Plans.
           </p>
         </div>
       </div>
       <AccessCatalogsClient
         initialRoles={roles}
         initialRetailers={retailers}
+        initialSiteTypes={siteTypes}
         initialSizeBands={sizeBands}
         initialCategories={categories}
         canEditGlobal={access.isPlatformSuperAdmin}

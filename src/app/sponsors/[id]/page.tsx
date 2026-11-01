@@ -168,7 +168,7 @@ export default function SponsorDetailsPage() {
       </section>
 
       {/* Sponsor Details - Styled like event details page */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-6 sponsor-details-container">
+      <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem] pt-6 pb-6 sponsor-details-container">
         <div
           className={`sponsor-card ${getSponsorBackground(sponsor.id || 0)} rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden`}
           style={{

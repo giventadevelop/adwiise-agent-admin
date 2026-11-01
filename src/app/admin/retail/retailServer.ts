@@ -16,7 +16,9 @@ import type { UserProfileDTO } from '@/types';
 import type {
   RetailDailyMetricsDTO,
   RetailFuelDayDTO,
+  RetailIntegrationDTO,
   RetailLocationDTO,
+  RetailLocationProfileDTO,
   RetailRecommendationDTO,
   RetailRecommendationStatus,
   RetailUserLocationAssignmentDTO,
@@ -315,6 +317,144 @@ export async function replaceRetailLocationAssignmentsServer(
     if (!created.ok) return false;
   }
   return true;
+}
+
+async function writeRetailResource<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<T | null> {
+  const res = await fetchWithJwtRetry(method === 'POST' ? `${API_BASE_URL}${path}` : `${API_BASE_URL}${path}`, {
+    method,
+    headers: method === 'DELETE' ? undefined : { 'Content-Type': method === 'PATCH' ? 'application/merge-patch+json' : 'application/json' },
+    body: body == null ? undefined : JSON.stringify(body),
+  });
+  if (method === 'DELETE') return (res.ok ? (true as T) : null);
+  if (!res.ok) return null;
+  return (await res.json()) as T;
+}
+
+export interface RetailLocationsPage {
+  content: RetailLocationDTO[];
+  totalElements: number;
+  totalPages: number;
+}
+
+export async function fetchRetailLocationsPageServer(
+  page: number,
+  size: number,
+  tenantId?: string
+): Promise<RetailLocationsPage> {
+  try {
+    const params = new URLSearchParams({
+      page: String(Math.max(0, page)),
+      size: String(Math.min(Math.max(1, size), 100)),
+      sort: 'locationCode,asc',
+    });
+    await appendAdminTenantFilter(params, tenantId);
+    const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-locations?${params}`, { cache: 'no-store' });
+    if (!res.ok) return { content: [], totalElements: 0, totalPages: 0 };
+    const content = normalizeList<RetailLocationDTO>(await res.json());
+    const rawTotal = res.headers.get('x-total-count');
+    const totalElements = rawTotal != null && Number.isFinite(parseInt(rawTotal, 10))
+      ? Math.max(0, parseInt(rawTotal, 10))
+      : content.length;
+    return {
+      content,
+      totalElements,
+      totalPages: Math.max(1, Math.ceil(totalElements / Math.max(1, size))),
+    };
+  } catch (error) {
+    console.error('[fetchRetailLocationsPageServer]', error);
+    return { content: [], totalElements: 0, totalPages: 0 };
+  }
+}
+
+export async function saveRetailLocationServer(data: RetailLocationDTO): Promise<RetailLocationDTO | null> {
+  const now = new Date().toISOString();
+  if (data.id == null) {
+    return writeRetailResource<RetailLocationDTO>('/api/retail-locations', 'POST', {
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  return writeRetailResource<RetailLocationDTO>(`/api/retail-locations/${data.id}`, 'PATCH', {
+    ...data,
+    updatedAt: now,
+  });
+}
+
+export async function deleteRetailLocationServer(id: number): Promise<boolean> {
+  const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-locations/${id}`, { method: 'DELETE' });
+  return res.ok;
+}
+
+export async function fetchRetailProfilesServer(tenantId?: string): Promise<RetailLocationProfileDTO[]> {
+  return fetchScopedList<RetailLocationProfileDTO>('/api/retail-location-profiles', tenantId);
+}
+
+export async function saveRetailProfileServer(data: RetailLocationProfileDTO): Promise<RetailLocationProfileDTO | null> {
+  const now = new Date().toISOString();
+  if (data.id == null) {
+    return writeRetailResource<RetailLocationProfileDTO>('/api/retail-location-profiles', 'POST', {
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  return writeRetailResource<RetailLocationProfileDTO>(`/api/retail-location-profiles/${data.id}`, 'PATCH', {
+    ...data,
+    updatedAt: now,
+  });
+}
+
+export async function fetchRetailIntegrationsAdminServer(tenantId?: string): Promise<RetailIntegrationDTO[]> {
+  return fetchScopedList<RetailIntegrationDTO>('/api/retail-integrations', tenantId, { sort: 'systemType,asc' });
+}
+
+export async function saveRetailIntegrationServer(data: RetailIntegrationDTO): Promise<RetailIntegrationDTO | null> {
+  const now = new Date().toISOString();
+  if (data.id == null) {
+    return writeRetailResource<RetailIntegrationDTO>('/api/retail-integrations', 'POST', {
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  return writeRetailResource<RetailIntegrationDTO>(`/api/retail-integrations/${data.id}`, 'PATCH', {
+    ...data,
+    updatedAt: now,
+  });
+}
+
+export async function deleteRetailIntegrationServer(id: number): Promise<boolean> {
+  const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-integrations/${id}`, { method: 'DELETE' });
+  return res.ok;
+}
+
+async function fetchRetailRange<T>(path: string, fromDate: string, toDate: string, tenantId?: string): Promise<T[]> {
+  const params = new URLSearchParams({
+    size: '2000',
+    'metricDate.greaterThanOrEqual': fromDate,
+    'metricDate.lessThanOrEqual': toDate,
+  });
+  await appendAdminTenantFilter(params, tenantId);
+  const res = await fetchWithJwtRetry(`${API_BASE_URL}${path}?${params}`, { cache: 'no-store' });
+  if (!res.ok) return [];
+  return normalizeList<T>(await res.json());
+}
+
+export async function fetchRetailMetricsRangeServer(
+  fromDate: string,
+  toDate: string,
+  tenantId?: string
+): Promise<RetailDailyMetricsDTO[]> {
+  return fetchRetailRange<RetailDailyMetricsDTO>('/api/retail-daily-metrics', fromDate, toDate, tenantId);
+}
+
+export async function fetchRetailFuelRangeServer(
+  fromDate: string,
+  toDate: string,
+  tenantId?: string
+): Promise<RetailFuelDayDTO[]> {
+  return fetchRetailRange<RetailFuelDayDTO>('/api/retail-fuel-days', fromDate, toDate, tenantId);
 }
 
 export async function replaceRetailRegionAssignmentsServer(

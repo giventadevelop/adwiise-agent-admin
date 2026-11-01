@@ -7,7 +7,7 @@ import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl } fr
 import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import { stripDeprecatedSettingsIdentityFields } from '@/lib/stripDeprecatedSettingsIdentityFields';
 import { getSiteTypePresetSettings } from '@/lib/siteTypePresets';
-import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions';
+import { fetchSiteTypes } from '@/app/admin/access-catalogs/ApiServerActions';
 import type {
   TenantSettingsDTO,
   TenantSettingsFormDTO,
@@ -674,8 +674,8 @@ export async function applySiteTypePresetsForTenant(
       console.warn('[applySiteTypePresetsForTenant] No settings row for tenant', tenantId);
       return false;
     }
-    const retailers = await fetchRetailerTypes(tenantId).catch(() => []);
-    const moduleKey = retailers.find((row) => row.code === siteType)?.moduleKey;
+    const siteTypes = await fetchSiteTypes(tenantId).catch(() => []);
+    const moduleKey = siteTypes.find((row) => row.code === siteType)?.moduleKey;
     const presetPatch = getSiteTypePresetSettings(siteType, moduleKey);
     await patchTenantSetting(settings.id, { ...presetPatch, tenantId });
     return true;

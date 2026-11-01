@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
+import { ActionButton, RetailNav, fieldClass, labelClass } from '@/components/retail/RetailUi';
 import MorningMetricTile from '@/components/retail/MorningMetricTile';
 import {
   METRIC_TILES,
   ORIGIN_CHIP_STYLES,
+  ORIGIN_SURFACE,
+  STATUS_CHIP,
   categoryDisplayLabel,
   originForRecommendationCategory,
+  packSurface,
 } from '@/lib/retail/metricDisplay';
 import { useAdminTenantId } from '../AdminTenantContext';
 import TenantSiteTypePicker from '../TenantSiteTypePicker';
@@ -124,16 +127,12 @@ export default function RetailMorningPage() {
       </div>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Retail morning brief</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-lg text-gray-800">
           Stores you are allowed to see for this tenant. Gallons appear only for a gas station.
         </p>
-        {canAssign && (
-          <p className="mt-2">
-            <Link href={`/admin/retail/access${tenantQuery}`} className="text-sm font-semibold text-teal-800 underline">
-              Assign managers
-            </Link>
-          </p>
-        )}
+        <div className="mt-6">
+          <RetailNav tenantQuery={tenantQuery} current="morning" showAccess={canAssign} />
+        </div>
 
         {!tenantId && <TenantSiteTypePicker siteTypes={['RETAIL']} title="Retail tenants" />}
 
@@ -143,22 +142,22 @@ export default function RetailMorningPage() {
 
         {tenantId && !denied && (
           <div className="mt-6 space-y-6">
-            <div className="bg-white rounded-lg shadow-md p-4 flex flex-wrap items-end gap-4">
-              <label className="block text-sm font-medium text-gray-700">
+            <div className="bg-sky-200 text-sky-950 border-l-4 border-sky-700 rounded-lg shadow-md p-6 grid gap-4 md:grid-cols-3 items-end">
+              <label className={`${labelClass} text-base text-sky-950`}>
                 Brief date
                 <input
                   type="date"
                   value={date}
                   onChange={event => setDate(event.target.value)}
-                  className="mt-1 block border border-gray-400 rounded-xl px-4 py-2"
+                  className={fieldClass}
                 />
               </label>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className={`${labelClass} text-base text-sky-950`}>
                 Store
                 <select
                   value={locationId ?? ''}
                   onChange={event => setLocationId(event.target.value ? Number(event.target.value) : null)}
-                  className="mt-1 block border border-gray-400 rounded-xl px-4 py-2"
+                  className={fieldClass}
                 >
                   {locations.map(location => (
                     <option key={location.id} value={location.id}>
@@ -167,9 +166,11 @@ export default function RetailMorningPage() {
                   ))}
                 </select>
               </label>
-              <button
-                type="button"
-                className="rounded-lg bg-teal-800 px-4 py-2 text-sm font-semibold text-white"
+              <ActionButton
+                tone="teal"
+                icon="refresh"
+                label={asking ? 'Refreshing' : 'Refresh brief'}
+                disabled={asking}
                 onClick={async () => {
                   if (!tenantId) return;
                   setAsking(true);
@@ -177,23 +178,21 @@ export default function RetailMorningPage() {
                   setAsking(false);
                   if (refreshed.ok) setRefreshKey(current => current + 1);
                 }}
-              >
-                Refresh
-              </button>
-              {loading && <p className="text-sm text-gray-500">Loading</p>}
+              />
+              {loading && <p className="text-base font-medium md:col-span-3">Loading</p>}
             </div>
 
             {selected && (
               <div className="space-y-4">
-                <div className="bg-white rounded-lg shadow-md p-4">
-                  <p className="text-lg font-semibold text-gray-900">
+                <div className={`rounded-lg shadow-md p-6 ${packSurface(selected.retailerTypeCode)}`}>
+                  <p className="text-2xl font-bold">
                     {selected.locationName} · {selected.locationCode}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="mt-1 text-lg font-semibold">
                     Pack {selected.retailerTypeCode || 'not set'}
                     {selected.region ? ` · Region ${selected.region}` : ''}
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-2 text-base font-medium">
                     One brief date, one store. Day numbers come from the register and, for gas packs, the fuel controller.
                   </p>
                 </div>
@@ -251,7 +250,7 @@ export default function RetailMorningPage() {
 
             {selected && (
               <form
-                className="bg-white rounded-lg shadow-md p-4 space-y-3"
+                className="bg-cyan-200 text-cyan-950 border-l-4 border-cyan-700 rounded-lg shadow-md p-6 space-y-4"
                 onSubmit={async event => {
                   event.preventDefault();
                   if (!tenantId || !selected.locationCode) return;
@@ -261,41 +260,35 @@ export default function RetailMorningPage() {
                   setAsking(false);
                 }}
               >
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={`${labelClass} text-base text-cyan-950`}>
                   Ask about this brief
                   <input
                     value={question}
                     onChange={event => setQuestion(event.target.value)}
-                    className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-2"
+                    className={fieldClass}
                   />
                 </label>
-                <button
-                  type="submit"
-                  disabled={asking || !question.trim()}
-                  className="rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  Ask
-                </button>
-                {answer && <p className="text-gray-800">{answer}</p>}
+                <ActionButton type="submit" tone="blue" icon="chat" label={asking ? 'Asking' : 'Ask'} disabled={asking || !question.trim()} />
+                {answer && <p className="text-lg font-medium">{answer}</p>}
               </form>
             )}
 
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-gray-900">Morning action list</h2>
-              {cards.length === 0 && <p className="text-gray-600">No cards for this store on this date.</p>}
+              <h2 className="text-2xl font-bold text-gray-900">Morning action list</h2>
+              {cards.length === 0 && <p className="text-lg text-gray-800">No cards for this store on this date.</p>}
               {cards.map(card => {
                 const isChain = card.locationId == null;
                 const origin = originForRecommendationCategory(card.category, { isChain });
                 return (
-                  <article key={card.id ?? card.title} className="bg-white rounded-lg shadow-md p-4">
+                  <article key={card.id ?? card.title} className={`rounded-lg shadow-md p-6 ${ORIGIN_SURFACE[origin]}`}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${ORIGIN_CHIP_STYLES[origin]}`}>
                             {categoryDisplayLabel(card.category)}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ORIGIN_CHIP_STYLES[origin]}`}
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${ORIGIN_CHIP_STYLES[origin]}`}
                             title={
                               isChain
                                 ? 'This card compares stores across the chain for this brief date.'
@@ -305,40 +298,30 @@ export default function RetailMorningPage() {
                             {origin}
                           </span>
                           {isChain && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-800">
+                            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-violet-800 text-white">
                               Chain-level
                             </span>
                           )}
-                          <span className="text-xs text-gray-500">{card.status || 'NEW'}</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STATUS_CHIP[card.status || 'NEW'] ?? STATUS_CHIP.NEW}`}>
+                            {card.status || 'NEW'}
+                          </span>
                         </div>
-                        <p className="mt-2 font-medium text-gray-900">{card.title}</p>
-                        {card.detail && <p className="mt-1 text-sm text-gray-600">{card.detail}</p>}
+                        <p className="mt-3 text-xl font-bold">{card.title}</p>
+                        {card.detail && <p className="mt-2 text-base font-medium">{card.detail}</p>}
                         {card.explanation && (
-                          <p className="mt-2 text-sm text-gray-700" title={card.explanation}>
+                          <p className="mt-2 text-base" title={card.explanation}>
                             {card.explanation}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">{formatUsd(card.estimatedImpactUsd)}</p>
-                        <p className="text-xs text-gray-500">est. impact</p>
+                        <p className="text-2xl font-bold">{formatUsd(card.estimatedImpactUsd)}</p>
+                        <p className="text-base font-medium">est. impact</p>
                       </div>
                     </div>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        className="rounded-lg bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800"
-                        onClick={() => setStatus(card, 'ACCEPTED')}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700"
-                        onClick={() => setStatus(card, 'DISMISSED')}
-                      >
-                        Dismiss
-                      </button>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <ActionButton tone="emerald" icon="check" label="Accept" onClick={() => setStatus(card, 'ACCEPTED')} />
+                      <ActionButton tone="orange" icon="ban" label="Dismiss" onClick={() => setStatus(card, 'DISMISSED')} />
                     </div>
                   </article>
                 );

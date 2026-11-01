@@ -148,9 +148,9 @@ export default function TeamPage() {
     <div className="min-h-screen bg-background" style={{ paddingTop: '100px' }}>
       {/* Header Section */}
       <section className="py-16 bg-card sacred-shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem]">
           {/* Header with back button - left aligned */}
-          <div className="flex items-center mb-8 gap-4 px-16">
+          <div className="flex items-center mb-8 gap-4">
             <Link
               href="/"
               className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-3 sm:px-6"
@@ -176,7 +176,7 @@ export default function TeamPage() {
 
       {/* Main Content Section */}
       <section className="py-24 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem]">
           {loading ? (
             <div className="flex justify-center items-center min-h-[400px]">
               <div className="relative">

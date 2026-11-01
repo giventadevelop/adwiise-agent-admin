@@ -48,7 +48,14 @@ export interface RetailLocationDTO {
   retailerTypeCode?: string;
   brand?: string;
   region?: string;
+  addressLine1?: string;
+  addressLine2?: string;
   city?: string;
+  stateProvince?: string;
+  zipCode?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
   timezone?: string;
   is24Hours?: boolean;
   isActive?: boolean;
@@ -66,6 +73,7 @@ export interface RetailDailyMetricsDTO {
   transactionsCount?: number;
   laborHours?: number;
   laborCostUsd?: number;
+  wasteCostUsd?: number;
   shrinkCostUsd?: number;
   expectedProfitUsd?: number;
   actualProfitUsd?: number;
@@ -135,6 +143,19 @@ export interface RetailUserRegionAssignmentDTO {
   region: string;
   assignedByUserProfileId?: number | null;
   notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RetailLocationProfileDTO {
+  id?: number;
+  tenantId: string;
+  locationId: number;
+  fuelDispenserCount?: number;
+  hasCarWash?: boolean;
+  hasLottery?: boolean;
+  hasFoodservice?: boolean;
+  licenseExpiresOn?: string;
   createdAt?: string;
   updatedAt?: string;
 }

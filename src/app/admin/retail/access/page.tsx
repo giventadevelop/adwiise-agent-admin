@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
+import { ActionButton, RetailNav, YellowCheckbox, fieldClass, labelClass } from '@/components/retail/RetailUi';
 import { useAdminTenantId } from '../../AdminTenantContext';
 import type { UserProfileDTO } from '@/types';
 import type { RetailLocationDTO, RetailUserLocationAssignmentDTO, RetailUserRegionAssignmentDTO } from '@/types/retail';
@@ -113,22 +113,20 @@ export default function RetailAccessPage() {
       </div>
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
         <div>
-          <Link href={`/admin/retail${tenantQuery}`} className="text-sm font-semibold text-teal-800 underline">
-            Back to the morning brief
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold text-gray-900">Retail assignments</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Retail assignments</h1>
           <p className="mt-1 text-sm text-gray-600">
             Owners assign a store manager to stores and a regional manager to region names. A store with a blank region stays off the regional list.
           </p>
         </div>
+        <RetailNav tenantQuery={tenantQuery} current="access" showAccess />
         {allowed === false && <p className="text-gray-700">Only an owner or admin can assign retail managers.</p>}
         {allowed && (
           <>
             {message && <p className="text-sm text-gray-800">{message}</p>}
-            <section className="bg-white rounded-lg shadow-md p-4 space-y-3">
+            <section className="bg-white rounded-lg shadow-md p-6 space-y-4">
               <h2 className="font-semibold text-gray-900">Store manager</h2>
               <select
-                className="border border-gray-400 rounded-xl px-3 py-2"
+                className={fieldClass}
                 value={storeManagerId ?? ''}
                 onChange={event => setStoreManagerId(event.target.value ? Number(event.target.value) : null)}
               >
@@ -141,33 +139,29 @@ export default function RetailAccessPage() {
               {storeManagers.length === 0 && (
                 <p className="text-sm text-gray-600">No profile with role RETAIL_STORE_MANAGER for this tenant.</p>
               )}
-              <div className="space-y-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {stores.map(store => (
-                  <label key={store.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={store.id != null && selectedLocations.includes(store.id)}
-                      onChange={() => {
-                        if (store.id == null) return;
-                        setSelectedLocations(current =>
-                          current.includes(store.id as number)
-                            ? current.filter(id => id !== store.id)
-                            : [...current, store.id as number]
-                        );
-                      }}
-                    />
-                    {store.locationCode} {store.region ? `(${store.region})` : '(no region)'}
-                  </label>
+                  <YellowCheckbox
+                    key={store.id}
+                    checked={store.id != null && selectedLocations.includes(store.id)}
+                    onChange={() => {
+                      if (store.id == null) return;
+                      setSelectedLocations(current =>
+                        current.includes(store.id as number)
+                          ? current.filter(id => id !== store.id)
+                          : [...current, store.id as number]
+                      );
+                    }}
+                    label={`${store.locationCode} ${store.region ? `(${store.region})` : '(no region)'}`}
+                  />
                 ))}
               </div>
-              <button type="button" className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white" onClick={saveStores}>
-                Save stores
-              </button>
+              <ActionButton tone="emerald" icon="save" label="Save stores" onClick={saveStores} />
             </section>
-            <section className="bg-white rounded-lg shadow-md p-4 space-y-3">
+            <section className="bg-white rounded-lg shadow-md p-6 space-y-4">
               <h2 className="font-semibold text-gray-900">Regional manager</h2>
               <select
-                className="border border-gray-400 rounded-xl px-3 py-2"
+                className={fieldClass}
                 value={regionalManagerId ?? ''}
                 onChange={event => setRegionalManagerId(event.target.value ? Number(event.target.value) : null)}
               >
@@ -180,17 +174,15 @@ export default function RetailAccessPage() {
               {regionalManagers.length === 0 && (
                 <p className="text-sm text-gray-600">No profile with role RETAIL_REGIONAL_MANAGER for this tenant.</p>
               )}
-              <label className="block text-sm text-gray-700">
+              <label className={labelClass}>
                 Regions, separated by commas
                 <input
-                  className="mt-1 block w-full border border-gray-400 rounded-xl px-3 py-2"
+                  className={fieldClass}
                   value={regionText}
                   onChange={event => setRegionText(event.target.value)}
                 />
               </label>
-              <button type="button" className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white" onClick={saveRegions}>
-                Save regions
-              </button>
+              <ActionButton tone="purple" icon="save" label="Save regions" onClick={saveRegions} />
             </section>
           </>
         )}

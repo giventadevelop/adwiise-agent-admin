@@ -4,12 +4,12 @@ import { fetchAdminAccessForClerkUser, resolveSessionTenantForAccess } from '@/a
 import { getApiBaseUrl, getTenantIdOptional } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { fetchPlatformBillingPlans, fetchTenantProductBillings } from '@/app/admin/platform-billing/ApiServerActions';
-import type { GasStationLocationDTO } from '@/types/gasStation';
+import type { RetailLocationDTO } from '@/types/retail';
 import BillingDesk from './BillingDesk';
 
-async function loadLocations(tenantId: string): Promise<GasStationLocationDTO[]> {
+async function loadLocations(tenantId: string): Promise<RetailLocationDTO[]> {
   const params = new URLSearchParams({ 'tenantId.equals': tenantId, size: '500' });
-  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/gas-station-locations?${params.toString()}`, {
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/retail-locations?${params.toString()}`, {
     cache: 'no-store',
     headers: { 'X-Tenant-ID': tenantId },
   });

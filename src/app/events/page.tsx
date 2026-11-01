@@ -737,7 +737,7 @@ export default function EventsPage() {
       <div className="block md:hidden" style={{ height: '150px', width: '100%', backgroundColor: 'transparent' }}></div>
 
       {/* Event List */}
-      <div className="max-w-6xl mx-auto px-8 py-12 md:px-16 lg:px-24" style={{ paddingTop: '60px' }}>
+      <div className="w-full box-border px-8 py-12 md:px-16 lg:px-[4.5rem]" style={{ paddingTop: '60px' }}>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-6">All Events</h1>
 
@@ -788,7 +788,7 @@ export default function EventsPage() {
         </div>
 
         {/* Search Form */}
-        <div className="max-w-5xl mx-auto mb-8">
+        <div className="w-full mb-8">
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Search Events</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

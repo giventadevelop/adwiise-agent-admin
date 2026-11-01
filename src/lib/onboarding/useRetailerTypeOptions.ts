@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ONBOARDING_SITE_TYPE_OPTIONS } from '@/lib/onboarding/onboardingShared';
-import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions';
+import { fetchSiteTypes } from '@/app/admin/access-catalogs/ApiServerActions';
 
 export interface RetailerTypeOption {
   value: string;
@@ -30,7 +30,7 @@ export function useRetailerTypeOptions(
     let cancelled = false;
     const load = async () => {
       if (source === 'proxy') {
-        const response = await fetch('/api/proxy/retailer-types?size=500&sort=sortOrder,asc', { cache: 'no-store' });
+        const response = await fetch('/api/proxy/site-types?size=500&sort=sortOrder,asc', { cache: 'no-store' });
         if (!response.ok) return;
         const data = await response.json();
         const rows = Array.isArray(data) ? data : Array.isArray(data?.content) ? data.content : [];
@@ -38,7 +38,7 @@ export function useRetailerTypeOptions(
         if (!cancelled && next.length > 0) setOptions(next);
         return;
       }
-      const next = toOptions(await fetchRetailerTypes(tenantId));
+      const next = toOptions(await fetchSiteTypes(tenantId));
       if (!cancelled && next.length > 0) setOptions(next);
     };
     load().catch(() => {});

@@ -15,7 +15,6 @@ const PLATFORM_ONLY_NAV_KEYS = new Set([
   'tenant-organizations',
   'tenant-settings',
   'satellite-domains',
-  'gas-station',
   'tenant-test',
   'onboarding-requests',
   'access-roles',
@@ -148,14 +147,6 @@ export default function AdminNavigation({ currentPage, showHome = true }: AdminN
       key: 'profile-site'
     },
     {
-      href: '/admin/gas-station',
-      icon: 'chart',
-      label: 'Gas Stations',
-      color: 'orange',
-      active: currentPage === 'gas-station',
-      key: 'gas-station'
-    },
-    {
       href: tenantId ? `/admin/retail?tenant=${encodeURIComponent(tenantId)}` : '/admin/retail',
       icon: 'chart',
       label: 'Retail morning',
@@ -178,6 +169,14 @@ export default function AdminNavigation({ currentPage, showHome = true }: AdminN
       color: 'indigo',
       active: currentPage === 'access-roles',
       key: 'access-roles'
+    },
+    {
+      href: '/admin/access-catalogs#site-types',
+      icon: 'users',
+      label: 'Site types',
+      color: 'purple',
+      active: currentPage === 'site-types',
+      key: 'site-types'
     },
     {
       href: '/admin/access-catalogs#retailer-types',

@@ -54,13 +54,20 @@ export default function ErrorDialog({
           )}
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+        <div className="flex justify-end gap-3 border-t border-gray-200 p-6">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            className="flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-red-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-red-200"
             type="button"
+            title="Close"
+            aria-label="Close"
           >
-            Close
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-red-200">
+              <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <span className="font-semibold text-red-700">Close</span>
           </button>
         </div>
       </div>

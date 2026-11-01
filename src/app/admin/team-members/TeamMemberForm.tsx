@@ -236,7 +236,9 @@ export default function TeamMemberForm({
     setDetailGroups(groups);
     setDetailsOpen(true);
   }
-  const isMusic = groups.find((g) => g.id === Number(watchedGroupId))?.teamType === 'MUSIC';
+  const groupTeamType = groups.find((g) => g.id === Number(watchedGroupId))?.teamType ?? 'SPORTS';
+  const isMusic = groupTeamType === 'MUSIC';
+  const isSports = groupTeamType === 'SPORTS';
 
   useEffect(() => {
     let cancelled = false;
@@ -439,7 +441,7 @@ export default function TeamMemberForm({
         >
           <input type="number" {...register('priorityOrder', { valueAsNumber: true })} className={inputClass} />
         </FieldHint>
-        {!isMusic && (
+        {isSports && (
           <>
             <FieldHint label="Jersey number" hint="Shirt number for football. Whole number. Example: 7. Leave blank if unknown.">
               <input type="number" {...register('jerseyNumber', { valueAsNumber: true })} className={inputClass} />
@@ -579,7 +581,7 @@ export default function TeamMemberForm({
         </div>
       </div>
 
-      {!isMusic && (
+      {isSports && (
         <fieldset className="rounded-xl border border-gray-300 bg-gray-50 p-4">
           <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-gray-900">
             Season and career

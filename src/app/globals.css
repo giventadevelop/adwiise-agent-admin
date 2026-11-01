@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: 18px;
+}
+
 /* ========================================
    HEADER DESIGN SYSTEM - Editorial Elegance
    ======================================== */
@@ -1300,4 +1304,54 @@ input.custom-checkbox--yellow:checked {
 
 .zoom-out {
   animation: zoomOut 0.5s ease-out forwards;
+}
+
+/* Admin pages: drop the centered 1024–1280px column on desktop.
+   Direct page shells only, so dialogs and narrow fields stay boxed.
+   Below 1024px the page's own px-4 / px-8 stays. */
+@media (min-width: 1024px) {
+  .admin-page-shell > .max-w-7xl,
+  .admin-page-shell > .max-w-6xl,
+  .admin-page-shell > .max-w-5xl,
+  .admin-page-shell > .container,
+  .admin-page-shell > div > .max-w-7xl,
+  .admin-page-shell > div > .max-w-6xl,
+  .admin-page-shell > div > .max-w-5xl,
+  .admin-page-shell > div > .container {
+    max-width: none;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+    padding-left: 4.5rem;
+    padding-right: 4.5rem;
+  }
+}
+
+/* Generic white content cards use the same strength as the morning register tiles.
+   Colored cards, fields, the header, and dialogs keep their own backgrounds. */
+.bg-white.rounded-lg.shadow-md,
+.bg-white.rounded-xl.shadow-lg {
+  background-color: #bfdbfe;
+  color: #172554;
+  border-left: 4px solid #1d4ed8;
+}
+
+input.bg-white.rounded-lg.shadow-md,
+select.bg-white.rounded-lg.shadow-md,
+textarea.bg-white.rounded-lg.shadow-md,
+input.bg-white.rounded-xl.shadow-lg,
+select.bg-white.rounded-xl.shadow-lg,
+textarea.bg-white.rounded-xl.shadow-lg,
+.header-glass.bg-white.rounded-lg.shadow-md,
+.header-glass.bg-white.rounded-xl.shadow-lg,
+.header-glass .bg-white.rounded-lg.shadow-md,
+.header-glass .bg-white.rounded-xl.shadow-lg,
+[role="dialog"].bg-white.rounded-lg.shadow-md,
+[role="dialog"].bg-white.rounded-xl.shadow-lg,
+[role="dialog"] .bg-white.rounded-lg.shadow-md,
+[role="dialog"] .bg-white.rounded-xl.shadow-lg {
+  background-color: #ffffff;
+  color: inherit;
+  border-left-width: 0;
 }

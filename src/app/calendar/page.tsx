@@ -38,7 +38,7 @@ export default async function CalendarPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50" style={{ paddingTop: '120px' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="w-full box-border px-4 sm:px-6 lg:px-[4.5rem] py-4 sm:py-8">
         {/* Page Header */}
         <div className="mb-4 sm:mb-6 md:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 text-center sm:text-left">

@@ -4,7 +4,7 @@ import { fetchAdminAccessForClerkUser } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { fetchPlatformBillingPlans, fetchTenantProductBillings } from '@/app/admin/platform-billing/ApiServerActions';
-import type { GasStationLocationDTO } from '@/types/gasStation';
+import type { RetailLocationDTO } from '@/types/retail';
 import BillingDesk from '@/app/admin/billing/BillingDesk';
 
 export default async function TenantPlatformBillingPage({
@@ -23,11 +23,11 @@ export default async function TenantPlatformBillingPage({
   const tenantId = decodeURIComponent(resolved.tenantId);
   const paramsQuery = new URLSearchParams({ 'tenantId.equals': tenantId, size: '500' });
   const locationResponse = await fetchWithJwtRetry(
-    `${getApiBaseUrl()}/api/gas-station-locations?${paramsQuery.toString()}`,
+    `${getApiBaseUrl()}/api/retail-locations?${paramsQuery.toString()}`,
     { cache: 'no-store', headers: { 'X-Tenant-ID': tenantId } }
   );
   const locationData = locationResponse.ok ? await locationResponse.json() : [];
-  const locations: GasStationLocationDTO[] = Array.isArray(locationData) ? locationData : locationData?.content ?? [];
+  const locations: RetailLocationDTO[] = Array.isArray(locationData) ? locationData : locationData?.content ?? [];
   const [rows, plans] = await Promise.all([
     fetchTenantProductBillings(tenantId).catch(() => []),
     fetchPlatformBillingPlans().catch(() => []),

@@ -3,9 +3,9 @@
 import { getCurrentAdminAccess, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO } from '@/types/accessCatalog';
+import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO } from '@/types/accessCatalog';
 
-type CatalogRow = AccessRoleDTO | RetailerTypeDTO | RetailerSizeBandDTO | RecommendationCategoryDTO;
+type CatalogRow = AccessRoleDTO | RetailerTypeDTO | RetailerSizeBandDTO | RecommendationCategoryDTO | SiteTypeCatalogDTO;
 
 function asList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -31,7 +31,7 @@ async function fetchCatalog<T>(resource: string, tenantId?: string | null): Prom
   const scoped = tenantId?.trim();
   if (scoped) headers['X-Tenant-ID'] = scoped;
   const response = await fetchWithJwtRetry(
-    `${getApiBaseUrl()}/api/${resource}?size=500&sort=sortOrder,asc`,
+    `${getApiBaseUrl()}/api/${resource}?size=2000&sort=sortOrder,asc`,
     { cache: 'no-store', headers }
   );
   if (!response.ok) throw new Error(await readError(response));
@@ -97,6 +97,10 @@ export async function fetchRetailerTypes(tenantId?: string | null): Promise<Reta
   return fetchCatalog<RetailerTypeDTO>('retailer-types', tenantId);
 }
 
+export async function fetchSiteTypes(tenantId?: string | null): Promise<SiteTypeCatalogDTO[]> {
+  return fetchCatalog<SiteTypeCatalogDTO>('site-types', tenantId);
+}
+
 /** Active roles a caller may assign. Platform-super roles stay hidden from tenant admins. */
 export async function fetchAssignableAccessRoles(tenantId?: string | null): Promise<AccessRoleDTO[]> {
   const access = await getCurrentAdminAccess();
@@ -113,7 +117,11 @@ export async function saveAccessRole(row: AccessRoleDTO, shared: boolean, tenant
 }
 
 export async function saveRetailerType(row: RetailerTypeDTO, shared: boolean, tenantId?: string | null) {
-  return saveCatalog('retailer-types', row, shared, tenantId);
+  return saveCatalog('retailer-types', { ...row, siteTypeCode: row.siteTypeCode || 'RETAIL' }, shared, tenantId);
+}
+
+export async function saveSiteType(row: SiteTypeCatalogDTO, shared: boolean, tenantId?: string | null) {
+  return saveCatalog('site-types', row, shared, tenantId);
 }
 
 export async function deleteAccessRole(row: AccessRoleDTO) {
@@ -122,6 +130,10 @@ export async function deleteAccessRole(row: AccessRoleDTO) {
 
 export async function deleteRetailerType(row: RetailerTypeDTO) {
   return deleteCatalog('retailer-types', row);
+}
+
+export async function deleteSiteType(row: SiteTypeCatalogDTO) {
+  return deleteCatalog('site-types', row);
 }
 
 export async function fetchRetailerSizeBands(): Promise<RetailerSizeBandDTO[]> {

@@ -76,13 +76,44 @@ export const METRIC_TILES: Record<MetricTileKey, MetricTileCopy> = {
 };
 
 export const ORIGIN_CHIP_STYLES: Record<MetricOrigin, string> = {
-  Fuel: 'bg-orange-100 text-orange-800',
-  Register: 'bg-blue-100 text-blue-800',
-  Labor: 'bg-indigo-100 text-indigo-800',
-  Profit: 'bg-emerald-100 text-emerald-800',
-  Chain: 'bg-violet-100 text-violet-800',
-  Other: 'bg-gray-100 text-gray-800',
+  Fuel: 'bg-orange-800 text-white',
+  Register: 'bg-blue-800 text-white',
+  Labor: 'bg-indigo-800 text-white',
+  Profit: 'bg-emerald-800 text-white',
+  Chain: 'bg-violet-800 text-white',
+  Other: 'bg-amber-800 text-white',
 };
+
+/** Stronger fill, dark text, and a darker left bar. */
+export const ORIGIN_SURFACE: Record<MetricOrigin, string> = {
+  Fuel: 'bg-orange-200 text-orange-950 border-l-4 border-orange-700',
+  Register: 'bg-blue-200 text-blue-950 border-l-4 border-blue-700',
+  Labor: 'bg-indigo-200 text-indigo-950 border-l-4 border-indigo-700',
+  Profit: 'bg-emerald-200 text-emerald-950 border-l-4 border-emerald-700',
+  Chain: 'bg-violet-200 text-violet-950 border-l-4 border-violet-800',
+  Other: 'bg-amber-200 text-amber-950 border-l-4 border-amber-700',
+};
+
+export const PACK_SURFACE: Record<string, string> = {
+  GAS_STATION: 'bg-orange-200 text-orange-950 border-l-4 border-orange-700',
+  LIQUOR_STORE: 'bg-purple-200 text-purple-950 border-l-4 border-purple-700',
+  DUNKIN_DONUTS: 'bg-pink-200 text-pink-950 border-l-4 border-pink-700',
+  SEVEN_ELEVEN: 'bg-green-200 text-green-950 border-l-4 border-green-700',
+  RESTAURANT: 'bg-rose-200 text-rose-950 border-l-4 border-rose-700',
+  CLINIC: 'bg-cyan-200 text-cyan-950 border-l-4 border-cyan-700',
+};
+
+export const STATUS_CHIP: Record<string, string> = {
+  NEW: 'bg-sky-800 text-white',
+  VIEWED: 'bg-blue-800 text-white',
+  ACCEPTED: 'bg-emerald-800 text-white',
+  DISMISSED: 'bg-rose-800 text-white',
+  COMPLETED: 'bg-green-800 text-white',
+};
+
+export function packSurface(code?: string | null): string {
+  return PACK_SURFACE[code || ''] ?? 'bg-teal-200 text-teal-950 border-l-4 border-teal-700';
+}
 
 const CATEGORY_ORIGIN: Record<string, MetricOrigin> = {
   FUEL_PRICING: 'Fuel',

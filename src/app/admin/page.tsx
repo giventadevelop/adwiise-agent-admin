@@ -25,12 +25,12 @@ const BUTTON_GUIDES: Record<string, string> = {
   'team-groups': 'Containers for a sports club or band, such as First XI, Under-16, or Choir. Create the group here, then add people on Squad roster. Whether the group is sports or music comes from team types in Roster catalogs.',
   'team-members': 'People inside a squad: name, sports, skills, achievements, and portrait. Choose their squad group on this form. Sport and achievement choices come from Roster catalogs.',
   'roster-catalogs': 'Dropdown lists used by squads: sports, achievement categories, and team types. A shared row is offered to every tenant. Only a platform super admin should change shared rows.',
-  'access-catalogs': 'Two shared dropdowns on one page: access roles, and site or retailer types. Shared rows apply to every tenant and are edited by a platform super admin.',
+  'access-catalogs': 'Shared catalogs: access roles, site types, retailer packs, size bands, and recommendation categories. Shared rows are edited by a platform super admin.',
   'access-roles': 'Roles such as ADMIN and any custom role you add. They decide who sees the admin menu and which locations a person can open. Change shared roles only as platform super admin.',
-  'retailer-types': 'Shop and brand kinds such as liquor store, Dunkin, and Seven-Eleven, plus the module they belong to. These codes are stored as the organization site type and appear in onboarding and organization dropdowns.',
+  'retailer-types': 'Shop packs such as gas station, liquor store, Dunkin, and Seven-Eleven. A pack belongs to a site type. Shops use RETAIL.',
+  'site-types': 'Organization site types such as events, church, sports team, music band, personal profile, hybrid, and retail. A shop is RETAIL. The pack is chosen separately.',
   'retailer-size-bands': 'Size bands for one retailer type. Gas uses single (1 to 4), mid (5 to 10), and enterprise (11 or more). Other packs start with one standard band.',
   'recommendation-categories': 'Kinds of morning cards, such as fuel pricing, ordering, and staffing. A new kind is added here. Billing prices stay on Billing Plans.',
-  'site-types': 'Organization kinds such as events, church, sports team, music band, personal profile, hybrid, and gas station. They are stored in the same list as retailer types. Adding a row adds a choice to onboarding and the organization site-type dropdown.',
   'sports-categories': 'Sports such as football or cricket, shown as checkboxes on a squad member. A shared sport is available to every tenant. Edit shared rows only as platform super admin.',
   'tournaments': 'Seasons or cups for a sports-team site. This tile appears only when the organization site type is a sports team.',
   'homepage-cache': 'Refresh stored homepage content after heroes, events, or sections change and the public page still looks old.',
@@ -40,7 +40,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'onboarding-requests': 'New customer applications. Approve one to create a tenant. The site type chosen here decides which tools that tenant sees.',
   'tenant-settings': 'Homepage sections, hero images, and feature flags for a tenant. Platform super admin only.',
   'profile-site': 'A personal or hybrid profile site: writings, projects, services, and contact blocks.',
-  'gas-station': 'Tools for gas-station tenants: locations, daily numbers, and recommendations.',
+  retail: 'Morning brief, stores, integrations, and store comparison.',
   'platform-bill': 'What this tenant owes the platform for the software. This is not ticket revenue.',
   'platform-plans': 'The fee catalog used to charge tenants. Platform super admin only.',
   'tenant-test': 'Try create and update calls against tenant records. For checking the API, not for everyday content.',
@@ -254,7 +254,7 @@ export default function AdminPage() {
       key: 'access-catalogs'
     },
     {
-      href: '/admin/access-catalogs#access-roles',
+      href: '/admin/access-catalogs/access-roles',
       icon: 'keyRound',
       label: 'Access roles',
       hint: 'Add roles for the admin menu',
@@ -272,7 +272,7 @@ export default function AdminPage() {
       platformOnly: true,
     },
     {
-      href: '/admin/access-catalogs#retailer-types',
+      href: '/admin/access-catalogs/site-types',
       icon: 'globe',
       label: 'Site types',
       hint: 'Add organization site kinds',
@@ -281,7 +281,7 @@ export default function AdminPage() {
       platformOnly: true,
     },
     {
-      href: '/admin/access-catalogs#retailer-size-bands',
+      href: '/admin/access-catalogs/retailer-size-bands',
       icon: 'listChecks',
       label: 'Size bands',
       hint: 'Single, mid, and enterprise bands for each shop kind',
@@ -290,7 +290,7 @@ export default function AdminPage() {
       platformOnly: true,
     },
     {
-      href: '/admin/access-catalogs#recommendation-categories',
+      href: '/admin/access-catalogs/recommendation-categories',
       icon: 'clipboardCheck',
       label: 'Recommendation categories',
       hint: 'Card kinds for the morning list',
@@ -299,7 +299,7 @@ export default function AdminPage() {
       platformOnly: true,
     },
     {
-      href: '/admin/roster-catalogs#sports-categories',
+      href: '/admin/roster-catalogs/sports-categories',
       icon: 'listChecks',
       label: 'Sports categories',
       hint: 'Add sports for squad members',
@@ -379,13 +379,12 @@ export default function AdminPage() {
       key: 'profile-site'
     },
     {
-      href: '/admin/gas-station',
+      href: '/admin/retail',
       icon: 'chart',
-      label: 'Gas Stations',
-      hint: 'Open gas station tools',
-      color: 'orange',
-      key: 'gas-station',
-      platformOnly: true,
+      label: 'Retail',
+      hint: 'Morning brief, stores, and integrations',
+      color: 'teal',
+      key: 'retail',
     },
     {
       href: '/admin/billing',

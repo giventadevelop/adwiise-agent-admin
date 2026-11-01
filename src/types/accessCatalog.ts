@@ -17,6 +17,18 @@ export interface RetailerTypeDTO {
   label: string;
   hint?: string | null;
   moduleKey?: string | null;
+  siteTypeCode?: string | null;
+  sortOrder?: number | null;
+  isActive?: boolean | null;
+}
+
+export interface SiteTypeCatalogDTO {
+  id?: number | null;
+  tenantId?: string | null;
+  code: string;
+  label: string;
+  hint?: string | null;
+  moduleKey?: string | null;
   sortOrder?: number | null;
   isActive?: boolean | null;
 }

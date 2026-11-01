@@ -41,7 +41,7 @@ export async function setLocationIncludedInBilling(
   included: boolean
 ): Promise<void> {
   await assertCanPayTenant(tenantId);
-  const response = await fetchWithJwtRetry(`${apiBase()}/api/gas-station-locations/${locationId}`, {
+  const response = await fetchWithJwtRetry(`${apiBase()}/api/retail-locations/${locationId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/merge-patch+json',

@@ -23,6 +23,8 @@ import AddressFieldsSection from '@/components/admin/AddressFieldsSection';
 import DescriptionTextareaField from '@/components/admin/DescriptionTextareaField';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
+import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions';
+import type { RetailerTypeDTO } from '@/types/accessCatalog';
 
 interface TenantOrganizationFormProps {
   initialData?: TenantOrganizationDTO;
@@ -45,6 +47,7 @@ export default function TenantOrganizationForm({
   const router = useRouter();
   const tenantId = useAdminTenantId();
   const retailerOptions = useRetailerTypeOptions('server', tenantId);
+  const [packOptions, setPackOptions] = useState<RetailerTypeDTO[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [tenantIdPrefix, setTenantIdPrefix] = useState('');
@@ -98,6 +101,26 @@ export default function TenantOrganizationForm({
 
   // Watch form values for real-time updates
   const watchedValues = watch();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRetailerTypes(tenantId)
+      .then((rows) => {
+        if (!cancelled) {
+          setPackOptions(rows.filter((row) => row.isActive !== false && row.code !== 'GAS_STATION_ENT' && row.code !== 'EVENT_ORG' && row.code !== 'CHURCH_ORG' && row.code !== 'SPORTS_TEAM' && row.code !== 'MUSIC_BAND' && row.code !== 'PERSONAL_PROFILE' && row.code !== 'HYBRID' && row.code !== 'RETAIL' && (row.siteTypeCode == null || row.siteTypeCode === 'RETAIL')));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (watchedValues.siteType && watchedValues.siteType !== 'RETAIL') {
+      setValue('retailerTypeCode', '');
+    }
+  }, [watchedValues.siteType, setValue]);
 
   const domainField = register('domain', {
     required: 'Website / domain is required',
@@ -562,27 +585,38 @@ export default function TenantOrganizationForm({
               </p>
             </div>
 
+            {watchedValues.siteType === 'RETAIL' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Retailer pack
               </label>
               <select
-                {...register('retailerTypeCode')}
+                {...register('retailerTypeCode', {
+                  validate: (value) => watchedValues.siteType !== 'RETAIL' || Boolean(value && value.trim()) || 'Choose a retailer pack',
+                })}
                 className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
               >
-                <option value="">None</option>
-                <option value="GAS_STATION">Gas station</option>
-                <option value="LIQUOR_STORE">Liquor store</option>
-                <option value="DUNKIN_DONUTS">Dunkin</option>
-                <option value="SEVEN_ELEVEN">Seven-Eleven</option>
-                <option value="RESTAURANT">Restaurant</option>
-                <option value="CLINIC">Clinic</option>
+                <option value="">Choose a pack</option>
+                {(packOptions.length > 0 ? packOptions : [
+                  { code: 'GAS_STATION', label: 'Gas station' },
+                  { code: 'LIQUOR_STORE', label: 'Liquor store' },
+                  { code: 'DUNKIN_DONUTS', label: 'Dunkin' },
+                  { code: 'SEVEN_ELEVEN', label: 'Seven-Eleven' },
+                  { code: 'RESTAURANT', label: 'Restaurant' },
+                  { code: 'CLINIC', label: 'Clinic' },
+                ]).map((option) => (
+                  <option key={option.code} value={option.code}>{option.label}</option>
+                ))}
               </select>
               <p className="mt-1 text-sm text-gray-500">
-                Used when the site type is RETAIL. Gas uses a fuel file. The other packs use a register file only. Size is a band on the pack, not a second pack.
+                Required for a retail site. Gas uses a fuel file. The other packs use a register file only. Size is a band on the pack.
               </p>
-              <input type="hidden" {...register('retailerSizeBandCode')} />
+              {errors.retailerTypeCode && (
+                <p className="mt-1 text-sm text-red-600">{errors.retailerTypeCode.message}</p>
+              )}
             </div>
+            )}
+            <input type="hidden" {...register('retailerSizeBandCode')} />
           </div>
         </div>
 

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="How the squad roster tables relate to each other and to tenant settings, and where the same fact is stored twice.">
+    <title>Squad roster tables and tenant settings</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f7fbff;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.2em;
+            color: #0d3b66;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        h2 { font-size: 1.5em; color: #0d3b66; margin-top: 8px; }
+        h3 { font-size: 1.2em; color: #333; margin-top: 18px; }
+        p, li { font-size: 1.02em; }
+        a { color: #0052a3; }
+        a:focus, button:focus { outline: 3px solid #0066cc; outline-offset: 2px; }
+        code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .toc {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .toc h2 { margin-top: 0; font-size: 1.2em; }
+        .toc ol { margin: 8px 0 0 22px; }
+        .section-intro {
+            background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .section-intro code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            border: 1px solid #b8d4e3;
+        }
+        .section-container {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+        }
+        .section-container.parameters {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border-left-color: #ff9800;
+        }
+        .section-container.output {
+            background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%);
+            border-left-color: #28a745;
+        }
+        .section-container.usage {
+            background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%);
+            border-left-color: #9c27b0;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            padding: 12px 20px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+        .info, .warning, .success {
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 16px 0;
+        }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .info code, .warning code, .success code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            border: 1px solid #b8d4e3;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td { border: 1px solid #b8d4e3; padding: 12px; text-align: left; vertical-align: top; }
+        th {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) { background-color: #f3f9ff; }
+        tr:hover { background-color: #e3f2fd; }
+        td code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+        }
+        .diagram {
+            background: white;
+            border: 1px solid #b8d4e3;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0 4px;
+        }
+        .diagram-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin: 10px 0;
+        }
+        .node {
+            min-width: 180px;
+            max-width: 260px;
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: center;
+            border: 2px solid #0066cc;
+            background: #e8f4f8;
+            color: #0d3b66;
+        }
+        .node strong { display: block; font-family: 'Courier New', monospace; font-size: 0.95em; }
+        .node span { display: block; font-size: 0.85em; margin-top: 4px; }
+        .node.hub { background: #d4edda; border-color: #1e7e34; color: #14532d; }
+        .node.settings { background: #fff3cd; border-color: #b8860b; color: #5c4300; }
+        .node.catalog { background: #f0e6ff; border-color: #7b1fa2; color: #4a148c; }
+        .node.data { background: #e3f2fd; border-color: #0052a3; color: #0d3b66; }
+        .node.link { background: #ffe6cc; border-color: #e65100; color: #6d2c00; }
+        .arrow {
+            text-align: center;
+            color: #0052a3;
+            font-weight: 600;
+            margin: 2px 0;
+        }
+        .source {
+            font-size: 0.95em;
+            color: #333;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.6em; }
+            .node { min-width: 140px; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Squad roster tables and tenant settings</h1>
+        <p class="source">Read from <code>adwiise-agent-database-repo/SQLS/Current_Sqls/adwiise_agent_Latest_Schema.sql</code> on 31 October 2026. The seven tables in the screenshot are one roster. They are not copies of tenant settings.</p>
+
+        <div class="section-intro">
+            <p>A tenant is one organization, stored on <code>tenant_organization</code>. That organization has one settings row, <code>tenant_settings</code>, and any number of squads. The settings row decides whether the public homepage shows the squad. The seven roster tables hold the squads, the people, the sports they play, and the awards. None of those seven tables has a foreign key to <code>tenant_settings</code>.</p>
+        </div>
+
+        <nav class="toc" aria-label="On this page">
+            <h2>On this page</h2>
+            <ol>
+                <li><a href="#where-a-new-website-fits">Where a new website fits</a></li>
+                <li><a href="#how-a-tenant-owns-them">How a tenant owns these tables</a></li>
+                <li><a href="#diagram">Diagram</a></li>
+                <li><a href="#what-each-table-is">What each table is, in plain English</a></li>
+                <li><a href="#how-rows-connect">How the rows connect</a></li>
+                <li><a href="#redundancy">Where the same fact is stored twice</a></li>
+                <li><a href="#not-duplicates">What looks alike and is not a duplicate</a></li>
+            </ol>
+        </nav>
+
+        <section class="section-container parameters" id="where-a-new-website-fits">
+            <div class="section-header parameters">Where a new website fits</div>
+            <p>A group that wants its own website chooses a <strong>site type</strong>. A discussion group, a political interest group, and a social club use <code>EVENT_ORG</code>. That site type already turns on events, gallery, news, and membership. It does not turn on tournaments. Adding a new site-type code would not open any extra screen, because an unknown module key already uses the events preset.</p>
+            <p><strong>Team type</strong> is a second label, used only when that same site wants named groups on the roster. <code>team_groups.team_type</code> stores a text code from the <code>team_type</code> catalog. Shared codes include <code>SPORTS</code>, <code>MUSIC</code>, <code>OTHER</code>, <code>DISCUSSION</code>, <code>SOCIAL</code>, <code>POLITICAL</code>, <code>CULTURAL</code>, <code>VOLUNTEER</code>, <code>YOUTH</code>, and <code>COMMITTEE</code>. The member form shows jersey and season totals only for <code>SPORTS</code>, and instruments only for <code>MUSIC</code>. Every other code keeps name, biography, photo, and the sports checkboxes.</p>
+        </section>
+
+        <section class="section-container" id="how-a-tenant-owns-them">
+            <div class="section-header">How a tenant owns these tables</div>
+            <p>Every roster row that belongs to one club carries that club’s <code>tenant_id</code>. The id points at <code>tenant_organization.tenant_id</code>. Deleting the organization deletes the settings row and the roster rows, because those foreign keys use <code>ON DELETE CASCADE</code>.</p>
+            <p><code>tenant_settings</code> is a sibling of the roster, not its parent. The settings table also points at the same organization, and <code>tenant_id</code> is unique there, so each tenant has exactly one settings row. The only settings column that talks about this roster is <code>show_team_members_section_in_home_page</code>. When that flag is true, the homepage shows the squad section. The flag does not contain players, sports, or groups.</p>
+            <div class="info">
+                <p>Two catalog tables in the screenshot, <code>sports_category</code> and <code>team_type</code>, are allowed to have an empty <code>tenant_id</code>. An empty tenant id means the row is a shared platform choice, such as Cricket or Sports. A filled tenant id means that one organization added a private choice of its own. Operational tables (<code>team_groups</code>, <code>team_members</code>, and the three link tables) always require a tenant id.</p>
+            </div>
+        </section>
+
+        <section class="section-container usage" id="diagram">
+            <div class="section-header usage">Diagram</div>
+            <p>Green is the organization. Yellow is the on/off switch for the homepage. Purple boxes are shared lists. Blue boxes are the squad and its people. Orange boxes are the links that let one person have many sports and many squads.</p>
+            <figure class="diagram">
+                <figcaption class="arrow">One organization</figcaption>
+                <div class="diagram-row">
+                    <div class="node hub"><strong>tenant_organization</strong><span>The club. Every other row hangs off its tenant id.</span></div>
+                </div>
+                <p class="arrow">same tenant id, two different jobs</p>
+                <div class="diagram-row">
+                    <div class="node settings"><strong>tenant_settings</strong><span>One row. Shows or hides the squad on the homepage. No player data.</span></div>
+                    <div class="node catalog"><strong>team_type</strong><span>Shared list: Sports, Music, Other. A tenant may add a private type.</span></div>
+                    <div class="node catalog"><strong>sports_category</strong><span>Shared list: cricket, football, basketball, and the rest.</span></div>
+                </div>
+                <p class="arrow">a group stores the type code as text, not as a foreign key</p>
+                <div class="diagram-row">
+                    <div class="node data"><strong>team_groups</strong><span>One squad or band: name, slug, homepage text. Must belong to one tenant.</span></div>
+                </div>
+                <p class="arrow">each person has one home squad</p>
+                <div class="diagram-row">
+                    <div class="node data"><strong>team_members</strong><span>The person: name, photo, football season columns, and extra sport JSON.</span></div>
+                </div>
+                <p class="arrow">children of the person</p>
+                <div class="diagram-row">
+                    <div class="node link"><strong>team_member_sport</strong><span>Which sports this person plays. Points at sports_category.</span></div>
+                    <div class="node link"><strong>team_group_membership</strong><span>Extra squads for the same person. Jersey can differ per squad.</span></div>
+                    <div class="node link"><strong>team_member_achievement</strong><span>Awards for this person. Category is both a code and an optional id.</span></div>
+                </div>
+            </figure>
+            <div class="info">
+                <p>Reading the picture as a sentence: the organization owns the settings and the squads. A squad has people. A person has a home squad, a list of sports, a list of extra squads, and a list of awards. Settings never point at a person.</p>
+            </div>
+        </section>
+
+        <section class="section-container" id="what-each-table-is">
+            <div class="section-header">What each table is, in plain English</div>
+
+            <h3>sports_category</h3>
+            <p>The menu of sports. Seeded rows with an empty tenant id are Cricket, Football (Soccer), Basketball, Volleyball, Tennis and Squash, Badminton, Table Tennis, and Golf. Any tenant can use those. A tenant that needs a sport that is not on the list adds its own row with its tenant id. The code must be unique among shared rows, and unique again inside one tenant.</p>
+
+            <h3>team_type</h3>
+            <p>The menu of roster kinds. The shared rows are Sports, Music, and Other. This answers “is this group a squad or a band?” It does not list the sports inside the squad. A music band and a football squad can live in the same tenant.</p>
+
+            <h3>team_groups</h3>
+            <p>One named group on the public carousel: First Team, Choir, and so on. It must have a tenant id. <code>team_type</code> on this table is the catalog code copied into a text column (<code>SPORTS</code>, <code>MUSIC</code>, <code>OTHER</code>). There is no foreign key to <code>team_type.id</code>. The slug is unique per tenant when it is filled in.</p>
+
+            <h3>team_members</h3>
+            <p>One person in one home group. <code>team_group_id</code> is required, so a person cannot be saved with no home squad. The row also holds identity (name, photo, email), football season totals (appearances, goals, assists, wins, draws, losses), and two JSON-like text fields: <code>recent_matches</code> for football match rows, and <code>sport_profiles</code> for every other sport’s stats and matches. An optional <code>user_profile_id</code> can point at a login, and that link is cleared if the login is deleted. The person row itself is removed if the home group or the organization is deleted.</p>
+
+            <h3>team_member_sport</h3>
+            <p>The checked sports for one person. One row is one person plus one <code>sports_category</code>. The pair cannot be inserted twice. The schema comment says this table replaced the old <code>categories</code> list inside <code>sport_profiles</code>. The JSON column is still there for the extra numbers (points, wickets, match box scores). You cannot delete a sport from the catalog while a person still points at it (<code>ON DELETE RESTRICT</code>).</p>
+
+            <h3>team_group_membership</h3>
+            <p>Extra squads for a person who already has a home squad. The schema comment says a person can belong to more than one squad in the same tenant, and that <code>team_members.team_group_id</code> stays the primary group. Each membership can store its own jersey number and position. The pair of group and person is unique.</p>
+
+            <h3>team_member_achievement</h3>
+            <p>One award, honor, trophy, or cap for one person. <code>category</code> is a required text code such as <code>AWARD</code>. <code>achievement_category_id</code> is an optional pointer at the <code>achievement_category</code> catalog, which is the same shape as <code>sports_category</code> but was not in the screenshot. The award disappears with the person.</p>
+        </section>
+
+        <section class="section-container parameters" id="how-rows-connect">
+            <div class="section-header parameters">How the rows connect</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>What it means</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>tenant_settings.tenant_id</code></td>
+                        <td><code>tenant_organization.tenant_id</code></td>
+                        <td>One settings row per organization. Unique.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_groups.tenant_id</code></td>
+                        <td><code>tenant_organization.tenant_id</code></td>
+                        <td>The squad belongs to that club. Not to the settings row.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_groups.team_type</code></td>
+                        <td><code>team_type.code</code></td>
+                        <td>Text match only. No foreign key. A renamed catalog code will not update old groups.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_members.team_group_id</code></td>
+                        <td><code>team_groups.id</code></td>
+                        <td>Home squad. Required. Deleting the squad deletes its people.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_members.tenant_id</code></td>
+                        <td><code>tenant_organization.tenant_id</code></td>
+                        <td>Copied onto the person as well as the group. Nothing in the database checks that the person’s tenant matches the home group’s tenant.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_member_sport</code></td>
+                        <td><code>team_members</code> and <code>sports_category</code></td>
+                        <td>Which catalog sports this person plays.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_group_membership</code></td>
+                        <td><code>team_groups</code> and <code>team_members</code></td>
+                        <td>Additional squads. Unique per group and person.</td>
+                    </tr>
+                    <tr>
+                        <td><code>team_member_achievement</code></td>
+                        <td><code>team_members</code> and, optionally, <code>achievement_category</code></td>
+                        <td>Awards. The category code is stored even when the catalog id is empty.</td>
+                    </tr>
+                    <tr>
+                        <td><code>tenant_settings.show_team_members_section_in_home_page</code></td>
+                        <td>the roster, by convention</td>
+                        <td>Homepage visibility only. No foreign key.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section-container parameters" id="redundancy">
+            <div class="section-header parameters">Where the same fact is stored twice</div>
+            <p>The seven tables should stay. They answer different questions. The overlap is inside a few columns, not a second copy of a whole table.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>What is repeated</th>
+                        <th>Where</th>
+                        <th>What to treat as the source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Which sports a person plays</td>
+                        <td><code>team_member_sport</code> and the <code>categories</code> array inside <code>team_members.sport_profiles</code></td>
+                        <td>The link table. The service rewrites the JSON list from the checked sports after save. The rest of the JSON (stats and matches) is not a copy of another table.</td>
+                    </tr>
+                    <tr>
+                        <td>Which squad a person belongs to</td>
+                        <td><code>team_members.team_group_id</code> and a row in <code>team_group_membership</code></td>
+                        <td>The column on the person is the home squad and is required. The membership table is for extra squads. If the home squad is also inserted as a membership, jersey and position can drift between the two rows.</td>
+                    </tr>
+                    <tr>
+                        <td>Jersey and position</td>
+                        <td><code>team_members</code> and <code>team_group_membership</code></td>
+                        <td>Useful when the same person wears a different shirt in a second squad. Redundant only when both rows describe the same squad.</td>
+                    </tr>
+                    <tr>
+                        <td>Football season totals versus other sports</td>
+                        <td>Real columns on <code>team_members</code> (goals, assists, <code>recent_matches</code>) and the same ideas inside <code>sport_profiles</code> for basketball, cricket, and the other codes</td>
+                        <td>Football stays on the columns. Other sports stay in the JSON. Do not copy football into <code>sport_profiles</code>. The shapes match on purpose so editors can use one card layout.</td>
+                    </tr>
+                    <tr>
+                        <td>Award category</td>
+                        <td><code>team_member_achievement.category</code> (required text) and <code>achievement_category_id</code> (optional foreign key)</td>
+                        <td>This is the clearest duplication. The text can disagree with the catalog row. The catalog id is the safer pointer. The text remains because older rows and the form still send a code.</td>
+                    </tr>
+                    <tr>
+                        <td>Group kind</td>
+                        <td><code>team_type</code> catalog and <code>team_groups.team_type</code> text</td>
+                        <td>The catalog is the list of allowed labels. The group stores a copy of the code. There is no foreign key, so the database will not stop a group from keeping a code that was later turned off.</td>
+                    </tr>
+                    <tr>
+                        <td>Tenant id on every child</td>
+                        <td>Person, award, sport link, and membership all store <code>tenant_id</code> even though the home group already has it</td>
+                        <td>Kept so lists can filter by tenant without joining. It is a copy of the organization id, not a second organization. A bad write could put a person in one tenant and a home group in another. The schema does not forbid that.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="warning">
+                <p><code>sport_profiles</code> is still the right place for per-sport stats. Replacing it with another table would repeat a wide set of nullable numbers for every sport, or turn into a pile of name/value rows. The redundant part is only the <code>categories</code> list inside that JSON, because <code>team_member_sport</code> already stores those choices.</p>
+            </div>
+        </section>
+
+        <section class="section-container output" id="not-duplicates">
+            <div class="section-header output">What looks alike and is not a duplicate</div>
+            <ul>
+                <li><code>sports_category</code> and <code>team_type</code> share the same column layout (code, label, sort order, active flag, optional tenant id). They are two lists. Merging them would mix “Basketball” with “Music”.</li>
+                <li><code>team_type</code> code <code>SPORTS</code> is not the site type <code>SPORTS_TEAM</code> on <code>site_type_catalog</code>. Site type says what kind of website the organization is. Team type says what kind of group sits on that website. A church site can still have a sports squad.</li>
+                <li><code>tenant_settings.show_profile_achievements_section</code> is the personal-profile timeline. It is not <code>team_member_achievement</code>. The names are close. The tables are not.</li>
+                <li>Leagues and tournaments are other tenant-owned tables. Homepage and header flags on <code>tenant_settings</code> show them. They do not replace <code>team_groups</code> or <code>sports_category</code>.</li>
+                <li>Social links on <code>tenant_settings</code> are the club’s public pages. Social links on <code>team_members</code> are that person’s pages.</li>
+            </ul>
+            <div class="success">
+                <p>Nothing in the screenshot is an unused second copy of <code>tenant_settings</code>. The roster is tenant data. Settings are the switch. Keep both. When editing a person, trust <code>team_member_sport</code> for selected sports, <code>team_members.team_group_id</code> for the home squad, and <code>sport_profiles</code> only for the extra stat document.</p>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
