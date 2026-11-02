@@ -16,7 +16,7 @@ export type EventMediaThumbnailInput = Pick<
 
 export type OfficialDocumentPlaceholderKind = 'pdf' | 'word' | 'excel' | 'image' | 'generic';
 
-/** Card preview frame on /mosc-redesign/downloads (Tailwind aspect-[16/10]). */
+/** Card preview frame for official-document thumbnails (Tailwind aspect-[16/10]). */
 export const OFFICIAL_DOCUMENT_CARD_THUMBNAIL_ASPECT = '16 / 10';
 
 /** Recommended upload size for download card thumbnails (2× desktop ~400px width). */

@@ -9,14 +9,12 @@ import SatelliteAuthBranding from '@/components/auth/SatelliteAuthBranding';
 import { BRAND_PRIMARY_HOST } from '@/lib/brand';
 
 /**
- * Minimal primary-domain landing at `/` (no main Header/Footer — see ConditionalLayout).
+ * Primary-domain landing helper. The root layout always mounts Header and Footer.
  * Satellite flows continue to use `https://<primary>/sign-in?redirect_url=...` (unchanged).
  * Hash routing lets Clerk render sign-in on `/` without conflicting with `/sign-in` path routing.
  *
- * IMPORTANT: `/` does not mount Header, so `clerk_signout=true` must be handled here.
- * After primary /auth/signout-redirect redirects back (e.g. http://localhost:3001/?clerk_signout=true),
- * we call signOut() and send the user to /home — otherwise Clerk still shows "signed in" and the
- * param is never cleared (Header's clerk_signout effect never runs on this route).
+ * Header also clears `clerk_signout=true`. This helper still signs out and sends the user to /home
+ * when that param is present on `/`.
  */
 export default function RootAuthLanding() {
   const searchParams = useSearchParams();
@@ -47,7 +45,7 @@ export default function RootAuthLanding() {
     }
   }, [isLoaded, isSignedIn, userId, user]);
 
-  // Clear session when returning from /auth/signout-redirect with ?clerk_signout=true (this page has no Header).
+  // Clear session when returning from /auth/signout-redirect with ?clerk_signout=true.
   useEffect(() => {
     if (clerkSignOutParam !== 'true' || !isLoaded || clerkSignOutCleanupRef.current) return;
     clerkSignOutCleanupRef.current = true;

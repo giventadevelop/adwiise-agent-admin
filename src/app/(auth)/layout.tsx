@@ -2,8 +2,8 @@ import { ReactNode } from 'react';
 
 /**
  * Auth Layout — wraps sign-in, sign-up, etc.
- * Main site Header/Footer are excluded in ConditionalLayout for these routes
- * (see `isAuthRoute` in ConditionalLayout.tsx), so auth pages are not under the marketing nav.
+ * The root layout already renders the site Header and Footer on these routes.
+ * This wrapper only sets the gray page background.
  */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (

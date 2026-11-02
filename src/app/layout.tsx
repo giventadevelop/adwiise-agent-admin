@@ -7,7 +7,6 @@ import TrpcProvider from "@/lib/trpc/Provider";
 import Script from "next/script";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import ConditionalLayout from "../components/ConditionalLayout";
 import PaginationScrollToTop from "../components/PaginationScrollToTop";
 import MobileDebugConsole from "../components/MobileDebugConsole";
 import { TenantSettingsProvider } from "../components/TenantSettingsProvider";
@@ -78,7 +77,6 @@ export default async function RootLayout({
     /^\/membership\/qr/,
     /^\/api\/diagnostic/,
     /^\/api\/logs/,
-    /^\/mosc/,
     /^\/events/,
     /^\/sponsors/,
     /^\/gallery/,
@@ -130,19 +128,10 @@ export default async function RootLayout({
       afterSignOutUrl: '/', // Clerk v7: afterSignOutUrl moved from UserButton to provider
     };
 
-  const skipMainLayoutChrome =
-    pathname.startsWith('/mosc-old') || pathname.startsWith('/mosc');
-  const isAuthChromeHiddenRoute =
-    pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/sign-up') ||
-    pathname.startsWith('/sso-callback') ||
-    pathname.startsWith('/auth/signout-redirect');
-
-  // Determine tenant-scoped admin flag on the server for every route that renders the main Header.
-  // This includes public pages such as `/`, so admins can open the Admin menu from the homepage.
+  // Admin menu is on every page, including public routes and sign-in.
   let isTenantAdmin = false;
 
-  if (pathname && !skipMainLayoutChrome && !isAuthChromeHiddenRoute) {
+  if (pathname) {
     try {
       // CRITICAL: Call auth() immediately after awaiting headers() to ensure proper async context
       // Do not call any other async functions before auth() completes
@@ -361,16 +350,11 @@ export default async function RootLayout({
       logServerFetchFailure('Layout admin status', e);
       isTenantAdmin = false;
     }
-  } else {
-    console.log('[Layout] 🔍 Route does not render main Header, skipping admin auth checks:', pathname);
-    isTenantAdmin = false;
   }
 
   console.log('[Layout] 🔍 Final admin status:', { isTenantAdmin, isPublicRoute, pathname });
 
-  const footerContact = skipMainLayoutChrome
-    ? null
-    : await fetchFooterContactPropsServer();
+  const footerContact = await fetchFooterContactPropsServer();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -390,12 +374,11 @@ export default async function RootLayout({
           <PaginationScrollToTop />
           <TrpcProvider>
             <TenantSettingsProvider>
-              <ConditionalLayout
-                header={<Header hideMenuItems={false} isTenantAdmin={isTenantAdmin} />}
-                footer={<Footer contact={footerContact ?? undefined} />}
-              >
+              <Header hideMenuItems={false} isTenantAdmin={isTenantAdmin} />
+              <div className="flex-1 flex flex-col">
                 {children}
-              </ConditionalLayout>
+              </div>
+              <Footer contact={footerContact ?? undefined} />
             </TenantSettingsProvider>
           </TrpcProvider>
         </ClerkProvider>
