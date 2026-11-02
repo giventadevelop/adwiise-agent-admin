@@ -17,12 +17,8 @@ import { useAdminTenantId } from '../AdminTenantContext';
 import TenantSiteTypePicker from '../TenantSiteTypePicker';
 import type { RetailDailyMetricsDTO, RetailFuelDayDTO, RetailLocationDTO, RetailRecommendationDTO } from '@/types/retail';
 import {
-  fetchRetailFuelDaysServer,
-  fetchRetailLocationsServer,
-  fetchRetailMetricsServer,
-  fetchRetailRecommendationsServer,
-  getRetailMorningAccess,
   askRetailBriefServer,
+  loadRetailMorningBundle,
   refreshRetailBriefServer,
   updateRetailRecommendationServer,
 } from './retailServer';
@@ -50,6 +46,10 @@ export default function RetailMorningPage() {
   const [canAssign, setCanAssign] = useState(false);
   const [denied, setDenied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [storeError, setStoreError] = useState<string | null>(null);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [fuelError, setFuelError] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
@@ -63,38 +63,34 @@ export default function RetailMorningPage() {
       setRecommendations([]);
       setLocationId(null);
       setDenied(false);
+      setStoreError(null);
+      setMetricsError(null);
+      setFuelError(null);
+      setCardError(null);
       return;
     }
     let cancelled = false;
     setLoading(true);
+    setStoreError(null);
+    setMetricsError(null);
+    setFuelError(null);
+    setCardError(null);
     (async () => {
-      const access = await getRetailMorningAccess(tenantId);
+      const bundle = await loadRetailMorningBundle(date, tenantId);
       if (cancelled) return;
-      setCanAssign(access.canAssign);
-      if (access.scope === 'NONE') {
-        setDenied(true);
-        setLocations([]);
-        setMetrics([]);
-        setFuelDays([]);
-        setRecommendations([]);
-        setLoading(false);
-        return;
-      }
-      setDenied(false);
-      const [loadedLocations, loadedMetrics, loadedFuel, loadedRecs] = await Promise.all([
-        fetchRetailLocationsServer(tenantId),
-        fetchRetailMetricsServer(date, tenantId),
-        fetchRetailFuelDaysServer(date, tenantId),
-        fetchRetailRecommendationsServer(date, tenantId),
-      ]);
-      if (cancelled) return;
-      setLocations(loadedLocations);
-      setMetrics(loadedMetrics);
-      setFuelDays(loadedFuel);
-      setRecommendations(loadedRecs);
+      setCanAssign(bundle.canAssign);
+      setDenied(bundle.denied);
+      setLocations(bundle.locations);
+      setMetrics(bundle.metrics);
+      setFuelDays(bundle.fuelDays);
+      setRecommendations(bundle.recommendations);
+      setStoreError(bundle.storeError);
+      setMetricsError(bundle.metricsError);
+      setFuelError(bundle.fuelError);
+      setCardError(bundle.cardError);
       setLocationId(current => {
-        if (current != null && loadedLocations.some(location => location.id === current)) return current;
-        return loadedLocations[0]?.id ?? null;
+        if (current != null && bundle.locations.some(location => location.id === current)) return current;
+        return bundle.locations[0]?.id ?? null;
       });
       setLoading(false);
     })();
@@ -127,6 +123,19 @@ export default function RetailMorningPage() {
       </div>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Retail morning brief</h1>
+        {tenantId && (
+          <div className="mt-4 inline-flex items-center gap-4 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-6 py-4 shadow-sm">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+              <svg className="h-10 w-10 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <div>
+              <span className="block text-sm font-semibold text-indigo-700">Tenant ID</span>
+              <span className="mt-1 block text-2xl font-bold text-indigo-900">{tenantId}</span>
+            </div>
+          </div>
+        )}
         <p className="mt-2 text-lg text-gray-800">
           Stores you are allowed to see for this tenant. Gallons appear only for a gas station.
         </p>
@@ -150,6 +159,7 @@ export default function RetailMorningPage() {
                   value={date}
                   onChange={event => setDate(event.target.value)}
                   className={fieldClass}
+                  disabled={loading}
                 />
               </label>
               <label className={`${labelClass} text-base text-sky-950`}>
@@ -158,7 +168,9 @@ export default function RetailMorningPage() {
                   value={locationId ?? ''}
                   onChange={event => setLocationId(event.target.value ? Number(event.target.value) : null)}
                   className={fieldClass}
+                  disabled={loading || locations.length === 0}
                 >
+                  {locations.length === 0 && <option value="">No stores</option>}
                   {locations.map(location => (
                     <option key={location.id} value={location.id}>
                       {location.locationCode} ({location.retailerTypeCode || 'no pack'})
@@ -170,7 +182,7 @@ export default function RetailMorningPage() {
                 tone="teal"
                 icon="refresh"
                 label={asking ? 'Refreshing' : 'Refresh brief'}
-                disabled={asking}
+                disabled={asking || loading}
                 onClick={async () => {
                   if (!tenantId) return;
                   setAsking(true);
@@ -179,7 +191,18 @@ export default function RetailMorningPage() {
                   if (refreshed.ok) setRefreshKey(current => current + 1);
                 }}
               />
-              {loading && <p className="text-base font-medium md:col-span-3">Loading</p>}
+              {!loading && locations.length === 0 && (
+                <p className="text-base font-medium md:col-span-3">
+                  {storeError
+                    ? `The store list could not be loaded for tenant ${tenantId}. ${storeError}`
+                    : `No stores are available for tenant ${tenantId}. The store list is the same on every brief date.`}
+                </p>
+              )}
+              {!loading && (metricsError || fuelError) && (
+                <p className="text-base font-medium md:col-span-3">
+                  {[metricsError, fuelError].filter(Boolean).join(' ')} The store list is still available.
+                </p>
+              )}
             </div>
 
             {selected && (
@@ -275,7 +298,14 @@ export default function RetailMorningPage() {
 
             <div className="space-y-3">
               <h2 className="text-2xl font-bold text-gray-900">Morning action list</h2>
-              {cards.length === 0 && <p className="text-lg text-gray-800">No cards for this store on this date.</p>}
+              {cardError && (
+                <p className="text-lg text-gray-800">
+                  Morning cards for {date} could not be loaded. {cardError} The store list does not depend on this date.
+                </p>
+              )}
+              {!cardError && cards.length === 0 && (
+                <p className="text-lg text-gray-800">No cards for this store on this date.</p>
+              )}
               {cards.map(card => {
                 const isChain = card.locationId == null;
                 const origin = originForRecommendationCategory(card.category, { isChain });
@@ -330,6 +360,34 @@ export default function RetailMorningPage() {
           </div>
         )}
       </div>
+      {loading && tenantId && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="retail-morning-loading-title"
+        >
+          <div className="mx-4 w-full max-w-md rounded-xl border-2 border-blue-300 bg-blue-50 p-8 shadow-xl">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="flex items-center justify-center rounded-full bg-blue-100 p-4">
+                <svg className="h-12 w-12 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
+              <h2 id="retail-morning-loading-title" className="text-xl font-semibold text-blue-800">
+                Loading stores
+              </h2>
+              <p className="text-base leading-relaxed text-blue-800">
+                Loading the store list for tenant {tenantId} on {date}. The list stays disabled until this finishes.
+              </p>
+              <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
+                <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

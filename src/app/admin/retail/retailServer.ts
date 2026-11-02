@@ -207,6 +207,82 @@ export async function fetchRetailRecommendationsServer(
   return rows.filter(row => keepsLocation(row.locationId, access.allowedLocationIds));
 }
 
+export interface RetailMorningBundle {
+  locations: RetailLocationDTO[];
+  metrics: RetailDailyMetricsDTO[];
+  fuelDays: RetailFuelDayDTO[];
+  recommendations: RetailRecommendationDTO[];
+  canAssign: boolean;
+  denied: boolean;
+  storeError: string | null;
+  metricsError: string | null;
+  fuelError: string | null;
+  cardError: string | null;
+}
+
+function describeRetailFailure(label: string, error: unknown): string {
+  const raw = error instanceof Error ? error.message : '';
+  if (/unexpected end of json|empty response/i.test(raw)) {
+    return `The ${label} service returned an empty response.`;
+  }
+  if (/timed out/i.test(raw)) {
+    return `The ${label} service timed out.`;
+  }
+  return `The ${label} service did not respond.`;
+}
+
+async function settleRetailList<T>(label: string, run: () => Promise<T[]>): Promise<{ rows: T[]; error: string | null }> {
+  try {
+    return { rows: await run(), error: null };
+  } catch (error) {
+    console.error(`[loadRetailMorningBundle] ${label}`, error);
+    return { rows: [], error: describeRetailFailure(label, error) };
+  }
+}
+
+const EMPTY_MORNING_BUNDLE: RetailMorningBundle = {
+  locations: [],
+  metrics: [],
+  fuelDays: [],
+  recommendations: [],
+  canAssign: false,
+  denied: false,
+  storeError: null,
+  metricsError: null,
+  fuelError: null,
+  cardError: null,
+};
+
+export async function loadRetailMorningBundle(date: string, tenantId?: string): Promise<RetailMorningBundle> {
+  try {
+    const access = await getRetailMorningAccess(tenantId);
+    if (access.scope === 'NONE') {
+      return { ...EMPTY_MORNING_BUNDLE, denied: true };
+    }
+    const [locations, metrics, fuelDays, recommendations] = await Promise.all([
+      settleRetailList('store', () => fetchRetailLocationsServer(tenantId)),
+      settleRetailList('daily numbers', () => fetchRetailMetricsServer(date, tenantId)),
+      settleRetailList('fuel', () => fetchRetailFuelDaysServer(date, tenantId)),
+      settleRetailList('morning card', () => fetchRetailRecommendationsServer(date, tenantId)),
+    ]);
+    return {
+      locations: locations.rows,
+      metrics: metrics.rows,
+      fuelDays: fuelDays.rows,
+      recommendations: recommendations.rows,
+      canAssign: access.canAssign,
+      denied: false,
+      storeError: locations.error,
+      metricsError: metrics.error,
+      fuelError: fuelDays.error,
+      cardError: recommendations.error,
+    };
+  } catch (error) {
+    console.error('[loadRetailMorningBundle]', error);
+    return { ...EMPTY_MORNING_BUNDLE, storeError: describeRetailFailure('store', error) };
+  }
+}
+
 const ENGINE_BASE_URL = process.env.RETAIL_ENGINE_BASE_URL || 'http://127.0.0.1:8090';
 
 export async function askRetailBriefServer(
