@@ -1,0 +1,4 @@
+business_date,station_code,grade,gallons,revenue_usd,price_per_gallon
+2026-07-08,ST-001,REGULAR,2000,6980.00,3.49
+2026-07-08,ST-001,PREMIUM,400,1436.00,3.59
+2026-07-08,ST-001,DIESEL,300,1137.00,3.79

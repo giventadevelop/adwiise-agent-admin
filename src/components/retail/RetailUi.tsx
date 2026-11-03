@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import type { ReactNode } from 'react';
+import FeatureTileGrid, { toneCardClass, toneIconClass } from '@/components/admin/FeatureTileGrid';
 
 export const fieldClass =
   'mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base bg-white';
@@ -9,30 +9,6 @@ export const fieldClass =
 export const labelClass = 'block text-sm font-medium text-gray-700';
 
 type Tone = 'blue' | 'indigo' | 'teal' | 'purple' | 'orange' | 'emerald' | 'green' | 'red' | 'amber';
-
-const CARD: Record<Tone, string> = {
-  blue: 'bg-blue-50 hover:bg-blue-100 text-blue-800',
-  indigo: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800',
-  teal: 'bg-teal-50 hover:bg-teal-100 text-teal-800',
-  purple: 'bg-purple-50 hover:bg-purple-100 text-purple-800',
-  orange: 'bg-orange-50 hover:bg-orange-100 text-orange-800',
-  emerald: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800',
-  green: 'bg-green-50 hover:bg-green-100 text-green-800',
-  red: 'bg-red-50 hover:bg-red-100 text-red-800',
-  amber: 'bg-amber-50 hover:bg-amber-100 text-amber-800',
-};
-
-const ICON_TILE: Record<Tone, string> = {
-  blue: 'bg-blue-100 text-blue-500',
-  indigo: 'bg-indigo-100 text-indigo-500',
-  teal: 'bg-teal-100 text-teal-500',
-  purple: 'bg-purple-100 text-purple-500',
-  orange: 'bg-orange-100 text-orange-500',
-  emerald: 'bg-emerald-100 text-emerald-500',
-  green: 'bg-green-100 text-green-500',
-  red: 'bg-red-100 text-red-500',
-  amber: 'bg-amber-100 text-amber-500',
-};
 
 const ACTION: Record<Tone, string> = {
   blue: 'bg-blue-100 hover:bg-blue-200',
@@ -139,11 +115,12 @@ export function YellowCheckbox({
 }
 
 const NAV = [
-  { key: 'morning', href: '/admin/retail', label: 'Morning brief', tone: 'teal' as Tone, icon: 'sun' },
-  { key: 'locations', href: '/admin/retail/locations', label: 'Locations', tone: 'indigo' as Tone, icon: 'building' },
-  { key: 'integrations', href: '/admin/retail/integrations', label: 'Integrations', tone: 'purple' as Tone, icon: 'link' },
-  { key: 'compare', href: '/admin/retail/compare', label: 'Compare stores', tone: 'orange' as Tone, icon: 'chart' },
-  { key: 'access', href: '/admin/retail/access', label: 'Assign managers', tone: 'emerald' as Tone, icon: 'key' },
+  { key: 'morning', href: '/admin/retail', label: 'Morning brief', summary: 'Today’s cards for this store', hint: 'Open the morning brief', searchTerms: ['retail', 'gas station', 'liquor', 'shop', 'store'], tone: 'teal' as Tone, icon: 'sun' },
+  { key: 'locations', href: '/admin/retail/locations', label: 'Locations', summary: 'Stores in this organization', hint: 'Add and edit store locations', searchTerms: ['retail', 'shop', 'store'], tone: 'indigo' as Tone, icon: 'building' },
+  { key: 'upload', href: '/admin/retail/upload', label: 'Upload day', summary: 'Upload register and fuel files', hint: 'Save one store day from files', searchTerms: ['retail', 'upload', 'register', 'fuel', 'csv', 'shop', 'store'], tone: 'blue' as Tone, icon: 'upload' },
+  { key: 'integrations', href: '/admin/retail/integrations', label: 'Integrations', summary: 'Connect a store’s systems', hint: 'Payment and inventory connections', searchTerms: ['retail', 'shop', 'store'], tone: 'purple' as Tone, icon: 'link' },
+  { key: 'compare', href: '/admin/retail/compare', label: 'Compare stores', summary: 'See stores side by side', hint: 'Compare morning results', searchTerms: ['retail', 'shop', 'store'], tone: 'orange' as Tone, icon: 'chart' },
+  { key: 'access', href: '/admin/retail/access', label: 'Assign managers', summary: 'Assign store managers', hint: 'Choose who can open each store', searchTerms: ['retail', 'managers', 'shop', 'store'], tone: 'emerald' as Tone, icon: 'key' },
 ];
 
 export function RetailNav({
@@ -158,26 +135,22 @@ export function RetailNav({
   const items = NAV.filter(item => item.key !== 'access' || showAccess || current === 'access');
   return (
     <div className="w-full mb-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {items.map(item => {
-          const here = item.key === current;
-          return (
-            <Link
-              key={item.key}
-              href={`${item.href}${tenantQuery}`}
-              title={item.label}
-              aria-label={item.label}
-              aria-current={here ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center rounded-lg shadow-md p-3 text-base transition-all group ${CARD[item.tone]} ${here ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
-            >
-              <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300 ${ICON_TILE[item.tone]}`}>
-                <RetailIcon name={item.icon} className="w-10 h-10" />
-              </div>
-              <span className="font-semibold text-center leading-tight">{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
+      <FeatureTileGrid
+        searchLabel="Search retail tools by name, such as morning brief, locations, or managers."
+        tiles={items.map(item => ({
+          key: item.key,
+          href: `${item.href}${tenantQuery}`,
+          label: item.label,
+          summary: item.summary,
+          hint: item.hint,
+          searchTerms: item.searchTerms,
+          guide: item.hint,
+          active: item.key === current,
+          cardClassName: toneCardClass(item.tone),
+          iconWrapClassName: toneIconClass(item.tone),
+          icon: <RetailIcon name={item.icon} className="w-10 h-10" />,
+        }))}
+      />
     </div>
   );
 }
@@ -211,6 +184,58 @@ export function ActionButton({
       </span>
       <span className={`font-semibold ${ACTION_TEXT[tone]}`}>{label}</span>
     </button>
+  );
+}
+
+/** File picker styled like ActionButton (hidden native input over design-system chrome). */
+export function FilePickButton({
+  tone,
+  icon,
+  label,
+  accept,
+  fileName,
+  onChange,
+  disabled,
+}: {
+  tone: Tone;
+  icon: string;
+  label: string;
+  accept?: string;
+  fileName?: string | null;
+  onChange: (file: File | null) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="mt-1 space-y-2">
+      <label
+        className={`relative block w-full cursor-pointer ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+        title={label}
+        aria-label={label}
+      >
+        <span
+          className={`w-full flex-shrink-0 h-14 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4 ${ACTION[tone]}`}
+        >
+          <span className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${ACTION_ICON[tone]}`}>
+            <RetailIcon name={icon} className="w-6 h-6" />
+          </span>
+          <span className={`font-semibold ${ACTION_TEXT[tone]}`}>{label}</span>
+        </span>
+        <input
+          type="file"
+          accept={accept}
+          disabled={disabled}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          onChange={event => onChange(event.target.files?.[0] || null)}
+        />
+      </label>
+      {fileName ? (
+        <p className="text-sm text-gray-700">
+          Selected: <span className="font-semibold text-blue-700 break-all">{fileName}</span>
+        </p>
+      ) : (
+        <p className="text-sm text-gray-500">No file chosen</p>
+      )}
+    </div>
   );
 }
 

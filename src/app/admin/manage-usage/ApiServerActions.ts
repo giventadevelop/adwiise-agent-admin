@@ -1,10 +1,42 @@
 'use server';
 // This file was renamed from actions.ts to ApiServerActions.ts as a standard for server-side API calls in this module.
-import { appendAdminTenantFilter, headersForAdminTenantScope, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import {
+  appendAdminTenantFilter,
+  getCurrentAdminAccess,
+  headersForAdminTenantScope,
+  resolveAdminMutationTenantId,
+} from '@/app/admin/adminAccessServer';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { effectiveTenantId, appendTenantIfPresent, getDefaultPageSize, getBackendApiUrl, getTenantIdOptional } from '@/lib/env';
 import { pickFirstUserProfile } from '@/lib/pickFirstUserProfile';
 import { UserProfileDTO } from '@/types';
+
+const SUPER_ADMIN_ROLE = 'SUPER_ADMIN';
+
+function isSuperAdminRole(role: string | null | undefined): boolean {
+  return String(role || '').trim().toUpperCase() === SUPER_ADMIN_ROLE;
+}
+
+/**
+ * Only a platform SUPER_ADMIN may assign SUPER_ADMIN or change an existing SUPER_ADMIN profile.
+ * Tenant ADMIN (and lower) must not promote others to SUPER_ADMIN.
+ */
+async function assertSuperAdminRoleChangeAllowed(
+  nextRole: string | null | undefined,
+  existingRole?: string | null,
+): Promise<void> {
+  const elevatingToSuperAdmin = isSuperAdminRole(nextRole);
+  const touchingExistingSuperAdmin = isSuperAdminRole(existingRole);
+  if (!elevatingToSuperAdmin && !touchingExistingSuperAdmin) return;
+
+  const access = await getCurrentAdminAccess();
+  if (access.isPlatformSuperAdmin) return;
+
+  if (elevatingToSuperAdmin) {
+    throw new Error('Only a Super Admin can promote a user to SUPER_ADMIN.');
+  }
+  throw new Error('Only a Super Admin can change a SUPER_ADMIN user.');
+}
 
 export async function fetchAllUsersServer(tenantId?: string): Promise<UserProfileDTO[]> {
   const params = new URLSearchParams();
@@ -156,6 +188,35 @@ export async function searchUsersForTypeaheadServer(
 export async function patchUserProfileServer(userId: number, payload: Partial<UserProfileDTO>, tenantId?: string) {
   const url = `${getBackendApiUrl()}/api/user-profiles/${userId}`;
   const tid = await resolveAdminMutationTenantId(tenantId);
+
+  // Load current role so non-super admins cannot elevate to or alter SUPER_ADMIN.
+  let existingRole: string | null | undefined;
+  let loadedExisting = false;
+  try {
+    const existingRes = await fetchWithJwtRetry(url, {
+      method: 'GET',
+      headers: await headersForAdminTenantScope(tenantId),
+      cache: 'no-store',
+    });
+    if (existingRes.ok) {
+      const existing = (await existingRes.json()) as UserProfileDTO;
+      existingRole = existing?.userRole;
+      loadedExisting = true;
+    }
+  } catch (error) {
+    console.warn('[patchUserProfileServer] Could not load existing profile for role check:', error);
+  }
+
+  const access = await getCurrentAdminAccess();
+  if (!access.isPlatformSuperAdmin && !loadedExisting && payload.userRole !== undefined) {
+    // Fail closed: without the current role we cannot prove this is not a SUPER_ADMIN change.
+    throw new Error('Unable to verify current user role before update. Please try again.');
+  }
+
+  const nextRole =
+    payload.userRole !== undefined ? payload.userRole : existingRole;
+  await assertSuperAdminRoleChangeAllowed(nextRole, existingRole);
+
   const finalPayload = {
     ...payload,
     id: userId,
@@ -181,6 +242,13 @@ export async function patchUserProfileServer(userId: number, payload: Partial<Us
 
 export async function bulkUploadUsersServer(users: any[], tenantId?: string) {
   const tid = await resolveAdminMutationTenantId(tenantId);
+  const access = await getCurrentAdminAccess();
+  if (!access.isPlatformSuperAdmin) {
+    const attemptedSuperAdmin = users.some((u) => isSuperAdminRole(u?.userRole));
+    if (attemptedSuperAdmin) {
+      throw new Error('Only a Super Admin can create or assign SUPER_ADMIN via bulk upload.');
+    }
+  }
   const res = await fetchWithJwtRetry(`${getBackendApiUrl()}/api/user-profiles/bulk`, {
     method: 'POST',
     headers: await headersForAdminTenantScope(tenantId, {

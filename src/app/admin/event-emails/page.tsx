@@ -17,8 +17,6 @@ import {
 } from './ApiServerActions';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
-import AdminTenantScopeBadge from '../AdminTenantScopeBadge';
-
 export default function GlobalEventEmailsPage() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -218,7 +216,6 @@ export default function GlobalEventEmailsPage() {
             <div className="flex justify-between items-center gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Global Emails</h1>
-                <AdminTenantScopeBadge className="mt-2" />
                 <p className="text-gray-600 mt-1 text-sm sm:text-base">(You can add or disassociate these items with any events. Please go to the corresponding event page to manage these associated entities.)</p>
               </div>
               <button

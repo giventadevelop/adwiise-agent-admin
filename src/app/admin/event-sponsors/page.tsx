@@ -21,8 +21,6 @@ import {
 import { fetchAdminProfileServer } from '../manage-usage/ApiServerActions';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
-import AdminTenantScopeBadge from '../AdminTenantScopeBadge';
-
 export default function EventSponsorsPage() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -333,7 +331,6 @@ export default function EventSponsorsPage() {
         {/* Page Header */}
         <div className="mb-4 sm:mb-6 md:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white text-center sm:text-left mb-2">Global Sponsors</h1>
-          <AdminTenantScopeBadge className="mb-2" />
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">(You can add or disassociate these items with any events. Please go to the corresponding event page to manage these associated entities.)</p>
         </div>
 

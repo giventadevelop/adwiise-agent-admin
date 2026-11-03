@@ -1,20 +1,14 @@
-import Link from 'next/link';
-import { auth } from '@clerk/nextjs/server';
 import { BRAND_NAME, BRAND_TAGLINE, BRAND_LOGO_PATH } from '@/lib/brand';
+import HubEntryButton from './HubEntryButton';
 
 /**
  * Admin hub root. This project is not a tenant public site — do not load
  * events, sponsors, team, or other tenant-scoped homepage sections here.
+ * The entry button is client-side so a sign-out is not stuck on a cached signed-in render.
  */
-export default async function RootPage() {
-  let signedIn = false;
-  try {
-    const session = await auth();
-    signedIn = !!session?.userId;
-  } catch {
-    signedIn = false;
-  }
+export const dynamic = 'force-dynamic';
 
+export default function RootPage() {
   return (
     <main className="min-h-[70vh] flex items-center justify-center px-4 py-16 bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-xl w-full text-center space-y-8">
@@ -30,45 +24,7 @@ export default async function RootPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4">
-          {signedIn ? (
-            <Link
-              href="/admin"
-              className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-              title="Open Admin"
-              aria-label="Open Admin"
-            >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                  />
-                </svg>
-              </div>
-              <span className="font-semibold text-blue-700">Open Admin</span>
-            </Link>
-          ) : (
-            <Link
-              href="/sign-in"
-              className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-              title="Sign in"
-              aria-label="Sign in"
-            >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                  />
-                </svg>
-              </div>
-              <span className="font-semibold text-blue-700">Sign in</span>
-            </Link>
-          )}
+          <HubEntryButton />
         </div>
       </div>
     </main>

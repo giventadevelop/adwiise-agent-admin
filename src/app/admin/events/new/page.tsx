@@ -1,10 +1,9 @@
 'use client';
+import EventSectionTiles from '@/components/admin/EventSectionTiles';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { EventForm, defaultEvent } from '@/components/EventForm';
 import type { EventDetailsDTO, EventTypeDetailsDTO, UserProfileDTO } from '@/types';
-import Link from 'next/link';
-// Icons removed - using inline SVGs instead
 import { createCalendarEventServer } from '../../ApiServerActions';
 import { useAuth, useUser } from '@clerk/nextjs';
 import SaveStatusDialog, { type SaveStatus } from '@/components/SaveStatusDialog';
@@ -156,50 +155,8 @@ export default function CreateEventPage() {
 
   return (
     <div className="w-[80%] max-w-5xl mx-auto p-4" style={{ paddingTop: '118px' }}>
-      {/* Responsive Button Group */}
-      <div className="w-full mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Link
-            href="/admin"
-            className="flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-lg shadow-md p-4 text-xs transition-all group"
-            title="Admin Home"
-            aria-label="Admin Home"
-          >
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            </div>
-            <span className="font-semibold text-center leading-tight">Admin Home</span>
-          </Link>
-          <Link
-            href="/admin/manage-usage"
-            className="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg shadow-md p-4 text-xs transition-all group"
-            title="Manage Usage"
-            aria-label="Manage Usage"
-          >
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-blue-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-            <span className="font-semibold text-center leading-tight">Manage Usage</span>
-          </Link>
-          <Link
-            href="/admin/manage-events"
-            className="flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 text-green-800 rounded-lg shadow-md p-4 text-xs transition-all group"
-            title="Manage Events"
-            aria-label="Manage Events"
-          >
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="font-semibold text-center leading-tight">Manage Events</span>
-          </Link>
-        </div>
-      </div>
+      <EventSectionTiles kind="new-event" />
+
       <h1 className="text-2xl font-bold mb-4">
         {copyFromId ? 'Create Event (Copy)' : 'Create Event'}
       </h1>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from "@clerk/nextjs";
 import { useAdminAccess } from './AdminTenantContext';
 import AdminTenantWorkspacePicker from './AdminTenantWorkspacePicker';
+import { tileMatchesSearch } from '@/components/admin/FeatureTileGrid';
 import { fetchTenantSiteTypeServer } from './tournaments/ApiServerActions';
 
 const BUTTON_GUIDES: Record<string, string> = {
@@ -60,12 +61,36 @@ const BUTTON_GUIDES: Record<string, string> = {
   'news-advertisements': 'Turn this tenant’s news advertisements on or off. The main switch hides every slot. When it is on, each advertisement on the news page can be shown or hidden on its own.',
 };
 
+const SPORTS_SEARCH = [
+  'sports team',
+  'sports',
+  'squad',
+  'players',
+  'player',
+  'band',
+  'roster',
+  'soccer',
+  'football',
+  'cricket',
+  'hockey',
+  'basketball',
+  'baseball',
+  'tennis',
+  'athletics',
+  'tournament',
+  'cup',
+  'season',
+  'club',
+];
+const RETAIL_SEARCH = ['retail', 'gas station', 'liquor', 'shop', 'store', 'fuel', 'petrol'];
+
 export default function AdminPage() {
-  const { userId } = useAuth();
+  const { userId, isLoaded } = useAuth();
   const { isPlatformSuperAdmin, tenantId } = useAdminAccess();
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [isSportsTeam, setIsSportsTeam] = useState(false);
   const [cursorTip, setCursorTip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [featureQuery, setFeatureQuery] = useState('');
 
   function moveCursorTip(text: string, event: React.MouseEvent) {
     const offset = 16;
@@ -77,6 +102,12 @@ export default function AdminPage() {
     if (y + height > window.innerHeight - 8) y = Math.max(8, event.clientY - height - 8);
     setCursorTip({ text, x, y });
   }
+
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      window.location.replace('/');
+    }
+  }, [isLoaded, userId]);
 
   useEffect(() => {
     if (!tenantId) {
@@ -101,6 +132,8 @@ export default function AdminPage() {
       icon: 'home',
       label: 'Admin Home',
       hint: 'Open the admin dashboard',
+      summary: 'Return to this dashboard',
+      searchTerms: ['dashboard', 'home'],
       color: 'blue',
       key: 'admin-home'
     },
@@ -109,6 +142,8 @@ export default function AdminPage() {
       icon: 'users',
       label: 'Manage Users',
       hint: 'Edit member user accounts',
+      summary: 'People, roles, and approval',
+      searchTerms: ['members', 'users', 'accounts'],
       color: 'indigo',
       key: 'manage-usage'
     },
@@ -117,6 +152,8 @@ export default function AdminPage() {
       icon: 'calendar',
       label: 'Manage Events',
       hint: 'Create and edit events',
+      summary: 'Create and publish events',
+      searchTerms: ['calendar', 'tickets'],
       color: 'green',
       key: 'manage-events'
     },
@@ -125,6 +162,8 @@ export default function AdminPage() {
       icon: 'chart',
       label: 'Event Analytics',
       hint: 'View event attendance stats',
+      summary: 'Attendance across events',
+      searchTerms: ['stats', 'attendance'],
       color: 'teal',
       key: 'event-analytics'
     },
@@ -133,6 +172,8 @@ export default function AdminPage() {
       icon: 'users',
       label: 'Registrations',
       hint: 'Review event signup lists',
+      summary: 'Who signed up for events',
+      searchTerms: ['guests', 'attendees', 'signup'],
       color: 'purple',
       key: 'event-registrations'
     },
@@ -141,6 +182,8 @@ export default function AdminPage() {
       icon: 'chartBar',
       label: 'Poll Management',
       hint: 'Create and manage polls',
+      summary: 'Polls and answer choices',
+      searchTerms: ['votes', 'survey'],
       color: 'violet',
       key: 'poll-management'
     },
@@ -149,6 +192,8 @@ export default function AdminPage() {
       icon: 'userFriends',
       label: 'Focus Groups',
       hint: 'Manage discussion focus groups',
+      summary: 'Discussion circles and committees',
+      searchTerms: ['committee', 'discussion'],
       color: 'orange',
       key: 'focus-groups'
     },
@@ -157,6 +202,8 @@ export default function AdminPage() {
       icon: 'addressCard',
       label: 'Membership Plans',
       hint: 'Set membership plan prices',
+      summary: 'Prices and benefits people can buy',
+      searchTerms: ['pricing', 'subscription plans'],
       color: 'pink',
       key: 'membership-plans'
     },
@@ -165,6 +212,8 @@ export default function AdminPage() {
       icon: 'fileInvoice',
       label: 'Membership Subscriptions',
       hint: 'View active member subscriptions',
+      summary: 'Who has an active membership',
+      searchTerms: ['subscribers', 'members'],
       color: 'rose',
       key: 'membership-subscriptions'
     },
@@ -173,7 +222,8 @@ export default function AdminPage() {
       icon: 'mailBulk',
       label: 'Email Addresses',
       hint: 'Manage tenant email addresses',
-      sublabel: '[tenant email ids]',
+      summary: 'Official sender addresses for this organization',
+      searchTerms: ['tenant email ids', 'inbox', 'email'],
       color: 'lime',
       key: 'tenant-email-addresses'
     },
@@ -182,6 +232,8 @@ export default function AdminPage() {
       icon: 'envelope',
       label: 'Bulk Email',
       hint: 'Send bulk email campaigns',
+      summary: 'One announcement to many people',
+      searchTerms: ['campaign', 'newsletter', 'email'],
       color: 'yellow',
       key: 'bulk-email'
     },
@@ -190,6 +242,8 @@ export default function AdminPage() {
       icon: 'creditCard',
       label: 'Test Stripe',
       hint: 'Test Stripe payment flows',
+      summary: 'Try a test card payment',
+      searchTerms: ['checkout', 'payments', 'stripe'],
       color: 'fuchsia',
       key: 'test-stripe'
     },
@@ -198,6 +252,8 @@ export default function AdminPage() {
       icon: 'image',
       label: 'Media Management',
       hint: 'Upload and organize media',
+      summary: 'Images and files for events and pages',
+      searchTerms: ['upload', 'photos', 'files'],
       color: 'cyan',
       key: 'media-management'
     },
@@ -206,6 +262,8 @@ export default function AdminPage() {
       icon: 'photoAlbum',
       label: 'Gallery Albums',
       hint: 'Manage public photo albums',
+      summary: 'Public photo albums',
+      searchTerms: ['photos', 'gallery', 'albums'],
       color: 'deepTeal',
       key: 'gallery-albums'
     },
@@ -214,6 +272,8 @@ export default function AdminPage() {
       icon: 'userTie',
       label: 'Executive Committee',
       hint: 'Edit leadership team roster',
+      summary: 'Officers shown on the public site',
+      searchTerms: ['leaders', 'board', 'officers'],
       color: 'amber',
       key: 'executive-committee'
     },
@@ -222,7 +282,8 @@ export default function AdminPage() {
       icon: 'userFriends',
       label: 'Squad groups',
       hint: 'Create squads for a team or band',
-      sublabel: 'Sports / bands',
+      summary: 'Containers for a sports club or band',
+      searchTerms: SPORTS_SEARCH,
       color: 'squadGroups',
       key: 'team-groups'
     },
@@ -231,7 +292,8 @@ export default function AdminPage() {
       icon: 'addressCard',
       label: 'Squad roster',
       hint: 'Add players and their profiles',
-      sublabel: 'Members',
+      summary: 'People on a squad and their profiles',
+      searchTerms: SPORTS_SEARCH,
       color: 'squadRoster',
       key: 'team-members'
     },
@@ -240,7 +302,8 @@ export default function AdminPage() {
       icon: 'listChecks',
       label: 'Roster catalogs',
       hint: 'Sports, awards, and team types',
-      sublabel: 'Sports and types',
+      summary: 'Sports, awards, and team types',
+      searchTerms: SPORTS_SEARCH,
       color: 'sky',
       key: 'roster-catalogs'
     },
@@ -249,7 +312,8 @@ export default function AdminPage() {
       icon: 'keyRound',
       label: 'Access catalogs',
       hint: 'Roles plus site and shop types',
-      sublabel: 'Roles and retailers',
+      summary: 'Shared roles, site types, and shop packs',
+      searchTerms: ['roles', 'retailers', 'site types'],
       color: 'accessCatalog',
       key: 'access-catalogs'
     },
@@ -258,6 +322,8 @@ export default function AdminPage() {
       icon: 'keyRound',
       label: 'Access roles',
       hint: 'Add roles for the admin menu',
+      summary: 'Roles that open the admin menu',
+      searchTerms: ['permissions', 'admin roles'],
       color: 'accessRolesBtn',
       key: 'access-roles',
       platformOnly: true,
@@ -267,6 +333,8 @@ export default function AdminPage() {
       icon: 'building',
       label: 'Retailer types',
       hint: 'Add shop and brand kinds',
+      summary: 'Shop packs such as gas and liquor',
+      searchTerms: RETAIL_SEARCH,
       color: 'retailerTypesBtn',
       key: 'retailer-types',
       platformOnly: true,
@@ -276,6 +344,8 @@ export default function AdminPage() {
       icon: 'globe',
       label: 'Site types',
       hint: 'Add organization site kinds',
+      summary: 'Event, church, sports, retail, and other sites',
+      searchTerms: ['organization kind', 'sports team', 'sports', 'soccer', 'football', 'retail', 'church'],
       color: 'siteTypesBtn',
       key: 'site-types',
       platformOnly: true,
@@ -285,6 +355,8 @@ export default function AdminPage() {
       icon: 'listChecks',
       label: 'Size bands',
       hint: 'Single, mid, and enterprise bands for each shop kind',
+      summary: 'Single, mid, and enterprise shop sizes',
+      searchTerms: RETAIL_SEARCH,
       color: 'sizeBandsBtn',
       key: 'retailer-size-bands',
       platformOnly: true,
@@ -294,6 +366,8 @@ export default function AdminPage() {
       icon: 'clipboardCheck',
       label: 'Recommendation categories',
       hint: 'Card kinds for the morning list',
+      summary: 'Kinds of morning cards',
+      searchTerms: [...RETAIL_SEARCH, 'morning brief'],
       color: 'recommendationCategoriesBtn',
       key: 'recommendation-categories',
       platformOnly: true,
@@ -303,6 +377,8 @@ export default function AdminPage() {
       icon: 'listChecks',
       label: 'Sports categories',
       hint: 'Add sports for squad members',
+      summary: 'Sports shown on a squad member',
+      searchTerms: SPORTS_SEARCH,
       color: 'sportsCategoryBtn',
       key: 'sports-categories',
       platformOnly: true,
@@ -312,7 +388,8 @@ export default function AdminPage() {
       icon: 'trophy',
       label: 'Tournaments',
       hint: 'Manage sports tournament editions',
-      sublabel: 'Sports editions',
+      summary: 'Seasons and cups for a sports team',
+      searchTerms: SPORTS_SEARCH,
       color: 'tournamentCup',
       key: 'tournaments',
       sportsOnly: true,
@@ -322,6 +399,8 @@ export default function AdminPage() {
       icon: 'refresh',
       label: 'Cache records',
       hint: 'Refresh cached homepage content',
+      summary: 'Refresh stored homepage content',
+      searchTerms: ['cache', 'homepage'],
       color: 'cacheRecords',
       key: 'homepage-cache'
     },
@@ -330,6 +409,8 @@ export default function AdminPage() {
       icon: 'handshake',
       label: 'Event Sponsors',
       hint: 'Manage event sponsor listings',
+      summary: 'Sponsor names and logos',
+      searchTerms: ['sponsors'],
       color: 'emerald',
       key: 'event-sponsors'
     },
@@ -338,6 +419,8 @@ export default function AdminPage() {
       icon: 'building',
       label: 'Organizations',
       hint: 'Manage tenant organizations',
+      summary: 'Create tenant organizations',
+      searchTerms: ['tenants', 'organizations'],
       color: 'sky',
       key: 'tenant-organizations',
       platformOnly: true,
@@ -347,6 +430,8 @@ export default function AdminPage() {
       icon: 'globe',
       label: 'Satellite Domains',
       hint: 'Configure extra site domains',
+      summary: 'Extra public domains for sign-in',
+      searchTerms: ['domains', 'satellite'],
       color: 'sky',
       key: 'satellite-domains',
       platformOnly: true,
@@ -356,7 +441,8 @@ export default function AdminPage() {
       icon: 'userPlus',
       label: 'Onboarding Requests',
       hint: 'Review new customer signups',
-      sublabel: 'New customers',
+      summary: 'Approve a new customer application',
+      searchTerms: ['new customers', 'signup', 'onboarding'],
       color: 'onboardingRequests',
       key: 'onboarding-requests',
       platformOnly: true,
@@ -366,6 +452,8 @@ export default function AdminPage() {
       icon: 'cog',
       label: 'Tenant Settings',
       hint: 'Configure tenant site settings',
+      summary: 'Homepage sections and feature flags',
+      searchTerms: ['settings', 'hero', 'homepage'],
       color: 'red',
       key: 'tenant-settings',
       platformOnly: true,
@@ -375,6 +463,8 @@ export default function AdminPage() {
       icon: 'users',
       label: 'Personal Profile',
       hint: 'Edit public profile pages',
+      summary: 'Writings, projects, and contact blocks',
+      searchTerms: ['profile site', 'personal'],
       color: 'violet',
       key: 'profile-site'
     },
@@ -383,6 +473,8 @@ export default function AdminPage() {
       icon: 'chart',
       label: 'Retail',
       hint: 'Morning brief, stores, and integrations',
+      summary: 'Morning brief for gas, liquor, and other shops',
+      searchTerms: ['gas station', 'liquor', 'shop', 'store', 'morning brief'],
       color: 'teal',
       key: 'retail',
     },
@@ -391,6 +483,8 @@ export default function AdminPage() {
       icon: 'creditCard',
       label: 'Platform Bill',
       hint: 'View tenant platform invoice',
+      summary: 'What this tenant owes the platform',
+      searchTerms: ['invoice', 'billing'],
       color: 'platformBill',
       key: 'platform-bill',
     },
@@ -399,6 +493,8 @@ export default function AdminPage() {
       icon: 'fileInvoice',
       label: 'Billing Plans',
       hint: 'Manage platform fee plans',
+      summary: 'Fee catalog used to charge tenants',
+      searchTerms: ['platform fees', 'billing'],
       color: 'platformPlans',
       key: 'platform-plans',
       platformOnly: true,
@@ -408,6 +504,8 @@ export default function AdminPage() {
       icon: 'chart',
       label: 'Test CRUD',
       hint: 'Test tenant record APIs',
+      summary: 'Try tenant record API calls',
+      searchTerms: ['api test', 'crud'],
       color: 'warmOrange',
       key: 'tenant-test',
       platformOnly: true,
@@ -417,6 +515,8 @@ export default function AdminPage() {
       icon: 'microphone',
       label: 'Global Performers',
       hint: 'Manage shared event performers',
+      summary: 'Shared performers for many events',
+      searchTerms: ['artists', 'performers'],
       color: 'coolBlue',
       key: 'global-performers'
     },
@@ -425,6 +525,8 @@ export default function AdminPage() {
       icon: 'phone',
       label: 'Global Contacts',
       hint: 'Manage shared event contacts',
+      summary: 'Shared contacts for events',
+      searchTerms: ['phone', 'contacts'],
       color: 'vibrantPurple',
       key: 'global-contacts'
     },
@@ -433,6 +535,8 @@ export default function AdminPage() {
       icon: 'mailBulk',
       label: 'Global Emails',
       hint: 'Manage shared event emails',
+      summary: 'Shared email contacts for events',
+      searchTerms: ['email', 'contacts'],
       color: 'softPink',
       key: 'global-emails'
     },
@@ -441,6 +545,8 @@ export default function AdminPage() {
       icon: 'userCheck',
       label: 'Global Directors',
       hint: 'Manage shared program directors',
+      summary: 'Shared program directors',
+      searchTerms: ['directors'],
       color: 'brightYellow',
       key: 'global-directors'
     },
@@ -449,6 +555,8 @@ export default function AdminPage() {
       icon: 'qrcode',
       label: 'QR Scanner',
       hint: 'Scan tickets at check-in',
+      summary: 'Scan a ticket at the door',
+      searchTerms: ['check-in', 'qr', 'tickets'],
       color: 'lightCyan',
       key: 'qr-scanner'
     },
@@ -457,6 +565,8 @@ export default function AdminPage() {
       icon: 'clipboardCheck',
       label: 'Check-In Analytics',
       hint: 'Review ticket arrival stats',
+      summary: 'Arrivals compared with ticket sales',
+      searchTerms: ['check in', 'attendance'],
       color: 'cyan',
       key: 'check-in-analytics'
     },
@@ -465,6 +575,8 @@ export default function AdminPage() {
       icon: 'chartLine',
       label: 'Sales Analytics',
       hint: 'Review ticket sales revenue',
+      summary: 'Ticket revenue and sales totals',
+      searchTerms: ['revenue', 'sales'],
       color: 'sky',
       key: 'sales-analytics'
     },
@@ -473,6 +585,8 @@ export default function AdminPage() {
       icon: 'moneyBill',
       label: 'Manual Payments [Zelle, Venmo…]',
       hint: 'Record offline manual payments',
+      summary: 'Zelle, Venmo, and other offline payments',
+      searchTerms: ['zelle', 'venmo', 'offline'],
       color: 'mintGreen',
       key: 'manual-payments'
     },
@@ -481,6 +595,8 @@ export default function AdminPage() {
       icon: 'chartBar',
       label: 'Leagues',
       hint: 'Clubs, results, and standings',
+      summary: 'Clubs, results, and standings',
+      searchTerms: SPORTS_SEARCH,
       color: 'leagueTables',
       key: 'leagues'
     },
@@ -489,6 +605,8 @@ export default function AdminPage() {
       icon: 'userFriends',
       label: 'Squad membership',
       hint: 'Put a player on more than one squad',
+      summary: 'Put a player on more than one squad',
+      searchTerms: SPORTS_SEARCH,
       color: 'squadMembership',
       key: 'squad-membership'
     },
@@ -497,6 +615,8 @@ export default function AdminPage() {
       icon: 'folderOpen',
       label: 'Official Documents',
       hint: 'Manage official document files',
+      summary: 'Bylaws, notices, and official files',
+      searchTerms: ['documents', 'bylaws'],
       color: 'documentOfficial',
       key: 'official-documents'
     },
@@ -505,7 +625,8 @@ export default function AdminPage() {
       icon: 'listBullet',
       label: 'Document categories',
       hint: 'Organize official document types',
-      sublabel: 'Official library',
+      summary: 'Folders for the official library',
+      searchTerms: ['official library', 'categories'],
       color: 'docCategories',
       key: 'official-document-categories'
     },
@@ -514,6 +635,8 @@ export default function AdminPage() {
       icon: 'chartBar',
       label: 'Batch Job Dashboard',
       hint: 'Monitor scheduled batch jobs',
+      summary: 'Whether scheduled jobs ran or failed',
+      searchTerms: ['jobs', 'cron', 'scheduler'],
       color: 'indigo',
       key: 'batch-jobs-dashboard'
     },
@@ -522,6 +645,8 @@ export default function AdminPage() {
       icon: 'youtube',
       label: 'Homepage YouTube',
       hint: 'Set homepage live stream',
+      summary: 'Live or featured video on the homepage',
+      searchTerms: ['youtube', 'stream', 'live'],
       color: 'youtubeLive',
       key: 'homepage-youtube-live'
     },
@@ -530,6 +655,8 @@ export default function AdminPage() {
       icon: 'youtube',
       label: 'Gallery YouTube',
       hint: 'Manage gallery video links',
+      summary: 'YouTube videos in the gallery',
+      searchTerms: ['youtube', 'videos'],
       color: 'galleryVideos',
       key: 'gallery-youtube-videos'
     },
@@ -538,6 +665,8 @@ export default function AdminPage() {
       icon: 'newspaper',
       label: 'News ads',
       hint: 'Show or hide news page ads',
+      summary: 'Show or hide news page advertisements',
+      searchTerms: ['advertisements', 'news'],
       color: 'newsAdsBtn',
       key: 'news-advertisements',
     }
@@ -775,8 +904,20 @@ export default function AdminPage() {
     }
   };
 
-  // Render page content even if userId is not yet available (client-side auth loading)
-  // This prevents the page from hanging during Playwright tests
+  // Clerk has finished loading and there is no session: leave admin instead of spinning.
+  if (isLoaded && !userId) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+          <div className="text-center py-8">
+            <p className="text-gray-600">Signing you out of admin…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Session is still loading on the client.
   if (!userId) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
@@ -799,6 +940,12 @@ export default function AdminPage() {
     );
   }
 
+  const visibleButtons = adminButtons.filter((button) => {
+    if ('platformOnly' in button && button.platformOnly && !isPlatformSuperAdmin) return false;
+    if ('sportsOnly' in button && button.sportsOnly && !isSportsTeam) return false;
+    return tileMatchesSearch(button, featureQuery);
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
       <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-indigo-800 mb-4 sm:mb-8 flex flex-wrap items-center justify-center gap-2 text-center">
@@ -820,14 +967,52 @@ export default function AdminPage() {
         </p>
       )}
 
+      <div className="relative max-w-xl mx-auto mb-6">
+        <p className="text-xs text-gray-500 mb-2 text-center">
+          Search features by name or related words, such as retail, soccer, sports team, or gas station.
+        </p>
+        <div className="relative">
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            id="admin-feature-search"
+            type="text"
+            value={featureQuery}
+            onChange={(event) => setFeatureQuery(event.target.value)}
+            placeholder="Search features…"
+            title="Search admin features"
+            aria-label="Search admin features"
+            className={`box-border block w-full h-12 border rounded-xl focus:ring-blue-500 focus:border-blue-500 pl-10 pr-10 text-base ${
+              featureQuery.trim() ? 'border-blue-500 bg-blue-50' : 'border-gray-400 bg-white'
+            }`}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {featureQuery ? (
+            <button
+              type="button"
+              onClick={() => setFeatureQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 text-gray-400 hover:text-gray-700"
+              title="Clear search"
+              aria-label="Clear feature search"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       {/* Responsive Button Group */}
       <div className={`w-full mb-8 ${workspaceReady ? '' : 'pointer-events-none opacity-40'}`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {adminButtons.filter((button) => {
-            if ('platformOnly' in button && button.platformOnly && !isPlatformSuperAdmin) return false;
-            if ('sportsOnly' in button && button.sportsOnly && !isSportsTeam) return false;
-            return true;
-          }).map((button) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleButtons.map((button) => {
             const colorClasses = getColorClasses(button.color);
             const iconBgColor = getIconBgColor(button.color);
             const iconTextColor = getIconTextColor(button.color);
@@ -837,7 +1022,7 @@ export default function AdminPage() {
               <Link
                 key={button.key}
                 href={button.href}
-                className={`relative flex flex-col items-center justify-center ${colorClasses} rounded-lg shadow-md p-4 text-xs transition-all group`}
+                className={`relative flex flex-col items-center justify-center ${colorClasses} rounded-lg shadow-md p-5 text-sm transition-all group`}
                 aria-label={`${button.label}: ${button.hint}`}
                 onMouseEnter={(event) => moveCursorTip(button.hint, event)}
                 onMouseMove={(event) => moveCursorTip(button.hint, event)}
@@ -884,19 +1069,19 @@ export default function AdminPage() {
                 <div className={`flex-shrink-0 w-14 h-14 rounded-xl ${iconBgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
                   {renderIcon(button.icon, `w-10 h-10 ${iconTextColor}`)}
                 </div>
-                <span className="font-semibold text-center leading-tight">
-                  {button.label}
-                  {'sublabel' in button && button.sublabel ? (
-                    <>
-                      <br />
-                      <span className="font-medium opacity-80">{button.sublabel}</span>
-                    </>
-                  ) : null}
+                <span className="font-semibold text-center leading-tight">{button.label}</span>
+                <span className="mt-2 text-center text-sm sm:text-base font-medium leading-snug text-slate-600">
+                  [{button.summary}]
                 </span>
               </Link>
             );
           })}
         </div>
+        {visibleButtons.length === 0 && (
+          <div className="mt-4 rounded-lg border-2 border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-800 text-center">
+            No features match your search.
+          </div>
+        )}
       </div>
 
       {cursorTip && (

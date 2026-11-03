@@ -11,7 +11,6 @@ import AdminNavigation from '@/components/AdminNavigation';
 import type { EventProgramDirectorsDTO, EventDetailsDTO } from '@/types';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
-import AdminTenantScopeBadge from '../AdminTenantScopeBadge';
 import {
   fetchEventProgramDirectorsServer,
   createEventProgramDirectorServer,
@@ -275,7 +274,6 @@ export default function GlobalEventProgramDirectorsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Global Program Directors</h1>
-                <AdminTenantScopeBadge className="mt-2" />
                 <p className="text-gray-600 mt-1">(You can add or disassociate these items with any events. Please go to the corresponding event page to manage these associated entities.)</p>
               </div>
               <button

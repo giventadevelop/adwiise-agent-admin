@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ReactDOM from 'react-dom';
 // Icons removed - using inline SVGs instead
 import * as XLSX from 'xlsx';
-import { useAdminTenantId } from '../AdminTenantContext';
+import { useAdminAccess, useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import { fetchUsersServer, patchUserProfileServer, bulkUploadUsersServer } from './ApiServerActions';
 import { fetchAssignableAccessRoles } from '@/app/admin/access-catalogs/ApiServerActions';
@@ -24,6 +24,19 @@ const FALLBACK_ACCESS_ROLES = [
   { code: 'VOLUNTEER', label: 'Volunteer' },
   { code: 'MEMBER', label: 'Member' },
 ];
+
+function isSuperAdminRole(role?: string | null) {
+  return String(role || '').trim().toUpperCase() === 'SUPER_ADMIN';
+}
+
+/** Roles the current admin may assign. SUPER_ADMIN is platform-super-admin only. */
+function rolesAssignableByCaller(
+  options: { code: string; label: string }[],
+  isPlatformSuperAdmin: boolean,
+) {
+  if (isPlatformSuperAdmin) return options;
+  return options.filter((option) => !isSuperAdminRole(option.code));
+}
 
 function withCurrentRole(options: { code: string; label: string }[], current?: string | null) {
   if (current && !options.some((option) => option.code === current)) {
@@ -109,19 +122,27 @@ function UserDetailsTooltip({ user, anchorRect, onClose }: { user: UserProfileDT
   );
 }
 
-function EditUserModal({ user, open, onClose, onSave, loading, roleOptions }: {
+function EditUserModal({ user, open, onClose, onSave, loading, roleOptions, isPlatformSuperAdmin }: {
   user: UserProfileDTO | null,
   open: boolean,
   onClose: () => void,
   onSave: (updated: Partial<UserProfileDTO>) => void,
   loading?: boolean,
   roleOptions: { code: string; label: string }[],
+  isPlatformSuperAdmin: boolean,
 }) {
   const [form, setForm] = useState<Partial<UserProfileDTO>>(user || {});
   useEffect(() => {
     setForm(user || {});
   }, [user]);
   if (!open || !user) return null;
+  const roleLocked =
+    !isPlatformSuperAdmin && isSuperAdminRole(user.userRole);
+  const selectableRoles = withCurrentRole(
+    rolesAssignableByCaller(roleOptions, isPlatformSuperAdmin),
+    // Keep showing the current SUPER_ADMIN value when locked, but do not offer it for new assignment.
+    roleLocked ? user.userRole : form.userRole,
+  );
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-md w-full max-w-lg relative my-auto max-h-[90vh] flex flex-col">
@@ -316,18 +337,27 @@ function EditUserModal({ user, open, onClose, onSave, loading, roleOptions }: {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
               <select 
-                className="mt-1 block w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-base" 
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-base disabled:bg-gray-100 disabled:cursor-not-allowed" 
                 value={form.userRole || ''} 
+                disabled={roleLocked}
                 onChange={e => setForm(f => ({ ...f, userRole: e.target.value }))}
               >
                 <option value="">Select Role</option>
-                {withCurrentRole(roleOptions, form.userRole).map((option) => (
+                {selectableRoles.map((option) => (
                   <option key={option.code} value={option.code}>{option.label}</option>
                 ))}
               </select>
               <p className="mt-1.5 text-xs text-gray-500 leading-snug">
-                For gas station tenants, use <strong>GAS_STATION_ADMIN</strong> (all locations) or{' '}
-                <strong>GAS_STATION_MANAGER</strong> (assigned locations via Gas Station → Location access).
+                {roleLocked ? (
+                  <>Only a Super Admin can change a SUPER_ADMIN user.</>
+                ) : !isPlatformSuperAdmin ? (
+                  <>Only a Super Admin can promote someone to <strong>SUPER_ADMIN</strong>.</>
+                ) : (
+                  <>
+                    For gas station tenants, use <strong>GAS_STATION_ADMIN</strong> (all locations) or{' '}
+                    <strong>GAS_STATION_MANAGER</strong> (assigned locations via Gas Station → Location access).
+                  </>
+                )}
               </p>
             </div>
             <div>
@@ -445,16 +475,25 @@ const renderStatusBadge = (status: string | null | undefined) => {
 
 export default function ManageUsageClient({ adminProfile }: { adminProfile: UserProfileDTO | null }) {
   const tenantId = useAdminTenantId();
-  const [roleOptions, setRoleOptions] = useState(FALLBACK_ACCESS_ROLES);
+  const { isPlatformSuperAdmin } = useAdminAccess();
+  const [roleOptions, setRoleOptions] = useState(() =>
+    rolesAssignableByCaller(FALLBACK_ACCESS_ROLES, false),
+  );
   useEffect(() => {
+    setRoleOptions(rolesAssignableByCaller(FALLBACK_ACCESS_ROLES, isPlatformSuperAdmin));
     fetchAssignableAccessRoles(tenantId)
       .then((rows) => {
         if (rows.length > 0) {
-          setRoleOptions(rows.map((row) => ({ code: row.code, label: row.label || row.code })));
+          setRoleOptions(
+            rolesAssignableByCaller(
+              rows.map((row) => ({ code: row.code, label: row.label || row.code })),
+              isPlatformSuperAdmin,
+            ),
+          );
         }
       })
       .catch(() => {});
-  }, [tenantId]);
+  }, [tenantId, isPlatformSuperAdmin]);
   const [users, setUsers] = useState<UserProfileDTO[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState('');
@@ -627,6 +666,19 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
 
   async function handleEditSave(updated: Partial<UserProfileDTO>) {
     if (!editUser?.id) return;
+    const nextRole = updated.userRole ?? editUser.userRole;
+    if (!isPlatformSuperAdmin) {
+      if (isSuperAdminRole(nextRole) && !isSuperAdminRole(editUser.userRole)) {
+        setBulkMessage('Only a Super Admin can promote a user to SUPER_ADMIN.');
+        setTimeout(() => setBulkMessage(null), 4000);
+        return;
+      }
+      if (isSuperAdminRole(editUser.userRole)) {
+        setBulkMessage('Only a Super Admin can change a SUPER_ADMIN user.');
+        setTimeout(() => setBulkMessage(null), 4000);
+        return;
+      }
+    }
     setEditLoading(true);
     try {
       const res = await patchUserProfileServer(editUser.id, { ...editUser, ...updated }, tenantId);
@@ -634,6 +686,9 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
         setUsers(users => users.map(u => u.id === editUser.id ? { ...u, ...updated } : u));
         setEditUser(null);
       }
+    } catch (err: any) {
+      setBulkMessage(err?.message || 'Failed to update user');
+      setTimeout(() => setBulkMessage(null), 4000);
     } finally {
       setEditLoading(false);
     }
@@ -682,6 +737,10 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
           userStatus: row.userStatus || "pending",
         };
       });
+      if (!isPlatformSuperAdmin && users.some((u) => isSuperAdminRole(u.userRole))) {
+        setBulkMessage('Only a Super Admin can create or assign SUPER_ADMIN via bulk upload.');
+        return;
+      }
       const res = await bulkUploadUsersServer(users, tenantId);
       if (res && !res.error) {
         setBulkMessage('Bulk upload successful!');
@@ -1140,6 +1199,7 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
           onSave={handleEditSave}
           loading={editLoading}
           roleOptions={roleOptions}
+          isPlatformSuperAdmin={isPlatformSuperAdmin}
         />
       )}
     </div>

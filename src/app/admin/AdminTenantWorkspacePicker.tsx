@@ -158,10 +158,11 @@ export default function AdminTenantWorkspacePicker({
       try {
         const orgs = await searchTenantOrganizationsForSelectServer(trimmed);
         const mappedById = new Map(tenants.map((t) => [t.tenantId, t]));
+        // Re-check locally so a loose backend contains-match cannot surface unrelated tenants.
         setSearchHits(
           orgs
             .map((org) => orgToWorkspaceTenant(org, mappedById.get(org.tenantId?.trim() || '')))
-            .filter((t): t is AdminWorkspaceTenant => t != null),
+            .filter((t): t is AdminWorkspaceTenant => t != null && tenantMatchesQuery(t, trimmed)),
         );
       } catch {
         setSearchHits([]);
@@ -262,7 +263,7 @@ export default function AdminTenantWorkspacePicker({
       )}
 
       {hasSelection && (
-        <div className="mb-4 inline-flex w-full justify-center">
+        <div className="mb-4 flex w-full flex-wrap items-center justify-center gap-3">
           <div className="inline-flex items-center gap-2 rounded-lg border-2 border-green-300 bg-green-50 px-4 py-2 text-sm text-green-800">
             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -281,6 +282,25 @@ export default function AdminTenantWorkspacePicker({
               ) : null}
             </span>
           </div>
+          {!sessionAllTenants && canQueryAllTenants ? (
+            <button
+              type="button"
+              onClick={() => void handleSelect(ADMIN_SESSION_ALL_TENANTS)}
+              disabled={saving !== null}
+              className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="Clear this tenant and work across all tenants"
+              aria-label="Return to all tenants"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <span className="font-semibold text-indigo-700">
+                {saving === ADMIN_SESSION_ALL_TENANTS ? 'Returning…' : 'Return to all tenants'}
+              </span>
+            </button>
+          ) : null}
         </div>
       )}
 

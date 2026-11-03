@@ -107,7 +107,10 @@ export async function fetchAssignableAccessRoles(tenantId?: string | null): Prom
   const rows = await fetchAccessRoles(tenantId);
   return rows.filter((row) => {
     if (row.isActive === false) return false;
-    if (row.platformSuper && !access.isPlatformSuperAdmin) return false;
+    // SUPER_ADMIN (and any platformSuper catalog role) may only be assigned by a platform super admin.
+    if (!access.isPlatformSuperAdmin && (row.platformSuper || row.code === 'SUPER_ADMIN')) {
+      return false;
+    }
     return true;
   });
 }

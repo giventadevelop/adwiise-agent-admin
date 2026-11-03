@@ -684,13 +684,10 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
       hostname.includes(primaryHost.replace('www.', '')) ||
       hostname.includes(primaryDomain.replace('www.', ''));
 
-    /** Marketing home (not `/`, which is the auth shell on primary). */
-    const afterPrimarySignOut = '/home';
-
     if (isPrimary) {
       try {
-        await signOut();
-        window.location.href = afterPrimarySignOut;
+        await signOut({ redirectUrl: '/' });
+        window.location.replace('/');
       } catch (error) {
         console.error('[Header] Error signing out:', error);
         setIsSigningOut(false);
@@ -720,10 +717,10 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
       return;
     }
 
-    // Fallback: not primary and not satellite — normal sign out to marketing home
+    // Fallback: not primary and not satellite — normal sign out to the hub
     try {
-      await signOut();
-      window.location.href = '/home';
+      await signOut({ redirectUrl: '/' });
+      window.location.replace('/');
     } catch (error) {
       console.error('[Header] Error signing out:', error);
       setIsSigningOut(false);

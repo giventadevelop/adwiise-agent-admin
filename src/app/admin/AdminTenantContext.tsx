@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import AdminTenantFilterField from './AdminTenantFilterField';
 
 export type AdminAccessContextValue = {
@@ -113,7 +114,14 @@ export function AdminTenantLayoutClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { isLoaded, userId } = useAuth();
   const showTopTenantBar = showTenantSelector && !hasInlineTenantFilter(pathname);
+
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      window.location.replace('/');
+    }
+  }, [isLoaded, userId]);
 
   const tenantId = tenantFromSearchParams(
     searchParams ?? new URLSearchParams(),
