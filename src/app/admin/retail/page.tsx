@@ -54,6 +54,7 @@ export default function RetailMorningPage() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!tenantId) {
@@ -168,14 +169,18 @@ export default function RetailMorningPage() {
               <ActionButton
                 tone="teal"
                 icon="refresh"
-                label={asking ? 'Refreshing' : 'Refresh brief'}
-                disabled={asking || loading}
+                label={refreshing ? 'Refreshing' : 'Refresh brief'}
+                disabled={asking || refreshing || loading}
                 onClick={async () => {
                   if (!tenantId) return;
-                  setAsking(true);
-                  const refreshed = await refreshRetailBriefServer(tenantId, date);
-                  setAsking(false);
-                  if (refreshed.ok) setRefreshKey(current => current + 1);
+                  setRefreshing(true);
+                  try {
+                    await refreshRetailBriefServer(tenantId, date);
+                    // Always reload platform metrics/cards, even if the engine trigger fails.
+                    setRefreshKey(current => current + 1);
+                  } finally {
+                    setRefreshing(false);
+                  }
                 }}
               />
               {!loading && locations.length === 0 && (
@@ -265,9 +270,12 @@ export default function RetailMorningPage() {
                   event.preventDefault();
                   if (!tenantId || !selected.locationCode) return;
                   setAsking(true);
-                  const result = await askRetailBriefServer(tenantId, date, selected.locationCode, question);
-                  setAnswer(result.reply);
-                  setAsking(false);
+                  try {
+                    const result = await askRetailBriefServer(tenantId, date, selected.locationCode, question);
+                    setAnswer(result.reply ?? result.error ?? 'No answer yet for this brief.');
+                  } finally {
+                    setAsking(false);
+                  }
                 }}
               >
                 <label className={`${labelClass} text-base text-cyan-950`}>

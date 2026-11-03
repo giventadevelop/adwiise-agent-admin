@@ -283,40 +283,55 @@ export async function loadRetailMorningBundle(date: string, tenantId?: string): 
   }
 }
 
-const ENGINE_BASE_URL = process.env.RETAIL_ENGINE_BASE_URL || 'http://127.0.0.1:8090';
-
 export async function askRetailBriefServer(
   tenantId: string,
   date: string,
   stationCode: string,
   question: string
-): Promise<{ reply: string | null }> {
+): Promise<{ reply: string | null; error?: string }> {
   const access = await getRetailMorningAccess(tenantId);
   if (access.scope === 'NONE' || !question.trim()) return { reply: null };
-  const res = await fetch(`${ENGINE_BASE_URL}/v1/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tenantId, metricDate: date, stationCode, question }),
-    cache: 'no-store',
-  });
-  if (!res.ok) return { reply: null };
-  const body = (await res.json()) as { reply?: string };
-  return { reply: body.reply || null };
+  try {
+    // Amplify cannot reach the internal engine ALB; backend forwards to RETAIL_ENGINE_BASE_URL.
+    const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-brief/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
+      body: JSON.stringify({ tenantId, metricDate: date, stationCode, question }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      return { reply: null, error: `Ask failed (HTTP ${res.status}).` };
+    }
+    const body = (await res.json()) as { reply?: string };
+    return { reply: body.reply || null };
+  } catch (error) {
+    console.error('[askRetailBriefServer]', error);
+    return { reply: null, error: 'Ask failed. Try again in a moment.' };
+  }
 }
 
 export async function refreshRetailBriefServer(
   tenantId: string,
   date: string
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; error?: string }> {
   const access = await getRetailMorningAccess(tenantId);
   if (access.scope === 'NONE') return { ok: false };
-  const res = await fetch(`${ENGINE_BASE_URL}/v1/runs/trigger`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tenantId, metricDate: date, source: 'history', post: false }),
-    cache: 'no-store',
-  });
-  return { ok: res.ok };
+  try {
+    // Best-effort engine refresh; morning brief still reloads from the platform either way.
+    const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-brief/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
+      body: JSON.stringify({ tenantId, metricDate: date, source: 'history', post: false }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      return { ok: false, error: `Refresh trigger failed (HTTP ${res.status}).` };
+    }
+    return { ok: true };
+  } catch (error) {
+    console.error('[refreshRetailBriefServer]', error);
+    return { ok: false, error: 'Refresh trigger failed. Reloading saved brief.' };
+  }
 }
 
 export async function updateRetailRecommendationServer(
