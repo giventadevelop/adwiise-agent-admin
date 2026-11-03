@@ -155,6 +155,14 @@ export function RetailNav({
   );
 }
 
+/** Solid emerald + classic bevel (light top/left, dark bottom/right, drop ledge). */
+const EMPHASIZED_BEVEL =
+  'bg-gradient-to-b from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 ' +
+  'border-2 border-t-emerald-200 border-l-emerald-300 border-b-emerald-900 border-r-emerald-900 ' +
+  'shadow-[3px_3px_0_0_#064e3b] hover:shadow-[2px_2px_0_0_#064e3b] ' +
+  'active:shadow-none active:translate-x-[2px] active:translate-y-[2px] ' +
+  'disabled:shadow-none disabled:translate-x-0 disabled:translate-y-0';
+
 export function ActionButton({
   tone,
   icon,
@@ -171,14 +179,10 @@ export function ActionButton({
   onClick?: () => void;
   disabled?: boolean;
   type?: 'button' | 'submit';
-  /** Stronger border + shadow so the control stands out from nearby fields. */
+  /** Solid emerald bevelled CTA — distinct from pale ActionButton / FilePick tones. */
   emphasized?: boolean;
   className?: string;
 }) {
-  const border =
-    emphasized
-      ? 'border-2 border-blue-500 hover:border-blue-600 shadow-md ring-2 ring-blue-200'
-      : '';
   return (
     <button
       type={type}
@@ -186,12 +190,22 @@ export function ActionButton({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`w-full flex-shrink-0 h-14 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:hover:scale-100 ${ACTION[tone]} ${border} ${className}`.trim()}
+      className={`w-full flex-shrink-0 h-14 rounded-xl flex items-center justify-center gap-3 transition-all duration-150 disabled:opacity-60 ${
+        emphasized ? EMPHASIZED_BEVEL : `${ACTION[tone]} hover:scale-105 disabled:hover:scale-100`
+      } ${className}`.trim()}
     >
-      <span className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${ACTION_ICON[tone]}`}>
+      <span
+        className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+          emphasized
+            ? 'bg-emerald-800/35 text-white border border-emerald-200/40 shadow-inner'
+            : ACTION_ICON[tone]
+        }`}
+      >
         <RetailIcon name={icon} className="w-6 h-6" />
       </span>
-      <span className={`font-semibold ${ACTION_TEXT[tone]}`}>{label}</span>
+      <span className={`font-semibold ${emphasized ? 'text-white drop-shadow-sm' : ACTION_TEXT[tone]}`}>
+        {label}
+      </span>
     </button>
   );
 }

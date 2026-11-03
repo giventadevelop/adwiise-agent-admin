@@ -281,9 +281,9 @@ export default function RetailUploadPage() {
               No stores are available for tenant {tenantId}. Add a store on Locations before uploading a day.
             </p>
           )}
-          <div className="sm:col-span-2 pt-2 border-t-2 border-blue-200">
+          <div className="sm:col-span-2 pt-3 border-t-2 border-emerald-300">
             <ActionButton
-              tone="blue"
+              tone="emerald"
               icon="upload"
               label={loading ? 'Uploading…' : 'Upload and save'}
               emphasized
