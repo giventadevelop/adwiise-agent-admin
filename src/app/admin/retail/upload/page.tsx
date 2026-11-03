@@ -30,18 +30,35 @@ export default function RetailUploadPage() {
   const [metricDate, setMetricDate] = useState('');
   const [registerFile, setRegisterFile] = useState<File | null>(null);
   const [fuelFile, setFuelFile] = useState<File | null>(null);
+  const [loadingStores, setLoadingStores] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<UploadResult | null>(null);
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
 
   useEffect(() => {
+    if (!tenantId) {
+      setLocations([]);
+      setLocationId(0);
+      setLoadingStores(false);
+      return;
+    }
     let cancelled = false;
-    fetchRetailLocationsServer(tenantId).then(stores => {
-      if (cancelled) return;
-      setLocations(stores);
-      setLocationId(stores[0]?.id || 0);
-    });
+    setLoadingStores(true);
+    fetchRetailLocationsServer(tenantId)
+      .then(stores => {
+        if (cancelled) return;
+        setLocations(stores);
+        setLocationId(stores[0]?.id || 0);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLocations([]);
+        setLocationId(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStores(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -81,9 +98,15 @@ export default function RetailUploadPage() {
       form.set('registerFile', registerFile);
       if (gasStore && fuelFile) form.set('fuelFile', fuelFile);
       const response = await fetch('/api/proxy/retail-day-uploads/upload', { method: 'POST', body: form });
-      const body = (await response.json()) as UploadResult;
+      const body = (await response.json()) as UploadResult & { error?: string; path?: string; status?: number };
       if (!response.ok || body.accepted === false) {
-        setError(body.message || body.detail || 'The day was not uploaded.');
+        const detail =
+          body.message ||
+          body.detail ||
+          body.error ||
+          (typeof body.path === 'string' ? `${body.error || 'Not found'} (${body.path})` : '') ||
+          `Upload failed (HTTP ${response.status}).`;
+        setError(detail);
       } else {
         setResult(body);
       }
@@ -115,8 +138,11 @@ export default function RetailUploadPage() {
             <select
               className={fieldClass}
               value={locationId || ''}
+              disabled={loadingStores || locations.length === 0}
               onChange={event => setLocationId(Number(event.target.value))}
             >
+              {loadingStores && <option value="">Loading stores…</option>}
+              {!loadingStores && locations.length === 0 && <option value="">No stores</option>}
               {locations.map(location => (
                 <option key={location.id} value={location.id}>
                   {location.locationCode} — {location.locationName} ({location.retailerTypeCode})
@@ -158,8 +184,19 @@ export default function RetailUploadPage() {
             </div>
           )}
           {error && <p className="sm:col-span-2 text-sm text-red-700">{error}</p>}
+          {!loadingStores && tenantId && locations.length === 0 && (
+            <p className="sm:col-span-2 text-sm text-gray-700">
+              No stores are available for tenant {tenantId}. Add a store on Locations before uploading a day.
+            </p>
+          )}
           <div className="sm:col-span-2">
-            <ActionButton tone="blue" icon="upload" label="Upload and save" disabled={loading} onClick={upload} />
+            <ActionButton
+              tone="blue"
+              icon="upload"
+              label="Upload and save"
+              disabled={loading || loadingStores || locations.length === 0}
+              onClick={upload}
+            />
           </div>
         </div>
 
@@ -215,6 +252,39 @@ export default function RetailUploadPage() {
           </div>
         )}
       </div>
+
+      {loadingStores && tenantId && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="retail-upload-loading-title"
+        >
+          <div className="mx-4 w-full max-w-md rounded-xl border-2 border-blue-300 bg-blue-50 p-8 shadow-xl">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="flex items-center justify-center rounded-full bg-blue-100 p-4">
+                <svg className="h-12 w-12 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </div>
+              <h2 id="retail-upload-loading-title" className="text-xl font-semibold text-blue-800">
+                Loading stores
+              </h2>
+              <p className="text-base leading-relaxed text-blue-800">
+                Loading the store list for tenant {tenantId}. The store dropdown stays disabled until this finishes.
+              </p>
+              <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
+                <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
