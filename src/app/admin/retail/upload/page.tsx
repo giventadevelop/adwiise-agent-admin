@@ -80,7 +80,7 @@ export default function RetailUploadPage() {
       if (tenantId) form.set('tenantId', tenantId);
       form.set('registerFile', registerFile);
       if (gasStore && fuelFile) form.set('fuelFile', fuelFile);
-      const response = await fetch('/api/retail-day-uploads/upload', { method: 'POST', body: form });
+      const response = await fetch('/api/proxy/retail-day-uploads/upload', { method: 'POST', body: form });
       const body = (await response.json()) as UploadResult;
       if (!response.ok || body.accepted === false) {
         setError(body.message || body.detail || 'The day was not uploaded.');
