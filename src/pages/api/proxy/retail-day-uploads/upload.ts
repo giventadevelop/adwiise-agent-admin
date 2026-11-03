@@ -30,35 +30,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     getTenantIdOptional() ||
     '';
 
-  const raw = await getRawBody(req);
-  const response = await fetchWithJwtRetry(
-    `${getApiBaseUrl()}/api/retail-day-uploads`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': String(contentType),
-        ...(tenantHeader ? { 'X-Tenant-ID': tenantHeader } : {}),
-      },
-      body: raw,
-      // Engine day upload does S3 + post; default 30s proxy timeout is too short.
-      timeout: 120000,
-    },
-    'retail-day-uploads-POST'
-  );
-  const text = await response.text();
-  if (!text || !text.trim()) {
-    return res.status(502).json({
-      accepted: false,
-      message: `Retail day upload returned an empty body (HTTP ${response.status}).`,
-    });
-  }
-  res.status(response.status);
   try {
-    return res.json(JSON.parse(text));
-  } catch {
-    return res.status(response.ok ? 502 : response.status).json({
+    const raw = await getRawBody(req);
+    const response = await fetchWithJwtRetry(
+      `${getApiBaseUrl()}/api/retail-day-uploads`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': String(contentType),
+          ...(tenantHeader ? { 'X-Tenant-ID': tenantHeader } : {}),
+        },
+        body: raw,
+        // Engine day upload does S3 + post; default 30s proxy timeout is too short.
+        timeout: 120000,
+      },
+      'retail-day-uploads-POST'
+    );
+    const text = await response.text();
+    if (!text || !text.trim()) {
+      return res.status(502).json({
+        accepted: false,
+        message: `Retail day upload returned an empty body (HTTP ${response.status}).`,
+      });
+    }
+    res.status(response.status);
+    try {
+      return res.json(JSON.parse(text));
+    } catch {
+      return res.status(response.ok ? 502 : response.status).json({
+        accepted: false,
+        message: text.slice(0, 500) || 'Retail day upload failed',
+      });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Retail day upload failed';
+    const timedOut = /timed out/i.test(message);
+    return res.status(timedOut ? 504 : 502).json({
       accepted: false,
-      message: text.slice(0, 500) || 'Retail day upload failed',
+      message,
     });
   }
 }

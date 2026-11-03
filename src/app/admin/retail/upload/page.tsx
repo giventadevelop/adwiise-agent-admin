@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { ActionButton, FilePickButton, RetailNav, fieldClass, labelClass } from '@/components/retail/RetailUi';
 import { useAdminTenantId } from '../../AdminTenantContext';
@@ -48,14 +49,60 @@ function normalizeUploadResult(raw: Record<string, unknown>): UploadResult {
   };
 }
 
+function RetailBusyDialog({
+  titleId,
+  title,
+  message,
+}: {
+  titleId: string;
+  title: string;
+  message: string;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+    >
+      <div className="mx-4 w-full max-w-md rounded-xl border-2 border-blue-300 bg-blue-50 p-8 shadow-xl">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="flex items-center justify-center rounded-full bg-blue-100 p-4">
+            <svg className="h-12 w-12 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          </div>
+          <h2 id={titleId} className="text-xl font-semibold text-blue-800">
+            {title}
+          </h2>
+          <p className="text-base leading-relaxed text-blue-800">{message}</p>
+          <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
+            <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RetailUploadPage() {
-  const tenantId = useAdminTenantId();
+  const tenantIdFromContext = useAdminTenantId();
+  const searchParams = useSearchParams();
+  const urlTenant = (searchParams?.get('tenant') ?? '').trim() || undefined;
+  const tenantId = tenantIdFromContext || urlTenant;
+
   const [locations, setLocations] = useState<RetailLocationDTO[]>([]);
   const [locationId, setLocationId] = useState<number>(0);
   const [metricDate, setMetricDate] = useState('');
   const [registerFile, setRegisterFile] = useState<File | null>(null);
   const [fuelFile, setFuelFile] = useState<File | null>(null);
-  const [loadingStores, setLoadingStores] = useState(false);
+  // Start true so hard refresh / first paint shows the dialog before the effect runs.
+  const [loadingStores, setLoadingStores] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<UploadResult | null>(null);
@@ -65,11 +112,14 @@ export default function RetailUploadPage() {
     if (!tenantId) {
       setLocations([]);
       setLocationId(0);
-      setLoadingStores(false);
+      // URL may resolve a moment after hard refresh; keep spinner only while a tenant is expected.
+      setLoadingStores(Boolean(urlTenant));
       return;
     }
     let cancelled = false;
     setLoadingStores(true);
+    setLocations([]);
+    setLocationId(0);
     fetchRetailLocationsServer(tenantId)
       .then(stores => {
         if (cancelled) return;
@@ -87,7 +137,7 @@ export default function RetailUploadPage() {
     return () => {
       cancelled = true;
     };
-  }, [tenantId]);
+  }, [tenantId, urlTenant]);
 
   const selected = useMemo(
     () => locations.find(location => location.id === locationId),
@@ -155,6 +205,9 @@ export default function RetailUploadPage() {
       setLoading(false);
     }
   }
+
+  const showStoresDialog = loadingStores;
+  const storeDialogTenant = tenantId || 'this organization';
 
   return (
     <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
@@ -228,11 +281,12 @@ export default function RetailUploadPage() {
               No stores are available for tenant {tenantId}. Add a store on Locations before uploading a day.
             </p>
           )}
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 pt-2 border-t-2 border-blue-200">
             <ActionButton
               tone="blue"
               icon="upload"
-              label="Upload and save"
+              label={loading ? 'Uploading…' : 'Upload and save'}
+              emphasized
               disabled={loading || loadingStores || locations.length === 0}
               onClick={upload}
             />
@@ -292,37 +346,24 @@ export default function RetailUploadPage() {
         )}
       </div>
 
-      {loadingStores && tenantId && (
-        <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="retail-upload-loading-title"
-        >
-          <div className="mx-4 w-full max-w-md rounded-xl border-2 border-blue-300 bg-blue-50 p-8 shadow-xl">
-            <div className="flex flex-col items-center space-y-4 text-center">
-              <div className="flex items-center justify-center rounded-full bg-blue-100 p-4">
-                <svg className="h-12 w-12 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              </div>
-              <h2 id="retail-upload-loading-title" className="text-xl font-semibold text-blue-800">
-                Loading stores
-              </h2>
-              <p className="text-base leading-relaxed text-blue-800">
-                Loading the store list for tenant {tenantId}. The store dropdown stays disabled until this finishes.
-              </p>
-              <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
-                <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
-              </div>
-            </div>
-          </div>
-        </div>
+      {showStoresDialog && !loading && (
+        <RetailBusyDialog
+          titleId="retail-upload-loading-title"
+          title="Loading stores"
+          message={`Loading the store list for tenant ${storeDialogTenant}. The store dropdown stays disabled until this finishes.`}
+        />
+      )}
+
+      {loading && (
+        <RetailBusyDialog
+          titleId="retail-upload-saving-title"
+          title="Uploading day"
+          message={
+            tenantId
+              ? `Uploading files for tenant ${tenantId}. Please wait until the day is saved.`
+              : 'Uploading files. Please wait until the day is saved.'
+          }
+        />
       )}
     </div>
   );
