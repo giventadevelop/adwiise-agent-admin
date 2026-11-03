@@ -21,7 +21,32 @@ type UploadResult = {
   controllerGallons?: number | null;
   message?: string;
   detail?: string;
+  error?: string;
+  path?: string;
+  status?: number;
 };
+
+function normalizeUploadResult(raw: Record<string, unknown>): UploadResult {
+  const recommendations = raw.recommendations ?? raw.recommendationList;
+  return {
+    accepted: raw.accepted as boolean | undefined,
+    posted: Boolean(raw.posted ?? raw.Posted),
+    stationCode: String(raw.stationCode ?? raw.station_code ?? ''),
+    metricDate: String(raw.metricDate ?? raw.metric_date ?? ''),
+    locationName: String(raw.locationName ?? raw.location_name ?? ''),
+    s3Prefix: (raw.s3Prefix ?? raw.s3_prefix) as string | undefined,
+    featureS3Key: (raw.featureS3Key ?? raw.feature_s3_key) as string | undefined,
+    storage: raw.storage as string | undefined,
+    overwritten: Boolean(raw.overwritten),
+    recommendations: Array.isArray(recommendations) ? recommendations : [],
+    controllerGallons: (raw.controllerGallons ?? raw.controller_gallons) as number | null | undefined,
+    message: raw.message as string | undefined,
+    detail: raw.detail as string | undefined,
+    error: raw.error as string | undefined,
+    path: raw.path as string | undefined,
+    status: raw.status as number | undefined,
+  };
+}
 
 export default function RetailUploadPage() {
   const tenantId = useAdminTenantId();
@@ -97,16 +122,30 @@ export default function RetailUploadPage() {
       if (tenantId) form.set('tenantId', tenantId);
       form.set('registerFile', registerFile);
       if (gasStore && fuelFile) form.set('fuelFile', fuelFile);
-      const response = await fetch('/api/proxy/retail-day-uploads/upload', { method: 'POST', body: form });
-      const body = (await response.json()) as UploadResult & { error?: string; path?: string; status?: number };
-      if (!response.ok || body.accepted === false) {
+      const proxyUrl = tenantId
+        ? `/api/proxy/retail-day-uploads/upload?tenantId=${encodeURIComponent(tenantId)}`
+        : '/api/proxy/retail-day-uploads/upload';
+      const response = await fetch(proxyUrl, { method: 'POST', body: form });
+      const raw = (await response.json()) as Record<string, unknown>;
+      const body = normalizeUploadResult(raw);
+      // Fill identity from the form when the API omits it (older service builds).
+      if (!body.stationCode && selected?.locationCode) body.stationCode = selected.locationCode;
+      if (!body.locationName && selected?.locationName) body.locationName = selected.locationName;
+      if (!body.metricDate && metricDate.trim()) body.metricDate = metricDate.trim();
+      const incomplete = !body.stationCode || !body.metricDate;
+      if (!response.ok || body.accepted === false || incomplete || body.posted !== true) {
         const detail =
           body.message ||
           body.detail ||
           body.error ||
-          (typeof body.path === 'string' ? `${body.error || 'Not found'} (${body.path})` : '') ||
+          (incomplete
+            ? 'The API returned an incomplete day result. Redeploy adwiise-agent-service (RetailDayUploadResource) and the engine image that serves POST /v1/uploads/day.'
+            : body.posted !== true
+              ? 'The day was accepted but not posted to the retail tables. Check that the serving engine can reach the API and FEATURE_STORE_S3_URI is set.'
+              : '') ||
           `Upload failed (HTTP ${response.status}).`;
         setError(detail);
+        setResult(null);
       } else {
         setResult(body);
       }
@@ -229,8 +268,8 @@ export default function RetailUploadPage() {
           <div className="mt-6 bg-white rounded-lg shadow-md p-6 text-base text-gray-900 space-y-2">
             <p className="font-semibold">Day saved</p>
             <p>
-              Store {result.stationCode}
-              {result.locationName ? ` (${result.locationName})` : ''} on {result.metricDate}.
+              Store {result.stationCode || '—'}
+              {result.locationName ? ` (${result.locationName})` : ''} on {result.metricDate || '—'}.
             </p>
             <p>Posted to retail tables: {result.posted ? 'yes' : 'no'}.</p>
             <p>Cards: {(result.recommendations || []).length}.</p>
