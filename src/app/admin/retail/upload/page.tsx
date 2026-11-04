@@ -309,6 +309,10 @@ export default function RetailUploadPage() {
             <li>
               <a className="underline" href="/samples/manual-upload/liquor-register.csv">
                 liquor-register.csv
+              </a>
+              {" · "}
+              <a className="underline" href="/samples/manual-upload/liquor-register-departments.csv">
+                liquor-register-departments.csv
               </a>{' '}
               for a liquor store (no fuel file)
             </li>

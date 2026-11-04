@@ -1,0 +1,5 @@
+business_date,station_code,transaction_id,line_type,amount_usd,quantity,department
+2026-07-08,LQ-001,T1,IN_STORE,8.00,1,BEER
+2026-07-08,LQ-001,T2,IN_STORE,12.00,1,WINE
+2026-07-08,LQ-001,T3,IN_STORE,6.00,1,SPIRITS
+2026-07-08,LQ-001,T4,IN_STORE,4.00,2,OTHER
