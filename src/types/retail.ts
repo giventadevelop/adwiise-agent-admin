@@ -167,6 +167,9 @@ export interface RetailIntegrationDTO {
   systemType: RetailSystemType;
   providerName?: string;
   connectionMode?: RetailConnectionMode;
+  /** Non-secret connection settings as a JSON string (URLs, site ids, paths). */
+  configJson?: string;
+  /** Secrets Manager ARN or local secret name — never the raw password. */
   credentialsRef?: string;
   lastSyncAt?: string;
   lastSyncStatus?: string;

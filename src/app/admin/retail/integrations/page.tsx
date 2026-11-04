@@ -31,6 +31,8 @@ const EMPTY: RetailIntegrationDTO = {
   systemType: 'POS',
   providerName: '',
   connectionMode: 'FILE_UPLOAD',
+  configJson: '',
+  credentialsRef: '',
   isEnabled: true,
 };
 
@@ -136,6 +138,22 @@ export default function RetailIntegrationsPage() {
                 {CONNECTION_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
               </select>
             </label>
+            <label className={labelClass}>Credentials ref
+              <input
+                className={fieldClass}
+                placeholder="demo-pos-loc3 or arn:aws:secretsmanager:..."
+                value={form.credentialsRef || ''}
+                onChange={event => setForm({ ...form, credentialsRef: event.target.value })}
+              />
+            </label>
+            <label className={`${labelClass} sm:col-span-2`}>Config JSON
+              <textarea
+                className={`${fieldClass} min-h-[120px] font-mono text-xs`}
+                placeholder='{"baseUrl":"http://127.0.0.1:8091","siteId":"LQ-001","paths":{"transactions":"/v1/sites/{siteId}/transactions"}}'
+                value={form.configJson || ''}
+                onChange={event => setForm({ ...form, configJson: event.target.value })}
+              />
+            </label>
             <YellowCheckbox checked={form.isEnabled !== false} onChange={checked => setForm({ ...form, isEnabled: checked })} label="Enabled" />
             {error && <p className="sm:col-span-2 text-sm text-red-700">{error}</p>}
             <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2">
@@ -152,6 +170,7 @@ export default function RetailIntegrationsPage() {
                 <th className="px-4 py-3">System</th>
                 <th className="px-4 py-3">Provider</th>
                 <th className="px-4 py-3">Mode</th>
+                <th className="px-4 py-3">Credentials</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -164,9 +183,10 @@ export default function RetailIntegrationsPage() {
                     <td className="px-4 py-3">{row.systemType}</td>
                     <td className="px-4 py-3">{row.providerName}</td>
                     <td className="px-4 py-3">{row.connectionMode}</td>
+                    <td className="px-4 py-3 font-mono text-xs max-w-[12rem] truncate" title={row.credentialsRef || ''}>{row.credentialsRef || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        <IconAction tone="blue" icon="pencil" label="Edit integration" onClick={() => { setEditingId(row.id ?? null); setForm(row); setShowForm(true); }} />
+                        <IconAction tone="blue" icon="pencil" label="Edit integration" onClick={() => { setEditingId(row.id ?? null); setForm({ ...row, configJson: row.configJson || '', credentialsRef: row.credentialsRef || '' }); setShowForm(true); }} />
                         <IconAction tone="red" icon="trash" label="Delete integration" onClick={() => { if (row.id == null) return; startTransition(async () => { await deleteRetailIntegrationServer(row.id as number); await reload(); }); }} />
                       </div>
                     </td>

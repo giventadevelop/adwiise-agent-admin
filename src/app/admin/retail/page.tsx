@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { ActionButton, RetailNav, fieldClass, labelClass } from '@/components/retail/RetailUi';
 import MorningMetricTile from '@/components/retail/MorningMetricTile';
@@ -36,7 +37,12 @@ function formatCount(value?: number | null): string {
 }
 
 export default function RetailMorningPage() {
-  const tenantId = useAdminTenantId();
+  const tenantIdFromContext = useAdminTenantId();
+  const searchParams = useSearchParams();
+  const urlTenant = (searchParams?.get('tenant') ?? '').trim() || undefined;
+  // URL fallback so hard refresh still has a tenant before AdminTenantContext catches up.
+  const tenantId = tenantIdFromContext || urlTenant;
+
   const [date, setDate] = useState('2026-07-08');
   const [locations, setLocations] = useState<RetailLocationDTO[]>([]);
   const [metrics, setMetrics] = useState<RetailDailyMetricsDTO[]>([]);
@@ -45,7 +51,8 @@ export default function RetailMorningPage() {
   const [locationId, setLocationId] = useState<number | null>(null);
   const [canAssign, setCanAssign] = useState(false);
   const [denied, setDenied] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // Start true so soft/hard refresh and first paint show the Loading stores dialog immediately.
+  const [loading, setLoading] = useState(true);
   const [storeError, setStoreError] = useState<string | null>(null);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [fuelError, setFuelError] = useState<string | null>(null);
@@ -68,37 +75,44 @@ export default function RetailMorningPage() {
       setMetricsError(null);
       setFuelError(null);
       setCardError(null);
+      // Keep spinner only while a tenant is still expected from the URL.
+      setLoading(Boolean(urlTenant));
       return;
     }
     let cancelled = false;
     setLoading(true);
+    setLocations([]);
+    setLocationId(null);
     setStoreError(null);
     setMetricsError(null);
     setFuelError(null);
     setCardError(null);
     (async () => {
-      const bundle = await loadRetailMorningBundle(date, tenantId);
-      if (cancelled) return;
-      setCanAssign(bundle.canAssign);
-      setDenied(bundle.denied);
-      setLocations(bundle.locations);
-      setMetrics(bundle.metrics);
-      setFuelDays(bundle.fuelDays);
-      setRecommendations(bundle.recommendations);
-      setStoreError(bundle.storeError);
-      setMetricsError(bundle.metricsError);
-      setFuelError(bundle.fuelError);
-      setCardError(bundle.cardError);
-      setLocationId(current => {
-        if (current != null && bundle.locations.some(location => location.id === current)) return current;
-        return bundle.locations[0]?.id ?? null;
-      });
-      setLoading(false);
+      try {
+        const bundle = await loadRetailMorningBundle(date, tenantId);
+        if (cancelled) return;
+        setCanAssign(bundle.canAssign);
+        setDenied(bundle.denied);
+        setLocations(bundle.locations);
+        setMetrics(bundle.metrics);
+        setFuelDays(bundle.fuelDays);
+        setRecommendations(bundle.recommendations);
+        setStoreError(bundle.storeError);
+        setMetricsError(bundle.metricsError);
+        setFuelError(bundle.fuelError);
+        setCardError(bundle.cardError);
+        setLocationId(current => {
+          if (current != null && bundle.locations.some(location => location.id === current)) return current;
+          return bundle.locations[0]?.id ?? null;
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [tenantId, date, refreshKey]);
+  }, [tenantId, date, refreshKey, urlTenant]);
 
   const selected = locations.find(location => location.id === locationId) ?? null;
   const sellsFuel = GAS_PACKS.has(selected?.retailerTypeCode ?? '');
@@ -109,6 +123,8 @@ export default function RetailMorningPage() {
     [recommendations, locationId]
   );
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
+  const storeDialogTenant = tenantId || urlTenant || 'this tenant';
+  const showStoresDialog = loading && Boolean(tenantId || urlTenant);
 
   const setStatus = async (card: RetailRecommendationDTO, status: 'ACCEPTED' | 'DISMISSED') => {
     if (card.id == null || card.locationId == null) return;
@@ -158,7 +174,8 @@ export default function RetailMorningPage() {
                   className={fieldClass}
                   disabled={loading || locations.length === 0}
                 >
-                  {locations.length === 0 && <option value="">No stores</option>}
+                  {loading && <option value="">Loading stores…</option>}
+                  {!loading && locations.length === 0 && <option value="">No stores</option>}
                   {locations.map(location => (
                     <option key={location.id} value={location.id}>
                       {location.locationCode} ({location.retailerTypeCode || 'no pack'})
@@ -355,7 +372,7 @@ export default function RetailMorningPage() {
           </div>
         )}
       </div>
-      {loading && tenantId && (
+      {showStoresDialog && (
         <div
           className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
           role="dialog"
@@ -374,7 +391,8 @@ export default function RetailMorningPage() {
                 Loading stores
               </h2>
               <p className="text-base leading-relaxed text-blue-800">
-                Loading the store list for tenant {tenantId} on {date}. The list stays disabled until this finishes.
+                Loading the store list for tenant {storeDialogTenant} on {date}. The list stays disabled until this
+                finishes.
               </p>
               <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
                 <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
