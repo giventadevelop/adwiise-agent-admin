@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
+import RetailBusyDialog from '@/components/retail/RetailBusyDialog';
 import { ActionButton, RetailNav, fieldClass, labelClass } from '@/components/retail/RetailUi';
 import MorningMetricTile from '@/components/retail/MorningMetricTile';
 import {
@@ -26,6 +27,14 @@ import {
 
 const GAS_PACKS = new Set(['GAS_STATION']);
 const DEFAULT_BRIEF_DATE = '2026-07-08';
+
+/** Suggested questions so non-AI-savvy owners are not stuck with a blank Ask box. */
+const ASK_SUGGESTIONS = [
+  "What's driving today's top card?",
+  'How much is in-store sales?',
+  'Which card has the biggest estimated impact?',
+  'How did fuel gallons look today?',
+] as const;
 
 function formatUsd(value?: number | null): string {
   if (value == null) return '—';
@@ -65,9 +74,13 @@ export default function RetailMorningPage() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  const [askFocusTitle, setAskFocusTitle] = useState<string | null>(null);
+  const [askFocusId, setAskFocusId] = useState<number | string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const storesLoadedForTenantRef = useRef<string | null>(null);
   const dateCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const waitForBriefAfterRefreshRef = useRef(false);
   const committedDateRef = useRef(date);
   committedDateRef.current = date;
 
@@ -150,6 +163,10 @@ export default function RetailMorningPage() {
         if (!cancelled) {
           setLoadingStores(false);
           setLoadingBrief(false);
+          if (waitForBriefAfterRefreshRef.current) {
+            waitForBriefAfterRefreshRef.current = false;
+            setRefreshing(false);
+          }
         }
       }
     })();
@@ -169,7 +186,7 @@ export default function RetailMorningPage() {
   );
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
   const storeDialogTenant = tenantId || urlTenant || 'this tenant';
-  const showStoresDialog = loadingStores && Boolean(tenantId || urlTenant);
+  const showStoresDialog = loadingStores && Boolean(tenantId || urlTenant) && !refreshing && !asking;
 
   const setStatus = async (card: RetailRecommendationDTO, status: 'ACCEPTED' | 'DISMISSED') => {
     if (card.id == null || card.locationId == null) return;
@@ -178,21 +195,45 @@ export default function RetailMorningPage() {
     setRecommendations(current => current.map(row => (row.id === updated.id ? { ...row, status: updated.status } : row)));
   };
 
+  const runAsk = async (
+    nextQuestion: string,
+    focus?: { recommendationId?: number | string; recommendationTitle?: string }
+  ) => {
+    if (!tenantId || !selected?.locationCode || !nextQuestion.trim()) return;
+    setAsking(true);
+    setAskFocusTitle(focus?.recommendationTitle ?? null);
+    setAskFocusId(focus?.recommendationId ?? null);
+    try {
+      const result = await askRetailBriefServer(tenantId, date, selected.locationCode, nextQuestion, {
+        recommendationId: focus?.recommendationId,
+        recommendationTitle: focus?.recommendationTitle,
+        siteType: selected.retailerTypeCode || undefined,
+      });
+      setAnswer(result.reply ?? result.error ?? 'No answer yet for this brief.');
+    } finally {
+      setAsking(false);
+    }
+  };
+
   return (
-    <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
+    <div className="relative z-0 w-full overflow-x-hidden box-border pt-28 sm:pt-32">
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6 sm:mb-8">
         <AdminNavigation currentPage="retail" />
       </div>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Retail morning brief</h1>
-        <p className="mt-2 text-lg text-gray-800">
+        <p className="mt-2 text-base sm:text-lg text-gray-800">
           Stores you are allowed to see for this tenant. Gallons appear only for a gas station.
         </p>
         <div className="mt-6">
           <RetailNav tenantQuery={tenantQuery} current="morning" showAccess={canAssign} />
         </div>
 
-        {!tenantId && <TenantSiteTypePicker siteTypes={['RETAIL']} title="Retail tenants" />}
+        {!tenantId && (
+          <div className="mt-6">
+            <TenantSiteTypePicker siteTypes={['RETAIL']} title="Retail tenants" />
+          </div>
+        )}
 
         {tenantId && denied && (
           <p className="mt-6 text-gray-700">You do not have a retail role for this tenant.</p>
@@ -200,8 +241,8 @@ export default function RetailMorningPage() {
 
         {tenantId && !denied && (
           <div className="mt-6 space-y-6">
-            <div className="bg-sky-200 text-sky-950 border-l-4 border-sky-700 rounded-lg shadow-md p-6 grid gap-4 md:grid-cols-3 items-end">
-              <label className={`${labelClass} text-base text-sky-950`}>
+            <div className="bg-sky-200 text-sky-950 border-l-4 border-sky-700 rounded-lg shadow-md p-4 sm:p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-end">
+              <label className={`${labelClass} text-base text-sky-950 min-w-0`}>
                 Brief date
                 <input
                   type="date"
@@ -221,16 +262,16 @@ export default function RetailMorningPage() {
                     }
                   }}
                   className={fieldClass}
-                  disabled={loadingStores}
+                  disabled={loadingStores || refreshing}
                 />
               </label>
-              <label className={`${labelClass} text-base text-sky-950`}>
+              <label className={`${labelClass} text-base text-sky-950 min-w-0`}>
                 Store
                 <select
                   value={locationId ?? ''}
                   onChange={event => setLocationId(event.target.value ? Number(event.target.value) : null)}
                   className={fieldClass}
-                  disabled={loadingStores || locations.length === 0}
+                  disabled={loadingStores || locations.length === 0 || refreshing}
                 >
                   {loadingStores && <option value="">Loading stores…</option>}
                   {!loadingStores && locations.length === 0 && <option value="">No stores</option>}
@@ -241,32 +282,42 @@ export default function RetailMorningPage() {
                   ))}
                 </select>
               </label>
-              <ActionButton
-                tone="teal"
-                icon="refresh"
-                label={refreshing ? 'Refreshing' : 'Refresh brief'}
-                disabled={asking || refreshing || loading}
-                onClick={async () => {
-                  if (!tenantId) return;
-                  setRefreshing(true);
-                  try {
-                    await refreshRetailBriefServer(tenantId, date);
-                    // Always reload platform metrics/cards, even if the engine trigger fails.
-                    setRefreshKey(current => current + 1);
-                  } finally {
-                    setRefreshing(false);
-                  }
-                }}
-              />
+              <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                <ActionButton
+                  tone="teal"
+                  icon="refresh"
+                  label={refreshing ? 'Refreshing' : 'Refresh brief'}
+                  disabled={asking || refreshing || loading}
+                  onClick={async () => {
+                    if (!tenantId) return;
+                    setRefreshNotice(null);
+                    setRefreshing(true);
+                    waitForBriefAfterRefreshRef.current = true;
+                    try {
+                      const result = await refreshRetailBriefServer(tenantId, date, selected?.locationCode);
+                      if (result.error) setRefreshNotice(result.error);
+                      // Always reload platform metrics/cards, even if the engine trigger fails.
+                      setRefreshKey(current => current + 1);
+                    } catch {
+                      waitForBriefAfterRefreshRef.current = false;
+                      setRefreshing(false);
+                      setRefreshNotice('Refresh failed. Try again in a moment.');
+                    }
+                  }}
+                />
+              </div>
+              {refreshNotice && (
+                <p className="text-base font-medium sm:col-span-2 lg:col-span-3">{refreshNotice}</p>
+              )}
               {!loading && locations.length === 0 && (
-                <p className="text-base font-medium md:col-span-3">
+                <p className="text-base font-medium sm:col-span-2 lg:col-span-3">
                   {storeError
                     ? `The store list could not be loaded for tenant ${tenantId}. ${storeError}`
                     : `No stores are available for tenant ${tenantId}. The store list is the same on every brief date.`}
                 </p>
               )}
               {!loading && (metricsError || fuelError) && (
-                <p className="text-base font-medium md:col-span-3">
+                <p className="text-base font-medium sm:col-span-2 lg:col-span-3">
                   {[metricsError, fuelError].filter(Boolean).join(' ')} The store list is still available.
                 </p>
               )}
@@ -274,19 +325,19 @@ export default function RetailMorningPage() {
 
             {selected && (
               <div className="space-y-4">
-                <div className={`rounded-lg shadow-md p-6 ${packSurface(selected.retailerTypeCode)}`}>
-                  <p className="text-2xl font-bold">
+                <div className={`rounded-lg shadow-md p-4 sm:p-6 ${packSurface(selected.retailerTypeCode)}`}>
+                  <p className="text-xl sm:text-2xl font-bold break-words">
                     {selected.locationName} · {selected.locationCode}
                   </p>
-                  <p className="mt-1 text-lg font-semibold">
+                  <p className="mt-1 text-base sm:text-lg font-semibold">
                     Pack {selected.retailerTypeCode || 'not set'}
                     {selected.region ? ` · Region ${selected.region}` : ''}
                   </p>
-                  <p className="mt-2 text-base font-medium">
+                  <p className="mt-2 text-sm sm:text-base font-medium">
                     One brief date, one store. Day numbers come from the register and, for gas packs, the fuel controller.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   <MorningMetricTile
                     copy={METRIC_TILES.inStoreSales}
                     value={formatUsd(metric?.salesUsd)}
@@ -340,48 +391,81 @@ export default function RetailMorningPage() {
 
             {selected && (
               <form
-                className="bg-cyan-200 text-cyan-950 border-l-4 border-cyan-700 rounded-lg shadow-md p-6 space-y-4"
+                className="bg-cyan-200 text-cyan-950 border-l-4 border-cyan-700 rounded-lg shadow-md p-4 sm:p-6 space-y-4"
                 onSubmit={async event => {
                   event.preventDefault();
-                  if (!tenantId || !selected.locationCode) return;
-                  setAsking(true);
-                  try {
-                    const result = await askRetailBriefServer(tenantId, date, selected.locationCode, question);
-                    setAnswer(result.reply ?? result.error ?? 'No answer yet for this brief.');
-                  } finally {
-                    setAsking(false);
-                  }
+                  await runAsk(question, {
+                    recommendationId: askFocusId ?? undefined,
+                    recommendationTitle: askFocusTitle ?? undefined,
+                  });
                 }}
               >
                 <label className={`${labelClass} text-base text-cyan-950`}>
                   Ask about this brief
                   <input
                     value={question}
-                    onChange={event => setQuestion(event.target.value)}
+                    onChange={event => {
+                      setQuestion(event.target.value);
+                      setAskFocusTitle(null);
+                      setAskFocusId(null);
+                    }}
                     className={fieldClass}
+                    disabled={asking || refreshing}
+                    placeholder="Or tap a suggestion / Ask about this on a card"
                   />
                 </label>
-                <ActionButton type="submit" tone="blue" icon="chat" label={asking ? 'Asking' : 'Ask'} disabled={asking || !question.trim()} />
-                {answer && <p className="text-lg font-medium">{answer}</p>}
+                {askFocusTitle && (
+                  <p className="text-sm font-semibold text-cyan-900">
+                    Focused on card: {askFocusTitle}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {ASK_SUGGESTIONS.filter(chip => sellsFuel || !chip.toLowerCase().includes('fuel')).map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      className="rounded-md bg-cyan-800 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-cyan-900 disabled:opacity-60"
+                      disabled={asking || refreshing}
+                      onClick={async () => {
+                        setQuestion(chip);
+                        setAskFocusTitle(null);
+                        setAskFocusId(null);
+                        await runAsk(chip);
+                      }}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+                <div className="w-full sm:max-w-xs">
+                  <ActionButton
+                    type="submit"
+                    tone="blue"
+                    icon="chat"
+                    label={asking ? 'Asking' : 'Ask'}
+                    disabled={asking || refreshing || !question.trim()}
+                  />
+                </div>
+                {answer && <p className="text-base sm:text-lg font-medium break-words">{answer}</p>}
               </form>
             )}
 
             <div className="space-y-3">
-              <h2 className="text-2xl font-bold text-gray-900">Morning action list</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Morning action list</h2>
               {cardError && (
-                <p className="text-lg text-gray-800">
+                <p className="text-base sm:text-lg text-gray-800">
                   Morning cards for {date} could not be loaded. {cardError} The store list does not depend on this date.
                 </p>
               )}
               {!cardError && cards.length === 0 && (
-                <p className="text-lg text-gray-800">No cards for this store on this date.</p>
+                <p className="text-base sm:text-lg text-gray-800">No cards for this store on this date.</p>
               )}
               {cards.map(card => {
                 const isChain = card.locationId == null;
                 const origin = originForRecommendationCategory(card.category, { isChain });
                 return (
-                  <article key={card.id ?? card.title} className={`rounded-lg shadow-md p-6 ${ORIGIN_SURFACE[origin]}`}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                  <article key={card.id ?? card.title} className={`rounded-lg shadow-md p-4 sm:p-6 ${ORIGIN_SURFACE[origin]}`}>
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${ORIGIN_CHIP_STYLES[origin]}`}>
@@ -406,22 +490,38 @@ export default function RetailMorningPage() {
                             {card.status || 'NEW'}
                           </span>
                         </div>
-                        <p className="mt-3 text-xl font-bold">{card.title}</p>
-                        {card.detail && <p className="mt-2 text-base font-medium">{card.detail}</p>}
+                        <p className="mt-3 text-lg sm:text-xl font-bold break-words">{card.title}</p>
+                        {card.detail && <p className="mt-2 text-base font-medium break-words">{card.detail}</p>}
                         {card.explanation && (
-                          <p className="mt-2 text-base" title={card.explanation}>
+                          <p className="mt-2 text-base break-words" title={card.explanation}>
                             {card.explanation}
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">{formatUsd(card.estimatedImpactUsd)}</p>
+                      <div className="text-left sm:text-right shrink-0">
+                        <p className="text-xl sm:text-2xl font-bold">{formatUsd(card.estimatedImpactUsd)}</p>
                         <p className="text-base font-medium">est. impact</p>
                       </div>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-3">
                       <ActionButton tone="emerald" icon="check" label="Accept" onClick={() => setStatus(card, 'ACCEPTED')} />
                       <ActionButton tone="orange" icon="ban" label="Dismiss" onClick={() => setStatus(card, 'DISMISSED')} />
+                      <ActionButton
+                        tone="blue"
+                        icon="chat"
+                        label="Ask about this"
+                        disabled={asking || refreshing}
+                        onClick={async () => {
+                          const next = `Why this recommendation: ${card.title}?`;
+                          setQuestion(next);
+                          setAskFocusTitle(card.title);
+                          setAskFocusId(card.id ?? card.sourceModelRunId ?? null);
+                          await runAsk(next, {
+                            recommendationId: card.id ?? card.sourceModelRunId,
+                            recommendationTitle: card.title,
+                          });
+                        }}
+                      />
                     </div>
                   </article>
                 );
@@ -431,33 +531,25 @@ export default function RetailMorningPage() {
         )}
       </div>
       {showStoresDialog && (
-        <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="retail-morning-loading-title"
-        >
-          <div className="mx-4 w-full max-w-md rounded-xl border-2 border-blue-300 bg-blue-50 p-8 shadow-xl">
-            <div className="flex flex-col items-center space-y-4 text-center">
-              <div className="flex items-center justify-center rounded-full bg-blue-100 p-4">
-                <svg className="h-12 w-12 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              </div>
-              <h2 id="retail-morning-loading-title" className="text-xl font-semibold text-blue-800">
-                Loading stores
-              </h2>
-              <p className="text-base leading-relaxed text-blue-800">
-                Loading the store list for tenant {storeDialogTenant} on {date}. The list stays disabled until this
-                finishes.
-              </p>
-              <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
-                <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <RetailBusyDialog
+          titleId="retail-morning-loading-title"
+          title="Loading stores"
+          message={`Loading the store list for tenant ${storeDialogTenant} on ${date}. The list stays disabled until this finishes.`}
+        />
+      )}
+      {refreshing && (
+        <RetailBusyDialog
+          titleId="retail-morning-refresh-title"
+          title="Refreshing brief"
+          message="Rebuilding cards for this store and date. Usually under a minute — please wait until this finishes."
+        />
+      )}
+      {asking && (
+        <RetailBusyDialog
+          titleId="retail-morning-ask-title"
+          title="Asking about this brief"
+          message="Waiting for the AI engine answer. This usually takes a few seconds."
+        />
       )}
     </div>
   );

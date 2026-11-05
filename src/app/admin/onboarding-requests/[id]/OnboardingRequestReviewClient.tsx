@@ -23,7 +23,7 @@ import {
   validateOnboardingSubmit,
 } from '@/lib/onboarding/onboardingShared';
 import { suggestTenantIdPrefixFromName } from '@/lib/tenantIdGeneration';
-import type { TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
+import type { OrganizationPortfolioDTO, TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import OnboardingRequestFields, { onboardingInputClass, type OnboardingFieldValues } from '../OnboardingRequestFields';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import {
@@ -49,6 +49,7 @@ interface ProvisioningValues {
   cloneAdmins: boolean;
   notifySubmitter: boolean;
   adminComments: string;
+  portfolioId: string;
 }
 
 function toFieldValues(r: TenantOnboardingRequestDTO): OnboardingFieldValues {
@@ -92,6 +93,7 @@ function initialProvisioning(r: TenantOnboardingRequestDTO): ProvisioningValues 
     cloneAdmins: true,
     notifySubmitter: true,
     adminComments: r.adminComments ?? '',
+    portfolioId: '',
   };
 }
 
@@ -122,7 +124,13 @@ function diffFields(original: OnboardingFieldValues, current: OnboardingFieldVal
   return patch as Partial<TenantOnboardingRequestDTO>;
 }
 
-export default function OnboardingRequestReviewClient({ initialRequest }: { initialRequest: TenantOnboardingRequestDTO }) {
+export default function OnboardingRequestReviewClient({
+  initialRequest,
+  portfolios = [],
+}: {
+  initialRequest: TenantOnboardingRequestDTO;
+  portfolios?: OrganizationPortfolioDTO[];
+}) {
   const [request, setRequest] = useState(initialRequest);
   const [savedFields, setSavedFields] = useState(() => toFieldValues(initialRequest));
   const [fields, setFields] = useState(() => toFieldValues(initialRequest));
@@ -261,6 +269,7 @@ export default function OnboardingRequestReviewClient({ initialRequest }: { init
         cloneAdmins: prov.cloneAdmins,
         notifySubmitter: prov.notifySubmitter,
         adminComments: prov.adminComments.trim() || undefined,
+        portfolioId: prov.portfolioId ? Number(prov.portfolioId) : undefined,
       },
       (fields.siteType || null) as TenantSiteType | null
     );
@@ -497,6 +506,18 @@ export default function OnboardingRequestReviewClient({ initialRequest }: { init
                 <div>
                   <label htmlFor="adminSourceTenantId" className="block text-sm font-medium text-gray-700">Copy admins from tenant</label>
                   <input id="adminSourceTenantId" type="text" value={prov.adminSourceTenantId} onChange={(e) => setProvField('adminSourceTenantId', e.target.value.trim())} placeholder="Platform default" disabled={!prov.cloneAdmins} className={onboardingInputClass()} />
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="portfolioId" className="block text-sm font-medium text-gray-700">Add to portfolio</label>
+                  <select id="portfolioId" value={prov.portfolioId} onChange={(e) => setProvField('portfolioId', e.target.value)} className={onboardingInputClass()}>
+                    <option value="">None</option>
+                    {portfolios.filter((portfolio) => portfolio.id && portfolio.isActive !== false).map((portfolio) => (
+                      <option key={portfolio.id} value={String(portfolio.id)}>
+                        {portfolio.portfolioName} ({portfolio.primaryTenantId})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">Optional. The new site keeps its own tenant ID, domain, and satellite. It joins the group as a member.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label htmlFor="adminComments" className="block text-sm font-medium text-gray-700">Reviewer comments (internal)</label>

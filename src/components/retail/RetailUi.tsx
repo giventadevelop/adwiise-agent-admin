@@ -292,23 +292,25 @@ export function PageFooter({
   totalCount,
   onPrev,
   onNext,
+  countLabel = 'stores',
 }: {
   page: number;
   totalPages: number;
   totalCount: number;
   onPrev: () => void;
   onNext: () => void;
+  countLabel?: string;
 }) {
   const pageButton =
     'px-5 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg shadow-sm border-2 border-blue-400 hover:border-blue-500 disabled:bg-blue-100 disabled:border-blue-300 disabled:text-blue-500 disabled:cursor-not-allowed flex items-center gap-2 transition-all duration-300 hover:scale-105 hover:shadow-md';
   return (
     <div className="mt-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <button type="button" className={pageButton} disabled={page <= 0} onClick={onPrev} title="Previous Page" aria-label="Previous Page">
           <RetailIcon name="left" className="w-5 h-5" />
           <span>Previous</span>
         </button>
-        <span className="px-4 py-2 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm text-sm font-bold text-blue-700">
+        <span className="px-4 py-2 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm text-sm font-bold text-blue-700 text-center">
           Page {page + 1} of {totalPages}
         </span>
         <button type="button" className={pageButton} disabled={page + 1 >= totalPages} onClick={onNext} title="Next Page" aria-label="Next Page">
@@ -318,7 +320,7 @@ export function PageFooter({
       </div>
       <div className="text-center mt-3">
         <span className="inline-flex items-center px-4 py-2 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm text-sm text-gray-700">
-          <span className="font-bold text-blue-600 mr-1">{totalCount}</span> stores
+          <span className="font-bold text-blue-600 mr-1">{totalCount}</span> {countLabel}
         </span>
       </div>
     </div>

@@ -107,7 +107,7 @@ export default function RetailAccessPage() {
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
 
   return (
-    <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
+    <div className="relative z-0 w-full overflow-x-hidden box-border pt-28 sm:pt-32">
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6">
         <AdminNavigation currentPage="retail-access" />
       </div>
@@ -139,7 +139,7 @@ export default function RetailAccessPage() {
               {storeManagers.length === 0 && (
                 <p className="text-sm text-gray-600">No profile with role RETAIL_STORE_MANAGER for this tenant.</p>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {stores.map(store => (
                   <YellowCheckbox
                     key={store.id}

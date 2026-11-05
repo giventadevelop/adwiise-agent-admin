@@ -37,6 +37,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'homepage-cache': 'Refresh stored homepage content after heroes, events, or sections change and the public page still looks old.',
   'event-sponsors': 'Sponsor names and logos that can be attached to events.',
   'tenant-organizations': 'Create and edit tenant organizations: name, domain, and website. Platform super admin only.',
+  'organization-portfolios': 'Group existing tenant sites under one primary tenant. An admin of that primary tenant can open every site in the group. Each site keeps its own domain and sign-in. Platform super admin only.',
   'satellite-domains': 'Extra public domains that sign in through this hub. Platform super admin only.',
   'onboarding-requests': 'New customer applications. Approve one to create a tenant. The site type chosen here decides which tools that tenant sees.',
   'tenant-settings': 'Homepage sections, hero images, and feature flags for a tenant. Platform super admin only.',
@@ -426,6 +427,17 @@ export default function AdminPage() {
       platformOnly: true,
     },
     {
+      href: '/admin/tenant-management/portfolios',
+      icon: 'layers',
+      label: 'Organization portfolios',
+      hint: 'Group tenant sites under one primary',
+      summary: 'Let a primary-tenant admin open related sites',
+      searchTerms: ['portfolio', 'group', 'tenants'],
+      color: 'portfolioGroup',
+      key: 'organization-portfolios',
+      platformOnly: true,
+    },
+    {
       href: '/admin/satellite-domains',
       icon: 'globe',
       label: 'Satellite Domains',
@@ -720,7 +732,8 @@ export default function AdminPage() {
       sizeBandsBtn: 'bg-[#ecfccb] hover:bg-[#d9f99d] text-[#3f6212]',
       recommendationCategoriesBtn: 'bg-[#ffe4e6] hover:bg-[#fecdd3] text-[#9f1239]',
       sportsCategoryBtn: 'bg-[#d1fae5] hover:bg-[#a7f3d0] text-[#065f46]',
-      newsAdsBtn: 'bg-[#e0f7fa] hover:bg-[#b2ebf2] text-[#006064]'
+      newsAdsBtn: 'bg-[#e0f7fa] hover:bg-[#b2ebf2] text-[#006064]',
+      portfolioGroup: 'bg-[#e8f5e9] hover:bg-[#c8e6c9] text-[#1b5e20]'
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -772,7 +785,8 @@ export default function AdminPage() {
       sizeBandsBtn: 'bg-[#d9f99d]',
       recommendationCategoriesBtn: 'bg-[#fecdd3]',
       sportsCategoryBtn: 'bg-[#a7f3d0]',
-      newsAdsBtn: 'bg-[#b2ebf2]'
+      newsAdsBtn: 'bg-[#b2ebf2]',
+      portfolioGroup: 'bg-[#c8e6c9]'
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -824,7 +838,8 @@ export default function AdminPage() {
       sizeBandsBtn: 'text-[#3f6212]',
       recommendationCategoriesBtn: 'text-[#9f1239]',
       sportsCategoryBtn: 'text-[#047857]',
-      newsAdsBtn: 'text-[#00838f]'
+      newsAdsBtn: 'text-[#00838f]',
+      portfolioGroup: 'text-[#1b5e20]'
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -871,6 +886,8 @@ export default function AdminPage() {
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>;
       case 'building':
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>;
+      case 'layers':
+        return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l9 4.5-9 4.5L3 7.5 12 3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l9 4.5 9-4.5" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5L12 21l9-4.5" /></svg>;
       case 'cog':
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
       case 'microphone':

@@ -8,6 +8,7 @@ import {
   patchTenantSetting,
 } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import { previewNextTenantIdServer } from '@/app/admin/tenant-management/organizations/tenantIdServerActions';
+import { listOrganizationPortfolioMembers } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { getApiBaseUrl } from '@/lib/env';
 import { revalidateSatelliteConfigCache } from '@/lib/satelliteConfigRuntime';
@@ -277,6 +278,19 @@ export async function approveOnboardingRequestServer(
     } catch (error) {
       console.error('[onboarding-requests] hero defaults failed', error);
       warnings.push('Default hero images were not applied; set them in Tenant Settings.');
+    }
+  }
+
+  if (approve.portfolioId) {
+    try {
+      const members = await listOrganizationPortfolioMembers(approve.portfolioId);
+      const linked = members.some((member) => member.tenantId === tenantId);
+      if (!linked) {
+        warnings.push('The site was created, but it was not added to the portfolio. Add it from Organization portfolios.');
+      }
+    } catch (error) {
+      console.error('[onboarding-requests] portfolio membership check failed', error);
+      warnings.push('The site was created. Confirm the portfolio membership on Organization portfolios.');
     }
   }
 

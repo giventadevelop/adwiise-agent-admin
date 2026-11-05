@@ -6,7 +6,8 @@ import type { UserProfileDTO } from '@/types';
  *
  * - SUPER_ADMIN on the all-tenants hub may query every tenant (empty filter = all).
  * - ADMIN (and SUPER_ADMIN on a single-tenant satellite) may only use tenant IDs
- *   from their own admin `user_profile` rows.
+ *   from their own admin `user_profile` rows, plus every member tenant of a portfolio
+ *   whose primary tenant is one of those rows. Member-site admins are not expanded.
  */
 
 export type AdminTenantAccess = {

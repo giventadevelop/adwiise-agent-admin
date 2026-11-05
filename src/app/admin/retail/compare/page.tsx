@@ -65,7 +65,7 @@ export default function RetailComparePage() {
   };
 
   return (
-    <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
+    <div className="relative z-0 w-full overflow-x-hidden box-border pt-28 sm:pt-32">
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6">
         <AdminNavigation currentPage="retail" />
       </div>
@@ -74,7 +74,7 @@ export default function RetailComparePage() {
         <div className="mt-6">
           <RetailNav tenantQuery={tenantQuery} current="compare" />
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6 grid gap-4 md:grid-cols-3 items-end">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-end">
           <label className={labelClass}>From
             <input type="date" className={fieldClass} value={fromDate} onChange={event => setFromDate(event.target.value)} />
           </label>

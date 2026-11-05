@@ -1377,6 +1377,27 @@ export interface TenantOnboardingApproveDTO {
   reviewedByClerkUserId?: string;
   reviewedByEmail?: string;
   notifySubmitter?: boolean;
+  portfolioId?: number;
+}
+
+/** A group of existing tenant sites. Each member keeps its own tenant id and satellite domain. */
+export interface OrganizationPortfolioDTO {
+  id?: number;
+  portfolioName: string;
+  description?: string | null;
+  primaryTenantId: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OrganizationPortfolioMemberDTO {
+  id?: number;
+  portfolioId?: number;
+  tenantId: string;
+  isPrimary?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /** Payload for POST `/api/tenant-onboarding-requests/{id}/reject` (backend TenantOnboardingRejectDTO). */

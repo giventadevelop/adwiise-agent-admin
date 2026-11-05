@@ -1,7 +1,9 @@
 import { assertPlatformSuperAdmin } from '@/app/admin/adminAccessServer';
+import { listOrganizationPortfolios } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
 import { fetchOnboardingRequestServer } from '../ApiServerActions';
 import OnboardingRequestReviewClient from './OnboardingRequestReviewClient';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import type { OrganizationPortfolioDTO } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,5 +26,12 @@ export default async function OnboardingRequestReviewPage({ params }: { params: 
     );
   }
 
-  return <OnboardingRequestReviewClient initialRequest={result.data} />;
+  let portfolios: OrganizationPortfolioDTO[] = [];
+  try {
+    portfolios = await listOrganizationPortfolios();
+  } catch (error) {
+    console.error('[onboarding-requests] portfolio list failed', error);
+  }
+
+  return <OnboardingRequestReviewClient initialRequest={result.data} portfolios={portfolios} />;
 }

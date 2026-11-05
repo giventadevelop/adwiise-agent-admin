@@ -92,7 +92,7 @@ export default function RetailIntegrationsPage() {
   };
 
   return (
-    <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
+    <div className="relative z-0 w-full overflow-x-hidden box-border pt-28 sm:pt-32">
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6">
         <AdminNavigation currentPage="retail" />
       </div>

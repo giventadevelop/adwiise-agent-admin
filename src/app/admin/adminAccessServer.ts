@@ -94,9 +94,53 @@ export const fetchAdminAccessForClerkUser = cache(
       );
     }
 
-    return resolveAdminAccessFromProfiles(profiles, isAllTenantsAdmin());
+    return expandPortfolioMemberTenants(resolveAdminAccessFromProfiles(profiles, isAllTenantsAdmin()));
   },
 );
+
+/**
+ * An ADMIN or SUPER_ADMIN of a portfolio's primary tenant may also open that portfolio's
+ * other tenant ids. This does not grant the global all-tenants mode. If the lookup fails,
+ * the caller's own admin tenants stay as they are.
+ */
+async function expandPortfolioMemberTenants(access: AdminTenantAccess): Promise<AdminTenantAccess> {
+  if (!access.isAdmin || access.canQueryAllTenants || access.allowedTenantIds.length === 0) {
+    return access;
+  }
+  try {
+    const params = new URLSearchParams();
+    for (const tenantId of access.allowedTenantIds) {
+      params.append('primaryTenantId', tenantId);
+    }
+    const res = await fetchWithJwtRetry(
+      `${getBackendApiUrl()}/api/organization-portfolios/member-tenant-ids?${params.toString()}`,
+      unscopedListOptions,
+    );
+    if (!res.ok) {
+      console.error('[adminAccessServer] portfolio member lookup failed', res.status);
+      return access;
+    }
+    const body = (await res.json()) as unknown;
+    const extra = Array.isArray(body) ? body.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
+    if (extra.length === 0) return access;
+    const seen = new Set<string>();
+    const allowedTenantIds: string[] = [];
+    for (const raw of [...access.allowedTenantIds, ...extra]) {
+      const tenantId = raw.trim();
+      if (!tenantId || seen.has(tenantId)) continue;
+      seen.add(tenantId);
+      allowedTenantIds.push(tenantId);
+    }
+    return {
+      ...access,
+      allowedTenantIds,
+      defaultTenantId: allowedTenantIds.length === 1 ? allowedTenantIds[0] : undefined,
+    };
+  } catch (error) {
+    console.error('[adminAccessServer] portfolio member lookup failed', error);
+    return access;
+  }
+}
 
 function parseTenantOrganizations(data: unknown): TenantOrganizationDTO[] {
   if (Array.isArray(data)) return data as TenantOrganizationDTO[];

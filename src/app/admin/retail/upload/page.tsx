@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
+import RetailBusyDialog from '@/components/retail/RetailBusyDialog';
 import { ActionButton, FilePickButton, RetailNav, fieldClass, labelClass } from '@/components/retail/RetailUi';
 import { useAdminTenantId } from '../../AdminTenantContext';
 import type { RetailLocationDTO } from '@/types/retail';
@@ -47,47 +48,6 @@ function normalizeUploadResult(raw: Record<string, unknown>): UploadResult {
     path: raw.path as string | undefined,
     status: raw.status as number | undefined,
   };
-}
-
-function RetailBusyDialog({
-  titleId,
-  title,
-  message,
-}: {
-  titleId: string;
-  title: string;
-  message: string;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-    >
-      <div className="mx-4 w-full max-w-md rounded-xl border-2 border-blue-300 bg-blue-50 p-8 shadow-xl">
-        <div className="flex flex-col items-center space-y-4 text-center">
-          <div className="flex items-center justify-center rounded-full bg-blue-100 p-4">
-            <svg className="h-12 w-12 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          </div>
-          <h2 id={titleId} className="text-xl font-semibold text-blue-800">
-            {title}
-          </h2>
-          <p className="text-base leading-relaxed text-blue-800">{message}</p>
-          <div className="mt-4 h-2 w-full rounded-full bg-blue-200">
-            <div className="h-2 w-3/5 animate-pulse rounded-full bg-blue-500" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function RetailUploadPage() {
@@ -210,7 +170,7 @@ export default function RetailUploadPage() {
   const storeDialogTenant = tenantId || 'this organization';
 
   return (
-    <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
+    <div className="relative z-0 w-full overflow-x-hidden box-border pt-28 sm:pt-32">
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6">
         <AdminNavigation currentPage="retail" />
       </div>

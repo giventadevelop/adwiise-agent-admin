@@ -174,7 +174,7 @@ export default function RetailLocationsPage() {
   };
 
   return (
-    <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
+    <div className="relative z-0 w-full overflow-x-hidden box-border pt-28 sm:pt-32">
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6">
         <AdminNavigation currentPage="retail" />
       </div>
@@ -220,7 +220,7 @@ export default function RetailLocationsPage() {
             <label className={labelClass}>State
               <input className={fieldClass} value={form.stateProvince || ''} onChange={event => setForm({ ...form, stateProvince: event.target.value })} />
             </label>
-            <div className="sm:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <YellowCheckbox checked={form.is24Hours === true} onChange={checked => setForm({ ...form, is24Hours: checked })} label="Open 24 hours" />
               <YellowCheckbox checked={form.isActive !== false} onChange={checked => setForm({ ...form, isActive: checked })} label="Active" />
               <YellowCheckbox checked={form.includedInSubscription !== false} onChange={checked => setForm({ ...form, includedInSubscription: checked })} label="Counted in the location fee" />
@@ -230,7 +230,7 @@ export default function RetailLocationsPage() {
                 <label className={labelClass}>Dispensers
                   <input type="number" className={fieldClass} value={form.fuelDispenserCount ?? ''} onChange={event => setForm({ ...form, fuelDispenserCount: event.target.value ? Number(event.target.value) : undefined })} />
                 </label>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <YellowCheckbox checked={form.hasCarWash === true} onChange={checked => setForm({ ...form, hasCarWash: checked })} label="Car wash" />
                   <YellowCheckbox checked={form.hasLottery === true} onChange={checked => setForm({ ...form, hasLottery: checked })} label="Lottery" />
                   <YellowCheckbox checked={form.hasFoodservice === true} onChange={checked => setForm({ ...form, hasFoodservice: checked })} label="Food service" />

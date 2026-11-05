@@ -283,24 +283,45 @@ export async function loadRetailMorningBundle(date: string, tenantId?: string): 
   }
 }
 
+async function readProblemDetail(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as { detail?: string; title?: string; message?: string };
+    const detail = (body.detail || body.message || body.title || '').trim();
+    return detail || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function askRetailBriefServer(
   tenantId: string,
   date: string,
   stationCode: string,
-  question: string
+  question: string,
+  options?: { recommendationId?: number | string; recommendationTitle?: string; siteType?: string }
 ): Promise<{ reply: string | null; error?: string }> {
   const access = await getRetailMorningAccess(tenantId);
   if (access.scope === 'NONE' || !question.trim()) return { reply: null };
   try {
     // Amplify cannot reach the internal engine ALB; backend forwards to RETAIL_ENGINE_BASE_URL.
+    const payload: Record<string, unknown> = { tenantId, metricDate: date, stationCode, question };
+    if (options?.recommendationId != null) payload.recommendationId = String(options.recommendationId);
+    if (options?.recommendationTitle) payload.recommendationTitle = options.recommendationTitle;
+    if (options?.siteType) payload.siteType = options.siteType;
     const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-brief/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
-      body: JSON.stringify({ tenantId, metricDate: date, stationCode, question }),
+      body: JSON.stringify(payload),
       cache: 'no-store',
     });
     if (!res.ok) {
-      return { reply: null, error: `Ask failed (HTTP ${res.status}).` };
+      const detail = await readProblemDetail(res);
+      return {
+        reply: null,
+        error: detail
+          ? `Ask failed (HTTP ${res.status}): ${detail}`
+          : `Ask failed (HTTP ${res.status}). Is the AI engine running at RETAIL_ENGINE_BASE_URL?`,
+      };
     }
     const body = (await res.json()) as { reply?: string };
     return { reply: body.reply || null };
@@ -312,20 +333,34 @@ export async function askRetailBriefServer(
 
 export async function refreshRetailBriefServer(
   tenantId: string,
-  date: string
+  date: string,
+  stationCode?: string
 ): Promise<{ ok: boolean; error?: string }> {
   const access = await getRetailMorningAccess(tenantId);
   if (access.scope === 'NONE') return { ok: false };
   try {
     // Best-effort engine refresh; morning brief still reloads from the platform either way.
+    const payload: Record<string, unknown> = {
+      tenantId,
+      metricDate: date,
+      source: 'history',
+      post: false,
+    };
+    if (stationCode) payload.stationCode = stationCode;
     const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-brief/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
-      body: JSON.stringify({ tenantId, metricDate: date, source: 'history', post: false }),
+      body: JSON.stringify(payload),
       cache: 'no-store',
     });
     if (!res.ok) {
-      return { ok: false, error: `Refresh trigger failed (HTTP ${res.status}).` };
+      const detail = await readProblemDetail(res);
+      return {
+        ok: false,
+        error: detail
+          ? `Refresh trigger failed (HTTP ${res.status}): ${detail}`
+          : `Refresh trigger failed (HTTP ${res.status}).`,
+      };
     }
     return { ok: true };
   } catch (error) {
