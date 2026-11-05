@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { ActionButton, RetailNav, fieldClass, labelClass } from '@/components/retail/RetailUi';
@@ -25,6 +25,7 @@ import {
 } from './retailServer';
 
 const GAS_PACKS = new Set(['GAS_STATION']);
+const DEFAULT_BRIEF_DATE = '2026-07-08';
 
 function formatUsd(value?: number | null): string {
   if (value == null) return '—';
@@ -43,7 +44,9 @@ export default function RetailMorningPage() {
   // URL fallback so hard refresh still has a tenant before AdminTenantContext catches up.
   const tenantId = tenantIdFromContext || urlTenant;
 
-  const [date, setDate] = useState('2026-07-08');
+  // dateInput = calendar field; date = committed value that triggers loads (on blur / Enter).
+  const [dateInput, setDateInput] = useState(DEFAULT_BRIEF_DATE);
+  const [date, setDate] = useState(DEFAULT_BRIEF_DATE);
   const [locations, setLocations] = useState<RetailLocationDTO[]>([]);
   const [metrics, setMetrics] = useState<RetailDailyMetricsDTO[]>([]);
   const [fuelDays, setFuelDays] = useState<RetailFuelDayDTO[]>([]);
@@ -51,8 +54,9 @@ export default function RetailMorningPage() {
   const [locationId, setLocationId] = useState<number | null>(null);
   const [canAssign, setCanAssign] = useState(false);
   const [denied, setDenied] = useState(false);
-  // Start true so soft/hard refresh and first paint show the Loading stores dialog immediately.
-  const [loading, setLoading] = useState(true);
+  // Stores dialog only for first load / tenant change — not for calendar date commits.
+  const [loadingStores, setLoadingStores] = useState(true);
+  const [loadingBrief, setLoadingBrief] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [fuelError, setFuelError] = useState<string | null>(null);
@@ -62,6 +66,35 @@ export default function RetailMorningPage() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const storesLoadedForTenantRef = useRef<string | null>(null);
+  const dateCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const committedDateRef = useRef(date);
+  committedDateRef.current = date;
+
+  const commitBriefDate = (nextValue?: string) => {
+    if (dateCommitTimerRef.current) {
+      clearTimeout(dateCommitTimerRef.current);
+      dateCommitTimerRef.current = null;
+    }
+    const next = (nextValue ?? dateInput).trim();
+    if (!next || next === committedDateRef.current) return;
+    setDate(next);
+  };
+
+  /** Calendar day click may not blur; spinner arrows fire many changes — wait until value settles. */
+  const scheduleBriefDateCommit = (nextValue: string) => {
+    if (dateCommitTimerRef.current) clearTimeout(dateCommitTimerRef.current);
+    dateCommitTimerRef.current = setTimeout(() => {
+      dateCommitTimerRef.current = null;
+      commitBriefDate(nextValue);
+    }, 700);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (dateCommitTimerRef.current) clearTimeout(dateCommitTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!tenantId) {
@@ -75,14 +108,21 @@ export default function RetailMorningPage() {
       setMetricsError(null);
       setFuelError(null);
       setCardError(null);
-      // Keep spinner only while a tenant is still expected from the URL.
-      setLoading(Boolean(urlTenant));
+      storesLoadedForTenantRef.current = null;
+      setLoadingStores(Boolean(urlTenant));
+      setLoadingBrief(false);
       return;
     }
     let cancelled = false;
-    setLoading(true);
-    setLocations([]);
-    setLocationId(null);
+    const needStores = storesLoadedForTenantRef.current !== tenantId;
+    if (needStores) {
+      setLoadingStores(true);
+      setLocations([]);
+      setLocationId(null);
+    } else {
+      // Date/refresh only — keep store list; no stores modal.
+      setLoadingBrief(true);
+    }
     setStoreError(null);
     setMetricsError(null);
     setFuelError(null);
@@ -101,12 +141,16 @@ export default function RetailMorningPage() {
         setMetricsError(bundle.metricsError);
         setFuelError(bundle.fuelError);
         setCardError(bundle.cardError);
+        storesLoadedForTenantRef.current = tenantId;
         setLocationId(current => {
           if (current != null && bundle.locations.some(location => location.id === current)) return current;
           return bundle.locations[0]?.id ?? null;
         });
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoadingStores(false);
+          setLoadingBrief(false);
+        }
       }
     })();
     return () => {
@@ -114,6 +158,7 @@ export default function RetailMorningPage() {
     };
   }, [tenantId, date, refreshKey, urlTenant]);
 
+  const loading = loadingStores || loadingBrief;
   const selected = locations.find(location => location.id === locationId) ?? null;
   const sellsFuel = GAS_PACKS.has(selected?.retailerTypeCode ?? '');
   const metric = metrics.find(row => row.locationId === locationId) ?? null;
@@ -124,7 +169,7 @@ export default function RetailMorningPage() {
   );
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
   const storeDialogTenant = tenantId || urlTenant || 'this tenant';
-  const showStoresDialog = loading && Boolean(tenantId || urlTenant);
+  const showStoresDialog = loadingStores && Boolean(tenantId || urlTenant);
 
   const setStatus = async (card: RetailRecommendationDTO, status: 'ACCEPTED' | 'DISMISSED') => {
     if (card.id == null || card.locationId == null) return;
@@ -160,10 +205,23 @@ export default function RetailMorningPage() {
                 Brief date
                 <input
                   type="date"
-                  value={date}
-                  onChange={event => setDate(event.target.value)}
+                  value={dateInput}
+                  onChange={event => {
+                    const next = event.target.value;
+                    setDateInput(next);
+                    // Do not load on every calendar/spinner step — settle or blur/Enter commits.
+                    scheduleBriefDateCommit(next);
+                  }}
+                  onBlur={() => commitBriefDate()}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      commitBriefDate();
+                      (event.target as HTMLInputElement).blur();
+                    }
+                  }}
                   className={fieldClass}
-                  disabled={loading}
+                  disabled={loadingStores}
                 />
               </label>
               <label className={`${labelClass} text-base text-sky-950`}>
@@ -172,10 +230,10 @@ export default function RetailMorningPage() {
                   value={locationId ?? ''}
                   onChange={event => setLocationId(event.target.value ? Number(event.target.value) : null)}
                   className={fieldClass}
-                  disabled={loading || locations.length === 0}
+                  disabled={loadingStores || locations.length === 0}
                 >
-                  {loading && <option value="">Loading stores…</option>}
-                  {!loading && locations.length === 0 && <option value="">No stores</option>}
+                  {loadingStores && <option value="">Loading stores…</option>}
+                  {!loadingStores && locations.length === 0 && <option value="">No stores</option>}
                   {locations.map(location => (
                     <option key={location.id} value={location.id}>
                       {location.locationCode} ({location.retailerTypeCode || 'no pack'})
