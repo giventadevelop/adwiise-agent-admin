@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import AdminNavigation from '@/components/AdminNavigation';
 import ManualPaymentsClient from './ManualPaymentsClient';
 import { fetchManualPaymentsServer, fetchManualPaymentSummaryServer } from './ApiServerActions';
 
@@ -43,6 +44,7 @@ export default async function ManualPaymentsPage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '120px' }}>
+      <AdminNavigation contextLine="Manual / offline payment requests for events in this tenant." />
       <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Manual Payments</h1>
         <Suspense fallback={<div className="text-center py-8">Loading manual payments...</div>}>

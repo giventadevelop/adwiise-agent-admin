@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import AdminTenantFilterField from './AdminTenantFilterField';
+import AdminHelpChat from '@/components/admin/AdminHelpChat';
 
 export type AdminAccessContextValue = {
   tenantId?: string;
@@ -178,6 +179,7 @@ export function AdminTenantLayoutClient({
         </div>
       )}
       <div className="admin-page-shell w-full">{children}</div>
+      <AdminHelpChat />
     </AdminAccessContext.Provider>
   );
 }

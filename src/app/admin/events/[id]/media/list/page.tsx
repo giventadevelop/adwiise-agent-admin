@@ -11,6 +11,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Modal } from "@/components/Modal";
 import AdminTenantFilterField from '@/app/admin/AdminTenantFilterField';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { formatInTimeZone } from 'date-fns-tz';
 
 // Helper function for timezone-aware date formatting
@@ -690,7 +691,11 @@ export default function EventMediaListPage() {
 
   return (
     <div ref={pageTopRef} className="w-[80%] mx-auto py-8" style={{ paddingTop: '118px' }}>
-<EventSectionTiles eventId={eventId} current="media" showTickets={eventDetails?.admissionType === 'ticketed'} showDiscounts={false} />
+      <AdminTenantIdBanner
+        tenantId={eventDetails?.tenantId}
+        contextLine="Media files uploaded for this event."
+      />
+      <EventSectionTiles eventId={eventId} current="media" showTickets={eventDetails?.admissionType === 'ticketed'} showDiscounts={false} />
 
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Media Files for Event</h1>

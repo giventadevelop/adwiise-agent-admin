@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import AdminNavigation from '@/components/AdminNavigation';
 import {
   deleteGalleryYoutubeVideo,
   fetchGalleryYoutubeVideosAdmin,
@@ -173,10 +173,8 @@ export default function GalleryYoutubeVideosClient() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '120px' }}>
+      <AdminNavigation contextLine="Gallery YouTube video thumbnails for this tenant." />
       <div className="mb-6">
-        <Link href="/admin" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
-          Admin Home
-        </Link>
         <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-indigo-800">Gallery YouTube videos</h1>
         <p className="mt-2 text-sm text-gray-600">
           Each URL is shown as a thumbnail in the MOSC redesign gallery Videos section. Leave a row inactive to hide

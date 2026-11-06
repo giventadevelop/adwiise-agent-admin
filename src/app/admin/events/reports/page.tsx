@@ -131,7 +131,10 @@ function AdminEventsReportsContent() {
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavigation currentPage="event-reports" />
+      <AdminNavigation
+        currentPage="event-reports"
+        contextLine="Event reports and data exports for this tenant."
+      />
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">

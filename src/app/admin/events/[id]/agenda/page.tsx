@@ -18,6 +18,7 @@ import {
 } from './ApiServerActions';
 import AgendaFlyerPanel from './AgendaFlyerPanel';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 const emptyForm: Partial<EventAgendaItemDTO> = {
   title: '',
@@ -748,6 +749,10 @@ export default function EventAgendaPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Day agenda items for this event."
+      />
       <div className="flex items-center gap-4 mb-6">
         <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />
         <div>

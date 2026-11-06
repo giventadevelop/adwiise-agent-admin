@@ -1,4 +1,5 @@
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import TicketTypeListClient from './TicketTypeListClient';
@@ -73,6 +74,10 @@ export default async function TicketTypeListPage({ params }: PageProps) {
   // Normal render with data
   return (
     <div className="max-w-6xl mx-auto px-4 pb-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={eventDetails?.tenantId}
+        contextLine="Ticket types for this event — prices, inventory, and availability."
+      />
       {/* Concise Event Summary */}
       {eventDetails && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">

@@ -8,9 +8,9 @@ import { TenantOrganizationDTO, TenantSettingsDTO } from '@/app/admin/tenant-man
 import { extractTenantIdSequence, getTenantIdPrefix } from '@/lib/tenantIdGeneration';
 import { formatOrganizationAddress } from '@/lib/formatOrganizationAddress';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
-import TenantConfigurationContextLabel from '@/app/admin/tenant-management/components/TenantConfigurationContextLabel';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 interface PageProps {
   params: { id: string };
@@ -172,12 +172,13 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 {organization?.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <TenantConfigurationContextLabel
-              tenantId={organization?.tenantId}
-              organizationName={organization?.organizationName}
-              className="mt-2 text-sm text-gray-600"
-            />
-            <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
+            <div className="mt-4">
+              <AdminTenantIdBanner
+                tenantId={organization?.tenantId}
+                contextLine="Organization profile and linked tenant settings for this tenant."
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">
               {identity?.description || 'No description provided'}
             </p>
           </div>

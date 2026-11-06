@@ -11,6 +11,7 @@ import {
 } from '../ApiServerActions';
 import type { ManualPaymentRequestDTO, ManualPaymentStatus, ManualPaymentMethodType } from '@/types';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import {
   FaSpinner,
   FaCheckCircle,
@@ -280,6 +281,7 @@ export default function ManualPaymentDetailClient({
 
   return (
     <div className="space-y-6">
+      <AdminTenantIdBanner contextLine="Review or update this manual payment request." />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

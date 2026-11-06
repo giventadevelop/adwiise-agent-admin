@@ -5,40 +5,56 @@ import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 
 type AdminTenantIdBannerProps = {
-  /** Explicit record tenant (edit/create forms). When omitted with no entityLabel, uses workspace context. */
+  /**
+   * Explicit tenant (record or page override). In workspace mode (no entityLabel),
+   * falls back to AdminTenantContext when omitted.
+   */
   tenantId?: string | null;
   /** Used in the empty-state message, e.g. "album", "sponsor". Presence selects entity (sky) mode. */
   entityLabel?: string;
+  /** One-line description of the table/form below this card. */
+  contextLine?: string;
   className?: string;
 };
 
 /**
  * Tenant ID banner.
- * - Workspace mode (AdminNavigation): indigo retail-style card from AdminTenantContext.
+ * - Workspace mode (AdminNavigation): indigo card from AdminTenantContext or tenantId prop.
  * - Entity mode (edit forms): sky card for the record’s tenantId when the top filter bar is hidden.
  */
 export default function AdminTenantIdBanner({
   tenantId: tenantIdProp,
   entityLabel,
+  contextLine,
   className = '',
 }: AdminTenantIdBannerProps) {
   const workspaceTenantId = useAdminTenantId();
   const isEntityMode = entityLabel !== undefined;
 
   if (isEntityMode) {
-    return <EntityTenantIdBanner tenantId={tenantIdProp} entityLabel={entityLabel} className={className} />;
+    return (
+      <EntityTenantIdBanner
+        tenantId={tenantIdProp}
+        entityLabel={entityLabel}
+        contextLine={contextLine}
+        className={className}
+      />
+    );
   }
 
-  return <WorkspaceTenantIdBanner tenantId={workspaceTenantId} className={className} />;
+  const tid = (tenantIdProp?.trim() || workspaceTenantId || '').trim() || undefined;
+  return <WorkspaceTenantIdBanner tenantId={tid} contextLine={contextLine} className={className} />;
 }
 
 function EntityTenantIdBanner({
   tenantId,
   entityLabel = 'record',
+  contextLine,
   className = '',
 }: {
   tenantId?: string | null;
   entityLabel?: string;
+  contextLine?: string;
   className?: string;
 }) {
   const tid = tenantId?.trim() || '';
@@ -46,14 +62,17 @@ function EntityTenantIdBanner({
   if (tid) {
     return (
       <div
-        className={`mt-4 inline-flex flex-wrap items-center gap-2 rounded-xl border-2 border-sky-300 bg-sky-50 px-4 py-3 shadow-sm ${className}`}
+        className={`mt-4 inline-flex flex-col gap-2 rounded-xl border-2 border-sky-300 bg-sky-50 px-4 py-3 shadow-sm ${className}`}
         title={`Tenant that owns this ${entityLabel}`}
         aria-label={`Tenant ID ${tid}`}
       >
-        <span className="text-xs font-semibold uppercase tracking-wide text-sky-700">Tenant ID</span>
-        <code className="rounded-lg bg-white px-3 py-1.5 text-sm font-bold text-sky-900 border border-sky-200 break-all">
-          {tid}
-        </code>
+        <div className="inline-flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-sky-700">Tenant ID</span>
+          <code className="rounded-lg bg-white px-3 py-1.5 text-sm font-bold text-sky-900 border border-sky-200 break-all">
+            {tid}
+          </code>
+        </div>
+        {contextLine ? <p className="text-sm font-medium text-sky-800 leading-snug">{contextLine}</p> : null}
       </div>
     );
   }
@@ -69,9 +88,11 @@ function EntityTenantIdBanner({
 
 function WorkspaceTenantIdBanner({
   tenantId,
+  contextLine,
   className = '',
 }: {
   tenantId?: string;
+  contextLine?: string;
   className?: string;
 }) {
   const [organizationName, setOrganizationName] = useState<string | null>(null);
@@ -109,11 +130,14 @@ function WorkspaceTenantIdBanner({
           />
         </svg>
       </div>
-      <div>
+      <div className="min-w-0">
         <span className="block text-sm font-semibold text-indigo-700">Tenant ID</span>
-        <span className="mt-1 block text-2xl font-bold text-indigo-900">{tenantId}</span>
+        <span className="mt-1 block text-2xl font-bold text-indigo-900 break-all">{tenantId}</span>
         {organizationName ? (
           <span className="mt-1 block text-sm font-medium text-indigo-600">{organizationName}</span>
+        ) : null}
+        {contextLine ? (
+          <p className="mt-2 text-sm font-semibold text-indigo-800 leading-snug">{contextLine}</p>
         ) : null}
       </div>
     </div>

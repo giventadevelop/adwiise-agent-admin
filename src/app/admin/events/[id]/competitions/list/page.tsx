@@ -2,6 +2,7 @@ import { safeAuth } from '@/lib/safe-auth';
 import CompetitionAdminNav from '@/components/admin/competitions/CompetitionAdminNav';
 import CompetitionAdminHelpStrip from '@/components/admin/competitions/CompetitionAdminHelpStrip';
 import EventCompetitionList from '@/components/admin/competitions/EventCompetitionList';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { fetchCompetitionsForEventServer } from '../ApiServerActions';
 import Link from 'next/link';
 
@@ -16,6 +17,7 @@ export default async function CompetitionListPage(props: {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner contextLine="Competitions catalog for this event." />
       <Link href={`/admin/events/${eventId}/competitions/settings`} className="text-blue-600 text-sm hover:underline">
         ← Settings
       </Link>

@@ -449,7 +449,10 @@ export default function ManageEventsPage() {
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavigation currentPage="manage-events" />
+      <AdminNavigation
+        currentPage="manage-events"
+        contextLine="Events for this tenant — create, edit, and open event sections."
+      />
 
       {/* Create Event Button */}
       <div className="flex justify-end mb-6">

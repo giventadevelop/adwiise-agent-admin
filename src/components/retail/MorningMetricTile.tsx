@@ -74,6 +74,9 @@ export default function MorningMetricTile({
       <p className={`mt-3 font-bold ${valueClassName ?? 'text-3xl'} ${VALUE_TONE[valueTone]}`}>
         {hasData ? value : '—'}
       </p>
+      {!hasData && (
+        <p className="mt-1 text-sm font-semibold opacity-90">No data for this day</p>
+      )}
     </div>
   );
 }

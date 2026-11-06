@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { FaWhatsapp, FaSpinner } from 'react-icons/fa';
+import AdminNavigation from '@/components/AdminNavigation';
 
 import WhatsAppDashboard from './WhatsAppDashboard';
 // import { WhatsAppErrorBoundary } from '@/components/whatsapp/WhatsAppErrorBoundary';
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default function WhatsAppDashboardPage() {
   return (
     <div className="space-y-6">
+      <AdminNavigation contextLine="WhatsApp messaging analytics and delivery metrics for this tenant." />
       {/* Page Header */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">

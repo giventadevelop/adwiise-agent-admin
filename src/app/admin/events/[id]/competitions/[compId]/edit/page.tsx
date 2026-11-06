@@ -4,6 +4,7 @@ import EventCompetitionForm from '@/components/admin/competitions/EventCompetiti
 import { fetchCompetitionByIdServer, fetchCompetitionDaysForEventServer } from '../../ApiServerActions';
 import { notFound } from 'next/navigation';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 export default async function EditCompetitionPage(props: {
   params: Promise<{ id: string; compId: string }> | { id: string; compId: string };
@@ -21,6 +22,7 @@ export default async function EditCompetitionPage(props: {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner contextLine="Edit this competition for the event." />
       <AdminBackButton href={`/admin/events/${eventId}/competitions/list`} label="Back to list" />
       <h1 className="text-3xl font-bold text-gray-900 mt-2 mb-6">Edit competition</h1>
       <CompetitionAdminNav eventId={eventId} />

@@ -133,7 +133,10 @@ function AdminEventsContent() {
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavigation currentPage="events" />
+      <AdminNavigation
+        currentPage="events"
+        contextLine="Event analytics overview for this tenant."
+      />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

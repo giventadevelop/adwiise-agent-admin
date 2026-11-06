@@ -10,6 +10,7 @@ import DataTable, { Column } from '@/components/ui/DataTable';
 import Modal, { ConfirmModal } from '@/components/ui/Modal';
 import type { EventContactsDTO, EventDetailsDTO } from '@/types';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import {
   fetchEventContactsServer,
   createEventContactServer,
@@ -517,6 +518,10 @@ export default function EventContactsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Contacts for this event."
+      />
       {/* Header with back button */}
       <div className="flex items-center mb-6">
         <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />

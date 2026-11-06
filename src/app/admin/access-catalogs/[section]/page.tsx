@@ -43,7 +43,10 @@ export default async function AccessCatalogSectionPage({
 
   return (
     <div className="container mx-auto px-4 py-8" style={{ paddingTop: '180px' }}>
-      <AdminNavigation currentPage="admin" />
+      <AdminNavigation
+        currentPage="admin"
+        contextLine={`${title} catalog entries used across tenants.`}
+      />
       <div className="mb-8 flex flex-wrap items-center gap-4">
         <AdminBackButton href="/admin/access-catalogs" label="Back to Access catalogs" />
         <h1 className="text-3xl font-bold text-gray-900">{title}</h1>

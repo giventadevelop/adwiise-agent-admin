@@ -187,12 +187,50 @@ export default function RetailMorningPage() {
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
   const storeDialogTenant = tenantId || urlTenant || 'this tenant';
   const showStoresDialog = loadingStores && Boolean(tenantId || urlTenant) && !refreshing && !asking;
+  const showBriefDialog = loadingBrief && !loadingStores && !refreshing && !asking;
 
-  const setStatus = async (card: RetailRecommendationDTO, status: 'ACCEPTED' | 'DISMISSED') => {
+  const setStatus = async (
+    card: RetailRecommendationDTO,
+    status: 'ACCEPTED' | 'DISMISSED' | 'COMPLETED'
+  ) => {
     if (card.id == null || card.locationId == null) return;
     const updated = await updateRetailRecommendationServer(card.id, card.locationId, status, tenantId);
     if (!updated) return;
     setRecommendations(current => current.map(row => (row.id === updated.id ? { ...row, status: updated.status } : row)));
+  };
+
+  const askContextForStore = () => {
+    if (!selected?.locationCode) return undefined;
+    return {
+      stationCode: selected.locationCode,
+      metrics: metric
+        ? {
+            salesUsd: metric.salesUsd,
+            inStoreSalesUsd: metric.salesUsd,
+            transactionsCount: metric.transactionsCount,
+            expectedProfitUsd: metric.expectedProfitUsd,
+            laborCostUsd: metric.laborCostUsd,
+          }
+        : null,
+      fuelDay: fuel
+        ? {
+            fuelGallonsSold: fuel.fuelGallonsSold,
+            fuelRevenueUsd: fuel.fuelRevenueUsd,
+          }
+        : null,
+      recommendations: cards.map(card => ({
+        id: card.id,
+        title: card.title,
+        detail: card.detail,
+        explanation: card.explanation,
+        estimatedImpactUsd: card.estimatedImpactUsd,
+        confidencePct: card.confidencePct,
+        category: card.category,
+        status: card.status,
+        sourceModelRunId: card.sourceModelRunId,
+        priority: card.priority,
+      })),
+    };
   };
 
   const runAsk = async (
@@ -208,6 +246,7 @@ export default function RetailMorningPage() {
         recommendationId: focus?.recommendationId,
         recommendationTitle: focus?.recommendationTitle,
         siteType: selected.retailerTypeCode || undefined,
+        context: askContextForStore(),
       });
       setAnswer(result.reply ?? result.error ?? 'No answer yet for this brief.');
     } finally {
@@ -330,12 +369,18 @@ export default function RetailMorningPage() {
                     {selected.locationName} · {selected.locationCode}
                   </p>
                   <p className="mt-1 text-base sm:text-lg font-semibold">
-                    Pack {selected.retailerTypeCode || 'not set'}
+                    Brief date {date}
+                    {selected.retailerTypeCode ? ` · Pack ${selected.retailerTypeCode}` : ' · Pack not set'}
                     {selected.region ? ` · Region ${selected.region}` : ''}
                   </p>
                   <p className="mt-2 text-sm sm:text-base font-medium">
                     One brief date, one store. Day numbers come from the register and, for gas packs, the fuel controller.
                   </p>
+                  {!loading && !metric && !fuel && (
+                    <p className="mt-3 text-base font-semibold">
+                      No data for this day ({date}) for {selected.locationCode}.
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   <MorningMetricTile
@@ -355,7 +400,7 @@ export default function RetailMorningPage() {
                         value={
                           fuel?.fuelGallonsSold != null
                             ? fuel.fuelGallonsSold.toLocaleString()
-                            : 'no fuel day yet'
+                            : '—'
                         }
                         hasData={fuel?.fuelGallonsSold != null}
                       />
@@ -366,25 +411,17 @@ export default function RetailMorningPage() {
                       />
                     </>
                   )}
-                  {(metric?.laborCostUsd != null || metric?.expectedProfitUsd != null) && (
-                    <>
-                      {metric?.laborCostUsd != null && (
-                        <MorningMetricTile
-                          copy={METRIC_TILES.laborCost}
-                          value={formatUsd(metric.laborCostUsd)}
-                          hasData
-                        />
-                      )}
-                      {metric?.expectedProfitUsd != null && (
-                        <MorningMetricTile
-                          copy={METRIC_TILES.expectedProfit}
-                          value={formatUsd(metric.expectedProfitUsd)}
-                          hasData
-                          valueTone="profit"
-                        />
-                      )}
-                    </>
-                  )}
+                  <MorningMetricTile
+                    copy={METRIC_TILES.laborCost}
+                    value={formatUsd(metric?.laborCostUsd)}
+                    hasData={metric?.laborCostUsd != null}
+                  />
+                  <MorningMetricTile
+                    copy={METRIC_TILES.expectedProfit}
+                    value={formatUsd(metric?.expectedProfitUsd)}
+                    hasData={metric?.expectedProfitUsd != null}
+                    valueTone="profit"
+                  />
                 </div>
               </div>
             )}
@@ -452,13 +489,19 @@ export default function RetailMorningPage() {
 
             <div className="space-y-3">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Morning action list</h2>
+              <p className="text-base sm:text-lg font-semibold text-gray-800">
+                Brief date {date}
+                {selected ? ` · ${selected.locationCode}` : ''}
+              </p>
               {cardError && (
                 <p className="text-base sm:text-lg text-gray-800">
                   Morning cards for {date} could not be loaded. {cardError} The store list does not depend on this date.
                 </p>
               )}
               {!cardError && cards.length === 0 && (
-                <p className="text-base sm:text-lg text-gray-800">No cards for this store on this date.</p>
+                <p className="text-base sm:text-lg text-gray-800">
+                  No cards for this store on {date}. No data for this day in the action list.
+                </p>
               )}
               {cards.map(card => {
                 const isChain = card.locationId == null;
@@ -487,7 +530,7 @@ export default function RetailMorningPage() {
                             </span>
                           )}
                           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STATUS_CHIP[card.status || 'NEW'] ?? STATUS_CHIP.NEW}`}>
-                            {card.status || 'NEW'}
+                            {card.status === 'COMPLETED' ? 'DONE' : card.status || 'NEW'}
                           </span>
                         </div>
                         <p className="mt-3 text-lg sm:text-xl font-bold break-words">{card.title}</p>
@@ -503,9 +546,10 @@ export default function RetailMorningPage() {
                         <p className="text-base font-medium">est. impact</p>
                       </div>
                     </div>
-                    <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-3">
+                    <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                       <ActionButton tone="emerald" icon="check" label="Accept" onClick={() => setStatus(card, 'ACCEPTED')} />
                       <ActionButton tone="orange" icon="ban" label="Dismiss" onClick={() => setStatus(card, 'DISMISSED')} />
+                      <ActionButton tone="green" icon="check" label="Done" onClick={() => setStatus(card, 'COMPLETED')} />
                       <ActionButton
                         tone="blue"
                         icon="chat"
@@ -535,6 +579,13 @@ export default function RetailMorningPage() {
           titleId="retail-morning-loading-title"
           title="Loading stores"
           message={`Loading the store list for tenant ${storeDialogTenant} on ${date}. The list stays disabled until this finishes.`}
+        />
+      )}
+      {showBriefDialog && (
+        <RetailBusyDialog
+          titleId="retail-morning-brief-loading-title"
+          title="Loading brief"
+          message={`Loading metrics and morning cards for ${date}. Please wait until this finishes.`}
         />
       )}
       {refreshing && (

@@ -3,6 +3,7 @@ import CompetitionAdminNav from '@/components/admin/competitions/CompetitionAdmi
 import EventCompetitionForm from '@/components/admin/competitions/EventCompetitionForm';
 import { fetchCompetitionDaysForEventServer } from '../../ApiServerActions';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 export default async function NewCompetitionPage(props: {
   params: Promise<{ id: string }> | { id: string };
@@ -15,6 +16,7 @@ export default async function NewCompetitionPage(props: {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner contextLine="Create a new competition for this event." />
       <AdminBackButton href={`/admin/events/${eventId}/competitions/list`} label="Back to list" />
       <h1 className="text-3xl font-bold text-gray-900 mt-2 mb-6">Add competition</h1>
       <CompetitionAdminNav eventId={eventId} />

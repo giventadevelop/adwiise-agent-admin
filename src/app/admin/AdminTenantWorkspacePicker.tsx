@@ -306,9 +306,14 @@ export default function AdminTenantWorkspacePicker({
 
       {(tenants.length >= 2 || canQueryAllTenants) && (
         <div ref={searchBoxRef} className="relative max-w-xl mx-auto mb-6">
-          <p className="text-xs text-gray-500 mb-2 text-center">
-            Type to search by organization name, Tenant ID, or domain — the same lookup as Tenant Settings.
-          </p>
+          <div className="mb-3 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 text-center shadow-sm">
+            <p className="text-sm sm:text-base font-bold text-indigo-900 leading-snug">
+              Type to search by organization name, Tenant ID, or domain
+            </p>
+            <p className="mt-1 text-xs sm:text-sm font-semibold text-indigo-800 leading-snug">
+              The same lookup as Tenant Settings
+            </p>
+          </div>
           <div className="relative">
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"

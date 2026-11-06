@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AdminNavigation from '@/components/AdminNavigation';
 import RemoveMemberButton from './RemoveMemberButton';
 import AddMemberForm from './AddMemberForm';
 import UpdateMemberForm from './UpdateMemberForm';
@@ -61,6 +62,10 @@ export default async function ManageGroupMembersPage(
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
+      <AdminNavigation
+        tenantId={group?.tenantId}
+        contextLine="Members of this focus group — roles and status."
+      />
       <div className="mb-4 sm:mb-6 md:mb-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 text-center sm:text-left">
           Manage Members for: {group?.name ?? 'Focus Group'}

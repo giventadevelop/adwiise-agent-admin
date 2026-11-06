@@ -4,9 +4,10 @@ This guide shows how to manage environment variables for your AWS Amplify app in
 
 ## App Information
 
-- **App ID**: `d1508w3f27cyps`
-- **Branch**: `feature_Common_Clerk`
-- **Region**: `us-east-1`
+- **App ID (prod hub)**: `d3gov7yn1ctow1` (`event-site-manager` / www.adwiiseagent.ai)
+- **App ID (dev hub)**: `d3qk5eouzr7b80` (`adwiise-agent-dev-hub`)
+- **Branch**: `release/v1.0.0`
+- **Amplify region**: `us-east-2` (Bedrock Runtime remains `us-east-1`)
 
 ## Quick Start
 
@@ -394,3 +395,25 @@ Both scripts:
 - Handle inline comments
 - Remove quotes from values
 - Apply all variables in one command to AWS Amplify
+
+## Admin Help Chat (Bedrock)
+
+Floating Admin Help on `/admin` uses `POST /api/admin/help-chat`. Bedrock is **on by default** in code; still set these Amplify app env vars so SSR matches local/prod files:
+
+```
+BEDROCK_ENABLED=true
+BEDROCK_REGION=us-east-1
+BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5
+```
+
+Merge without wiping other Amplify keys (apps are in **us-east-2**):
+
+```powershell
+.\scripts\set-amplify-bedrock-env.ps1                              # prod hub d3gov7yn1ctow1
+.\scripts\set-amplify-bedrock-env.ps1 -AppId d3qk5eouzr7b80        # dev hub
+.\scripts\set-amplify-bedrock-env.ps1 -AppId d3umj04vhrd3rv        # dev satellite
+```
+
+Also grant the Amplify SSR / service IAM role `bedrock:InvokeModel` (already attached as inline policy `AdminHelpBedrockInvoke` on the hub SSR logging role). Full steps: [admin_help_chat/AMPLIFY_BEDROCK_IAM.md](./admin_help_chat/AMPLIFY_BEDROCK_IAM.md).
+
+After changing Amplify env or `amplify.yml`, start a RELEASE on `release/v1.0.0` so SSR picks up `BEDROCK_*`.

@@ -329,7 +329,10 @@ export default function OnboardingRequestReviewClient({
   return (
     <div className="min-h-screen bg-gray-50 py-8" style={{ paddingTop: '180px' }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <AdminNavigation currentPage="onboarding-requests" />
+        <AdminNavigation
+          currentPage="onboarding-requests"
+          contextLine="Review and provision this tenant onboarding request."
+        />
 
         <div className="mt-8 space-y-6">
           <div className="bg-white rounded-lg shadow p-6">

@@ -777,7 +777,7 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
-      <AdminNavigation />
+      <AdminNavigation contextLine="User profiles for this tenant — roles, approval status, and contact details." />
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 md:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">

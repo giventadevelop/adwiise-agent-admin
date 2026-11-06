@@ -157,7 +157,10 @@ export function AdminSubscriptionsClient({
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavigation currentPage="membership-subscriptions" />
+      <AdminNavigation
+        currentPage="membership-subscriptions"
+        contextLine="Membership subscriptions for this tenant — who is active, pending, or canceled."
+      />
 
       <div className="mb-4 bg-white rounded-xl shadow border border-gray-200 p-4">
         <AdminTenantFilterField />

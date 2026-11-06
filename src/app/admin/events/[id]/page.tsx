@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fa';
 import type { EventDetailsDTO } from '@/types';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 export default function EventOverviewPage() {
   const { userId } = useAuth();
@@ -89,6 +90,10 @@ export default function EventOverviewPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Event overview — open sections below to manage tickets, media, and related records."
+      />
       {/* Header with back button */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">

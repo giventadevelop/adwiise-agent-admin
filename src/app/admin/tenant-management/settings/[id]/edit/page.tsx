@@ -5,11 +5,11 @@ import { fetchRecentTenantOrganizationsForSelectServer } from '@/app/admin/tenan
 import TenantSettingsEditClient from './TenantSettingsEditClient';
 import Link from 'next/link';
 import SatelliteDomainsGuidance from '@/components/admin/SatelliteDomainsGuidance';
-import TenantConfigurationContextLabel from '@/app/admin/tenant-management/components/TenantConfigurationContextLabel';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { parseTenantSettingsTab, tenantSettingsTabQuery } from '@/lib/tenantSettingsTabs';
 import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 interface PageProps {
   params: { id: string };
@@ -173,15 +173,13 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
           <h1 className="text-3xl font-bold text-gray-900">Edit Settings</h1>
           <SatelliteDomainsGuidance showHelp showBanner={false} />
         </div>
-        <TenantConfigurationContextLabel
-          className="mt-2 text-sm text-gray-600"
-          tenantId={settings?.tenantId}
-          organizationName={
-            settings?.tenantOrganization?.organizationName ||
-            organizations.find((org) => org.tenantId === settings?.tenantId)?.organizationName
-          }
-        />
-        <p className="mt-1 text-sm text-gray-500">Update tenant configuration settings</p>
+        <div className="mt-4">
+          <AdminTenantIdBanner
+            tenantId={settings?.tenantId}
+            contextLine="Tenant configuration — General, Integrations, Limits, Homepage Hero, and Customization tabs below."
+          />
+        </div>
+        <p className="mt-2 text-sm text-gray-500">Update tenant configuration settings</p>
       </div>
 
       <div className="mb-6">

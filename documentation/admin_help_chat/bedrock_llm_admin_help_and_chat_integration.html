@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bedrock LLM — Admin Help Chat and Retail Ask Integration</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fafbfc;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #0d3b66;
+      border-bottom: 3px solid #0066cc;
+      padding-bottom: 10px;
+    }
+    h2 {
+      font-size: 1.35rem;
+      color: #0d3b66;
+      border-left: 4px solid #3b82f6;
+      padding-left: 12px;
+      margin-top: 2em;
+    }
+    .meta { color: #555; margin-bottom: 1.25em; }
+    .section-intro {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border-left: 4px solid #2196f3;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    .section-container {
+      margin: 16px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #b8d4e3;
+    }
+    .section-container.usage { border-color: #2196f3; }
+    .section-container.parameters { border-color: #ff9800; }
+    .section-container.output { border-color: #4caf50; }
+    .section-header {
+      padding: 10px 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .section-container.usage .section-header {
+      background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+    }
+    .section-container.parameters .section-header {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+    }
+    .section-container.output .section-header {
+      background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+    }
+    .section-body { padding: 12px 14px; background: #fff; }
+    code, .code-highlight {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.9em;
+      border: 1px solid #b8d4e3;
+    }
+    pre {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      border: 1px solid #b8d4e3;
+      border-radius: 6px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .script-name {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 0.9em;
+      border: none;
+    }
+    .info-box {
+      background-color: #d1ecf1;
+      border-left: 4px solid #0c5460;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 4px;
+      color: #0c5460;
+    }
+    .warning-box {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    .success-box {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    th {
+      background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid #b8d4e3;
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background-color: #e8f4f8; }
+    tr:hover td { background-color: #d1ecf1; }
+    .command-block {
+      border-radius: 8px;
+      border: 2px solid #2196f3;
+      margin: 16px 0;
+      overflow: hidden;
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+    .command-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .command-type { font-weight: 700; color: #0d3b66; }
+    .copy-button {
+      background: #0066cc;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.85em;
+    }
+    .copy-button.copied { background: #28a745; }
+    .command-content {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: #e8f4f8;
+      color: #0d3b66;
+    }
+    .command-single-line {
+      padding: 8px 14px 12px;
+      font-size: 0.9em;
+    }
+    .command-single-line-label { font-weight: 600; color: #0d3b66; margin-bottom: 4px; }
+    ul, ol { margin: 8px 0 8px 20px; }
+    li { margin: 6px 0; }
+    a { color: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <h1>Bedrock LLM — Admin Help Chat and Retail Ask Integration</h1>
+  <p class="meta">
+    Shared guide for <strong>adwiise-agent-admin</strong> and <strong>application-deployments</strong>.
+    Keep this HTML and the Cursor rule
+    <code class="script-name">bedrock_llm_admin_help_and_chat_integration.mdc</code>
+    in sync in both repositories.
+  </p>
+
+  <p class="section-intro">
+    Use <strong>one Bedrock model family</strong> (Claude Sonnet on account <code class="code-highlight">224674645062</code>)
+    for two separate product surfaces: <strong>Admin Help</strong> (how-to for admin pages) and
+    <strong>Retail Ask</strong> (grounded Q&amp;A on a morning brief). Same model ID is fine;
+    never share the same API route, system prompt, or grounding context.
+  </p>
+
+  <h2>1. Two chat surfaces</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Surface</th>
+        <th>Runs in</th>
+        <th>Grounding</th>
+        <th>Call path</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Admin Help</strong></td>
+        <td><code class="code-highlight">adwiise-agent-admin</code><br><code class="code-highlight">POST /api/admin/help-chat</code></td>
+        <td>Curated knowledge pack + current <code class="code-highlight">pathname</code></td>
+        <td>Floating Help on <code class="code-highlight">/admin/**</code> → Next.js server → Bedrock <strong>direct</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Retail Ask</strong></td>
+        <td><code class="code-highlight">adwiise-agent-ai-engine</code><br><code class="code-highlight">POST /v1/chat</code></td>
+        <td>Saved brief JSON (metrics, cards, forecast)</td>
+        <td>Retail UI → Spring <code class="code-highlight">/api/retail-brief/chat</code> → engine ALB → Bedrock</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <strong>Do not</strong> send Admin Help questions to the AI engine <code class="code-highlight">/v1/chat</code>
+    or Spring <code class="code-highlight">/api/retail-brief/chat</code>. Amplify cannot reach the internal engine ALB;
+    retail Ask must keep that Spring forwarder. Admin Help must not reuse it.
+  </div>
+
+  <h2>2. Admin Help architecture</h2>
+  <div class="section-container usage">
+    <div class="section-header">Request flow</div>
+    <div class="section-body">
+      <pre>AdminHelpChat (floating UI on /admin)
+  → POST /api/admin/help-chat   (Clerk session + ADMIN / SUPER_ADMIN)
+  → retrieveAdminHelpKnowledge(question, pathname, isPlatformSuperAdmin)
+  → Bedrock InvokeModel  (or knowledge-pack stub if disabled / invoke fails)</pre>
+      <ul>
+        <li>Library: <code class="code-highlight">src/lib/adminHelp/</code> (knowledge, retrieve, prompt, bedrock client)</li>
+        <li>API: <code class="code-highlight">src/app/api/admin/help-chat/route.ts</code></li>
+        <li>UI: <code class="code-highlight">src/components/admin/AdminHelpChat.tsx</code> mounted from admin tenant layout client</li>
+        <li>Smoke: <code class="script-name">npm run test:admin-help</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section-container parameters">
+    <div class="section-header">Answer rules</div>
+    <div class="section-body">
+      <ul>
+        <li>Answer only from retrieved chunks + page context; never invent menus or routes.</li>
+        <li>Plain English how-to; read-only (no admin mutations).</li>
+        <li>Hide <code class="code-highlight">platformOnly</code> knowledge from non–SUPER_ADMIN.</li>
+        <li>Do not fine-tune the model on admin pages — update the knowledge pack instead.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>3. Environment variables</h2>
+  <pre>BEDROCK_ENABLED=true
+BEDROCK_REGION=us-east-1
+BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5</pre>
+  <div class="info-box">
+    Admin Help defaults <strong>on</strong> unless <code class="code-highlight">BEDROCK_ENABLED=false</code>.
+    Amplify Hosting apps are in <strong>us-east-2</strong>; Bedrock Runtime stays <strong>us-east-1</strong>.
+    <code class="script-name">amplify.yml</code> must include <code class="code-highlight">BEDROCK_</code> in the build-time env grep so SSR Lambdas receive the vars.
+  </div>
+
+  <h2>4. Amplify inventory</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>App</th>
+        <th>App ID</th>
+        <th>Amplify region</th>
+        <th>Branch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Prod hub <code class="code-highlight">event-site-manager</code> (www.adwiiseagent.ai)</td>
+        <td><code class="code-highlight">d3gov7yn1ctow1</code></td>
+        <td>us-east-2</td>
+        <td>release/v1.0.0</td>
+      </tr>
+      <tr>
+        <td>Dev hub <code class="code-highlight">adwiise-agent-dev-hub</code></td>
+        <td><code class="code-highlight">d3qk5eouzr7b80</code></td>
+        <td>us-east-2</td>
+        <td>release/v1.0.0</td>
+      </tr>
+      <tr>
+        <td>Dev satellite <code class="code-highlight">adwiise-agent-dev-satellite</code></td>
+        <td><code class="code-highlight">d3umj04vhrd3rv</code></td>
+        <td>us-east-2</td>
+        <td>release/v1.0.0</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="warning-box">
+    Listing apps in <code class="code-highlight">us-east-1</code> returns an empty list. Always use
+    <code class="code-highlight">aws amplify list-apps --region us-east-2</code>.
+  </div>
+
+  <h2>5. Amplify scripts (run from adwiise-agent-admin)</h2>
+
+  <div class="command-block setup" data-command-type="setup">
+    <div class="command-header">
+      <span class="command-type">Merge Bedrock env (safe — does not wipe other keys)</span>
+      <button type="button" class="copy-button" onclick="copyCommand(this,'merge-bedrock')">Copy</button>
+    </div>
+    <pre class="command-content" id="merge-bedrock">cd F:\project_workspace\adwiise-agent-admin; .\scripts\set-amplify-bedrock-env.ps1; .\scripts\set-amplify-bedrock-env.ps1 -AppId d3qk5eouzr7b80; .\scripts\set-amplify-bedrock-env.ps1 -AppId d3umj04vhrd3rv</pre>
+    <div class="command-single-line">
+      <div class="command-single-line-label">Windows single-line:</div>
+      <code id="merge-bedrock-single-code">cd F:\project_workspace\adwiise-agent-admin; .\scripts\set-amplify-bedrock-env.ps1; .\scripts\set-amplify-bedrock-env.ps1 -AppId d3qk5eouzr7b80; .\scripts\set-amplify-bedrock-env.ps1 -AppId d3umj04vhrd3rv</code>
+    </div>
+  </div>
+
+  <div class="command-block setup" data-command-type="setup">
+    <div class="command-header">
+      <span class="command-type">Attach Bedrock IAM to Amplify SSR role</span>
+      <button type="button" class="copy-button" onclick="copyCommand(this,'attach-iam')">Copy</button>
+    </div>
+    <pre class="command-content" id="attach-iam">cd F:\project_workspace\adwiise-agent-admin; .\scripts\attach-amplify-bedrock-iam.ps1 -RoleName AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a</pre>
+    <div class="command-single-line">
+      <div class="command-single-line-label">Windows single-line:</div>
+      <code id="attach-iam-single-code">cd F:\project_workspace\adwiise-agent-admin; .\scripts\attach-amplify-bedrock-iam.ps1 -RoleName AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a</code>
+    </div>
+  </div>
+
+  <div class="command-block setup" data-command-type="setup">
+    <div class="command-header">
+      <span class="command-type">List Amplify apps (correct region)</span>
+      <button type="button" class="copy-button" onclick="copyCommand(this,'list-apps')">Copy</button>
+    </div>
+    <pre class="command-content" id="list-apps">aws amplify list-apps --region us-east-2 --query "apps[].{appId:appId,name:name}" --output table</pre>
+    <div class="command-single-line">
+      <div class="command-single-line-label">Windows single-line:</div>
+      <code id="list-apps-single-code">aws amplify list-apps --region us-east-2 --query "apps[].{appId:appId,name:name}" --output table</code>
+    </div>
+  </div>
+
+  <div class="success-box">
+    <code class="script-name">set-amplify-bedrock-env.ps1</code> refuses to update if
+    <code class="code-highlight">get-app</code> JSON cannot be parsed (SSL warning noise) or the app has fewer than 10 existing env keys.
+    That prevents wiping a full Amplify env down to only Bedrock keys.
+  </div>
+
+  <div class="warning-box">
+    <code class="script-name">set-amplify-env-vars.ps1</code> <strong>replaces all</strong> app environment variables from a dotenv file.
+    Use it for full restores, not for “add three Bedrock keys.” Prefer the merge script for Bedrock-only updates.
+  </div>
+
+  <h2>6. Bolting Admin Help onto another admin / satellite frontend</h2>
+  <ol>
+    <li>Copy <code class="code-highlight">src/lib/adminHelp/</code>, the help-chat API route, and <code class="code-highlight">AdminHelpChat</code>; mount it in the admin layout client.</li>
+    <li>Add dependency <code class="code-highlight">@aws-sdk/client-bedrock-runtime</code> and the three <code class="code-highlight">BEDROCK_*</code> env vars.</li>
+    <li>Keep Clerk + admin role checks on the API route.</li>
+    <li>Extend the knowledge pack (<code class="code-highlight">hubGuides</code>, <code class="code-highlight">howTos</code>, <code class="code-highlight">operatorGuides</code>, <code class="code-highlight">routeMap</code>) for that product’s tiles — do not dump every HTML PRD into the prompt.</li>
+    <li>Merge Amplify env (us-east-2 app id) and attach <code class="code-highlight">bedrock:InvokeModel</code> to that app’s SSR role.</li>
+    <li>If the clone has retail, keep Retail Ask on Spring → engine; do not merge the two chat APIs.</li>
+  </ol>
+
+  <h2>7. Retail Ask (engine) reminders</h2>
+  <ul>
+    <li>Client: <code class="code-highlight">gas_station_ai_engine/llm/bedrock.py</code> — <code class="code-highlight">explain</code> vs <code class="code-highlight">ask</code>, account gate <code class="code-highlight">PROJECT_ACCOUNT</code>.</li>
+    <li>Brief grounding only; max tokens are tighter than Admin Help.</li>
+    <li>Related deploy notes live under application-deployments aws-infrastructure engine HTTP scripts (dev/prod engine Bedrock for Upload / Grounded Ask).</li>
+  </ul>
+
+  <h2>8. Anti-patterns</h2>
+  <table>
+    <thead>
+      <tr><th>Avoid</th><th>Do instead</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Admin Help → AI engine <code class="code-highlight">/v1/chat</code></td>
+        <td>Next.js <code class="code-highlight">/api/admin/help-chat</code> → Bedrock</td>
+      </tr>
+      <tr>
+        <td>Browser calling Bedrock with embedded keys</td>
+        <td>Server route + IAM / default credential chain</td>
+      </tr>
+      <tr>
+        <td><code class="code-highlight">update-app</code> with only Bedrock keys after a bad JSON parse</td>
+        <td>Merge script with parse + min-key safeguards</td>
+      </tr>
+      <tr>
+        <td>Fine-tuning / embedding all admin pages into the model</td>
+        <td>Curated knowledge pack + pathname retrieval</td>
+      </tr>
+      <tr>
+        <td>Teaching SUPER_ADMIN-only flows to tenant ADMIN</td>
+        <td>Filter <code class="code-highlight">platformOnly</code> chunks</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>9. Related files (keep copies aligned)</h2>
+  <div class="section-container output">
+    <div class="section-header">Canonical locations</div>
+    <div class="section-body">
+      <ul>
+        <li>Cursor rule (both repos): <code class="script-name">.cursor/rules/bedrock_llm_admin_help_and_chat_integration.mdc</code></li>
+        <li>This HTML (admin): <code class="code-highlight">documentation/admin_help_chat/bedrock_llm_admin_help_and_chat_integration.html</code></li>
+        <li>This HTML (deployments): <code class="code-highlight">documentation/aws-infrastructure/bedrock_llm_admin_help_and_chat_integration.html</code></li>
+        <li>IAM detail: <code class="code-highlight">documentation/admin_help_chat/AMPLIFY_BEDROCK_IAM.md</code> (admin repo)</li>
+        <li>Policy JSON: <code class="code-highlight">documentation/admin_help_chat/bedrock-invoke-policy.json</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function copyCommand(button, id) {
+      var el = document.getElementById(id + '-single-code') || document.getElementById(id);
+      if (!el) return;
+      var text = el.textContent || '';
+      function done() {
+        button.classList.add('copied');
+        button.textContent = 'Copied';
+        setTimeout(function () {
+          button.classList.remove('copied');
+          button.textContent = 'Copy';
+        }, 2000);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        done();
+      }
+    }
+  </script>
+</body>
+</html>

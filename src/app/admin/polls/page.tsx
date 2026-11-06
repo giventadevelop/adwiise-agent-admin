@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import AdminNavigation from '@/components/AdminNavigation';
 import { PollManagementClient } from './PollManagementClient';
 import { fetchEventPollsServer } from './ApiServerActions';
 import AdminTenantFilterBar from '@/components/admin/AdminTenantFilterBar';
@@ -31,6 +32,10 @@ export default async function PollsPage({
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
       <div className="max-w-5xl mx-auto px-8 py-8">
+        <AdminNavigation
+          tenantId={tenantId}
+          contextLine="Interactive event polls for this tenant — create, edit, and review responses."
+        />
         {/* Header Section with Gradient */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center space-x-3 mb-6">

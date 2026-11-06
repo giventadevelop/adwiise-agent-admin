@@ -298,7 +298,18 @@ export async function askRetailBriefServer(
   date: string,
   stationCode: string,
   question: string,
-  options?: { recommendationId?: number | string; recommendationTitle?: string; siteType?: string }
+  options?: {
+    recommendationId?: number | string;
+    recommendationTitle?: string;
+    siteType?: string;
+    /** Snapshot of what the morning page already shows (platform Postgres), so Ask matches the UI. */
+    context?: {
+      stationCode?: string;
+      metrics?: Record<string, unknown> | null;
+      fuelDay?: Record<string, unknown> | null;
+      recommendations?: Array<Record<string, unknown>>;
+    };
+  }
 ): Promise<{ reply: string | null; error?: string }> {
   const access = await getRetailMorningAccess(tenantId);
   if (access.scope === 'NONE' || !question.trim()) return { reply: null };
@@ -308,6 +319,7 @@ export async function askRetailBriefServer(
     if (options?.recommendationId != null) payload.recommendationId = String(options.recommendationId);
     if (options?.recommendationTitle) payload.recommendationTitle = options.recommendationTitle;
     if (options?.siteType) payload.siteType = options.siteType;
+    if (options?.context) payload.context = options.context;
     const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-brief/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },

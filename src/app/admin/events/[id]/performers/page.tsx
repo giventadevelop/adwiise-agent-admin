@@ -14,6 +14,7 @@ import EventPerformerPosterUploadDialog from '@/components/performers/EventPerfo
 import EventPerformerMediaGallery from '@/components/performers/EventPerformerMediaGallery';
 import type { EventFeaturedPerformersDTO, EventDetailsDTO } from '@/types';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import {
   fetchEventFeaturedPerformersServer,
   createEventFeaturedPerformerServer,
@@ -770,6 +771,10 @@ export default function EventPerformersPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Featured performers for this event."
+      />
       {/* Header with back button */}
       <div className="flex items-center mb-6">
         <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />

@@ -48,7 +48,10 @@ function AdminEventsSettingsContent() {
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavigation currentPage="event-settings" />
+      <AdminNavigation
+        currentPage="event-settings"
+        contextLine="Global event management settings for this tenant."
+      />
 
       {/* Settings Form */}
       <div className="bg-white rounded-lg shadow p-6">

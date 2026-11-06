@@ -12,7 +12,7 @@ frontend:
         # Required for Next.js Lambda React bundling on Amplify
         - echo "__NEXT_PRIVATE_PREBUNDLED_REACT=next" >> .env.production
         # Inject Amplify environment variables into .env.production for SSR Lambda runtime
-        - env | grep -E '^(NEXT_PUBLIC_|AMPLIFY_|STRIPE_|CLERK_|API_JWT|DATABASE_URL|DIRECT_URL|POOLED_URL|SUPABASE_|STRAPI_)' >> .env.production || true
+        - env | grep -E '^(NEXT_PUBLIC_|AMPLIFY_|STRIPE_|CLERK_|API_JWT|DATABASE_URL|DIRECT_URL|POOLED_URL|SUPABASE_|STRAPI_|BEDROCK_)' >> .env.production || true
         - npm run build
   artifacts:
     baseDirectory: .next

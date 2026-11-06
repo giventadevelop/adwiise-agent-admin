@@ -369,7 +369,10 @@ export default function RegistrationManagementClient({ data }: RegistrationManag
     <div className="w-full overflow-x-hidden box-border" style={{ paddingTop: '120px' }}>
       {/* Navigation Section - Full Width, Separate Responsive Container */}
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6 sm:mb-8">
-        <AdminNavigation currentPage="event-registrations" />
+        <AdminNavigation
+          currentPage="event-registrations"
+          contextLine="Event registrations for this tenant — search by event to manage attendees."
+        />
       </div>
       {/* Main Content Section - Constrained Width */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">

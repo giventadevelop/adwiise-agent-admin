@@ -1,0 +1,120 @@
+---
+description: Bedrock LLM for Admin Help chat vs retail brief Ask — architecture, Amplify/IAM, knowledge pack, and how to bolt onto admin/satellite apps
+globs: src/lib/adminHelp/**/*.{ts,tsx}, src/app/api/admin/help-chat/**/*.ts, src/components/admin/AdminHelpChat.tsx, src/app/admin/**/*.{ts,tsx}, documentation/admin_help_chat/**/*, amplify.yml, scripts/set-amplify-bedrock-env.ps1, scripts/attach-amplify-bedrock-iam.ps1
+alwaysApply: false
+---
+
+# Bedrock LLM — Admin Help chat and retail Ask (do not conflate)
+
+## Two products, one model family
+
+| Surface | Where it runs | Grounding | Call path |
+|---------|---------------|-----------|-----------|
+| **Retail / morning-brief Ask** | `adwiise-agent-ai-engine` `POST /v1/chat` | Saved brief JSON (metrics, cards, forecast) | Admin retail UI → Spring `/api/retail-brief/chat` → engine ALB → Bedrock |
+| **Admin Help chat** | `adwiise-agent-admin` `POST /api/admin/help-chat` | Curated admin knowledge pack + pathname context | Floating Help on `/admin/**` → Next.js server → Bedrock **direct** |
+
+- **Same account / model family:** `224674645062`, region **`us-east-1`** for Bedrock Runtime, default model `us.anthropic.claude-sonnet-5-5`.
+- **Different system prompts and context shapes.** Do **not** route Admin Help through the gas-station AI engine or `/v1/chat`.
+- **Do not fine-tune** the model on admin pages. Prefer knowledge chunks + retrieval; update docs when UX changes.
+
+## Admin Help architecture (canonical in agent-admin)
+
+```
+Admin UI (AdminHelpChat)
+  → POST /api/admin/help-chat   (Clerk + ADMIN/SUPER_ADMIN)
+  → retrieveAdminHelpKnowledge(question, pathname, isPlatformSuperAdmin)
+  → Bedrock InvokeModel (or stub if BEDROCK_ENABLED=false / invoke fails)
+```
+
+Key paths (admin repo):
+
+- Knowledge + retrieve: `src/lib/adminHelp/`
+- API: `src/app/api/admin/help-chat/route.ts`
+- UI: `src/components/admin/AdminHelpChat.tsx` (mounted from `AdminTenantContext`)
+- Ops docs: `documentation/admin_help_chat/`
+- Smoke: `npm run test:admin-help`
+
+### Rules for Admin Help answers
+
+- Use **only** retrieved knowledge + page context; never invent menu items or routes.
+- Plain English how-to; read-only (no mutations).
+- Omit `platformOnly` chunks for non–SUPER_ADMIN; refuse platform-only topics for ADMIN.
+- Retail Ask on `/admin/retail` stays a **separate** UI/backend path.
+
+## Env vars (local + Amplify)
+
+```
+BEDROCK_ENABLED=true
+BEDROCK_REGION=us-east-1
+BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5
+```
+
+- Admin Help **defaults on** unless `BEDROCK_ENABLED=false` (or `ADMIN_HELP_BEDROCK_ENABLED=false`).
+- Amplify Hosting apps are in **`us-east-2`**; Bedrock Runtime stays **`us-east-1`**.
+- `amplify.yml` must grep `BEDROCK_` into `.env.production` at build time so SSR Lambdas see the vars.
+
+### Amplify inventory (hub / parallel env)
+
+| App | App ID | Region |
+|-----|--------|--------|
+| Prod hub `event-site-manager` (`www.adwiiseagent.ai`) | `d3gov7yn1ctow1` | us-east-2 |
+| Dev hub `adwiise-agent-dev-hub` | `d3qk5eouzr7b80` | us-east-2 |
+| Dev satellite `adwiise-agent-dev-satellite` | `d3umj04vhrd3rv` | us-east-2 |
+
+List apps: `aws amplify list-apps --region us-east-2` (not us-east-1).
+
+## Amplify env + IAM scripts (admin repo)
+
+- Merge Bedrock keys **without wiping** other env: `scripts/set-amplify-bedrock-env.ps1`
+  - Refuses update if `get-app` JSON is dirty (SSL noise) or existing key count &lt; 10.
+- Full restore from dotenv: `scripts/set-amplify-env-vars.ps1` (replaces **all** app env — use carefully).
+- IAM inline policy: `scripts/attach-amplify-bedrock-iam.ps1` + `documentation/admin_help_chat/bedrock-invoke-policy.json`
+- Policy name: `AdminHelpBedrockInvoke` on Amplify SSR / service role (`bedrock:InvokeModel`).
+
+```powershell
+# Merge Bedrock onto prod hub (defaults)
+.\scripts\set-amplify-bedrock-env.ps1
+# Dev hub
+.\scripts\set-amplify-bedrock-env.ps1 -AppId d3qk5eouzr7b80
+```
+
+After env or `amplify.yml` changes: RELEASE on `release/v1.0.0`.
+
+## Bolting Admin Help onto another frontend (satellite / clone)
+
+1. Copy `src/lib/adminHelp/`, API route, `AdminHelpChat`, and mount in the admin layout client.
+2. Add `@aws-sdk/client-bedrock-runtime`; set the three `BEDROCK_*` env vars.
+3. Ensure Clerk-gated admin access before invoke.
+4. Extend knowledge pack (`hubGuides`, `howTos`, `operatorGuides`, `routeMap`) for that product’s tiles — do not dump all `documentation/**/*.html` into the prompt.
+5. Push Amplify env with merge script (us-east-2 app id); attach Bedrock IAM to that app’s SSR role.
+6. Keep retail Ask wired through Spring → engine if the clone has retail; do not merge the two chat APIs.
+
+## Retail Ask (engine) — reminders
+
+- Engine: `gas_station_ai_engine/llm/bedrock.py` — `explain` vs `ask`, account gate `PROJECT_ACCOUNT`.
+- Amplify **cannot** reach the internal engine ALB; retail Ask stays Admin → Spring → `RETAIL_ENGINE_BASE_URL`.
+- Admin Help must **not** reuse `/api/retail-brief/chat`.
+
+## Anti-patterns
+
+```text
+❌ Admin Help → AI engine /v1/chat
+❌ Browser → Bedrock with embedded AWS keys
+❌ update-app with only BEDROCK_* after a failed get-app JSON parse (wipes env)
+❌ Fine-tuning / “embed all admin pages into the model”
+❌ Teaching SUPER_ADMIN-only flows to tenant ADMIN
+```
+
+```text
+✅ Next.js server route + IAM role / default credential chain
+✅ Curated knowledge pack + pathname retrieval
+✅ Same Claude Sonnet model id, separate system prompt
+✅ Amplify list/update in us-east-2; Bedrock invoke in us-east-1
+```
+
+## Full HTML guide (keep in sync across repos)
+
+- Admin: `documentation/admin_help_chat/bedrock_llm_admin_help_and_chat_integration.html`
+- Deployments: `documentation/aws-infrastructure/bedrock_llm_admin_help_and_chat_integration.html`
+
+Keep the **same content** in both HTML copies and this rule when the architecture changes.

@@ -264,7 +264,10 @@ export function AdminMembershipPlansClient({
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavigation currentPage="membership-plans" />
+      <AdminNavigation
+        currentPage="membership-plans"
+        contextLine="Membership plans for this tenant — prices, benefits, and public visibility."
+      />
 
       <div className="mb-6 bg-white rounded-xl shadow border border-gray-200 p-4">
         <AdminTenantFilterField />

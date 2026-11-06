@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
 import { TenantOrganizationFormDTO } from '@/app/admin/tenant-management/types';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 export default function NewTenantOrganizationPage() {
   async function handleSubmit(data: TenantOrganizationFormDTO) {
@@ -86,6 +87,9 @@ export default function NewTenantOrganizationPage() {
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Create New Organization</h1>
+        <div className="mt-4">
+          <AdminTenantIdBanner contextLine="Creating a new organization — Tenant ID is generated when you save the form below." />
+        </div>
         <p className="mt-2 text-sm text-gray-600">
           Add a new tenant organization to the system. Tenant IDs are auto-generated from your name prefix plus the next sequence number (e.g. ford_motors_1).
         </p>

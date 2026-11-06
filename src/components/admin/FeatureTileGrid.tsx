@@ -142,7 +142,9 @@ export default function FeatureTileGrid({
   return (
     <div className="w-full mb-8">
       <div className="relative max-w-xl mx-auto mb-6">
-        <p className="text-xs text-gray-500 mb-2 text-center">{searchLabel}</p>
+        <div className="mb-3 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 text-center shadow-sm">
+          <p className="text-sm sm:text-base font-bold text-indigo-900 leading-snug">{searchLabel}</p>
+        </div>
         <div className="relative">
           <svg
             className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"

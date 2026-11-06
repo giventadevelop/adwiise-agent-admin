@@ -2,6 +2,7 @@ import { safeAuth } from '@/lib/safe-auth';
 import CompetitionAdminNav from '@/components/admin/competitions/CompetitionAdminNav';
 import CompetitionAdminHelpStrip from '@/components/admin/competitions/CompetitionAdminHelpStrip';
 import EventCompetitionDayList from '@/components/admin/competitions/EventCompetitionDayList';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { fetchCompetitionDaysForEventServer } from '../ApiServerActions';
 import Link from 'next/link';
 
@@ -16,6 +17,7 @@ export default async function CompetitionDaysPage(props: {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner contextLine="Competition schedule days for this event." />
       <Link href={`/admin/events/${eventId}/competitions/list`} className="text-blue-600 text-sm hover:underline">
         ← Competitions catalog
       </Link>

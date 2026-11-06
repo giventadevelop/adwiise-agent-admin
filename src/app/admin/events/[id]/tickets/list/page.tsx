@@ -1,4 +1,5 @@
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { EventTicketTransactionDTO, EventTicketTransactionStatisticsDTO, EventDetailsDTO, EventTicketTypeDTO } from '@/types';
 import Link from 'next/link';
 import TicketTableClient from './TicketTableClient';
@@ -174,6 +175,10 @@ export default async function TicketListPage({ params, searchParams }: { params:
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
+      <AdminTenantIdBanner
+        tenantId={eventDetails?.tenantId}
+        contextLine="Ticket transactions sold for this event."
+      />
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 md:mb-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 text-center sm:text-left">

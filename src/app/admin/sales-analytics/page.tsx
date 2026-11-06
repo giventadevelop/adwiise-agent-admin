@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import AdminNavigation from '@/components/AdminNavigation';
 import SalesAnalyticsClient from './SalesAnalyticsClient';
 import { calculateSalesMetricsServer } from './ApiServerActions';
 
@@ -29,6 +30,7 @@ export default async function SalesAnalyticsPage({
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" style={{ paddingTop: '120px' }}>
+        <AdminNavigation contextLine="Ticket sales metrics and transaction history for events in this tenant." />
         {/* Page Header */}
         <div className="mb-4 sm:mb-6 md:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 text-center sm:text-left">

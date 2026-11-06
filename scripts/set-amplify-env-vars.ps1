@@ -7,9 +7,10 @@
 
 param(
     [string]$EnvFile = ".env.amplify",
-    [string]$BranchName = "feature_Common_Clerk",
-    [string]$AppId = "d1508w3f27cyps",
-    [string]$Region = "us-east-1"
+    [string]$BranchName = "release/v1.0.0",
+    # Production hub www.adwiiseagent.ai (Amplify Hosting is us-east-2)
+    [string]$AppId = "d3gov7yn1ctow1",
+    [string]$Region = "us-east-2"
 )
 
 # Check if AWS CLI is installed

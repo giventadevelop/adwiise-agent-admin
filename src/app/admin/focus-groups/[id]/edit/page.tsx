@@ -1,5 +1,6 @@
 import { getAppUrl } from '@/lib/env';
 import { redirect } from 'next/navigation';
+import AdminNavigation from '@/components/AdminNavigation';
 import FocusGroupEditForm from './FocusGroupEditForm';
 import { fetchAssociatedEvents } from './ApiServerActions';
 import { composeFocusGroupDescription } from '@/lib/focusGroupExtras';
@@ -64,6 +65,10 @@ export default async function EditFocusGroupPage({ params }: { params: { id: str
 
   return (
     <div className="px-8 pt-24 pb-8 max-w-5xl mx-auto">
+      <AdminNavigation
+        tenantId={group?.tenantId}
+        contextLine="Edit this focus group’s details and associated events."
+      />
       <h1 className="text-2xl font-semibold mb-2">Edit Focus Group</h1>
       <FocusGroupEditForm
         group={group}

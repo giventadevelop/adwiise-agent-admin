@@ -5,6 +5,7 @@ import type { DiscountCodeDTO, EventDetailsDTO } from '@/types';
 import Link from 'next/link';
 import { FaTrashAlt, FaTimes } from 'react-icons/fa';
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { Modal } from '@/components/Modal';
 import { deleteDiscountCodeServer, patchDiscountCodeServer, createDiscountCodeServer } from './ApiServerActions';
 
@@ -142,6 +143,10 @@ export default function DiscountCodeListClient({
 
   return (
     <div className="max-w-5xl mx-auto px-8" style={{ paddingTop: '118px', paddingBottom: '32px' }}>
+      <AdminTenantIdBanner
+        tenantId={eventDetails?.tenantId}
+        contextLine="Discount codes for this event."
+      />
       {/* Concise Event Summary */}
       {eventDetails && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">

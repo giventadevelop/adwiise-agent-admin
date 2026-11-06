@@ -10,6 +10,7 @@ import type {
   OfficialDocumentYearBundleDTO,
 } from '@/types';
 import { getClientTenantId } from '@/lib/env';
+import AdminNavigation from '@/components/AdminNavigation';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import { useAdminTenantId } from '../AdminTenantContext';
 import {
@@ -733,17 +734,8 @@ export default function OfficialDocumentsClient({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminNavigation contextLine="Official documents library for this tenant — upload, categorize, and publish." />
       <nav className="mb-8 flex flex-wrap items-center gap-4 text-sm">
-        <Link
-          href="/admin"
-          className="inline-flex items-center font-medium text-blue-600 hover:text-blue-800"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Admin Dashboard
-        </Link>
-        <span className="text-gray-300">|</span>
         <Link
           href={
             adminTenantId

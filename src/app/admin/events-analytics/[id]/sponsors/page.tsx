@@ -11,6 +11,7 @@ import Modal, { ConfirmModal } from '@/components/ui/Modal';
 import ImageUpload from '@/components/ui/ImageUpload';
 import type { EventSponsorsDTO, EventSponsorsJoinDTO, EventDetailsDTO } from '@/types';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import {
   fetchEventSponsorsServer,
   fetchEventSponsorsJoinServer,
@@ -547,6 +548,10 @@ export default function EventSponsorsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Event analytics section for this tenant."
+      />
       {/* Header with back button */}
       <div className="flex items-center mb-6">
         <div className="flex items-center">

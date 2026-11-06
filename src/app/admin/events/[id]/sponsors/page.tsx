@@ -14,6 +14,7 @@ import EventSponsorPosterUploadDialog from '@/components/sponsors/EventSponsorPo
 import EventSponsorMediaGallery from '@/components/sponsors/EventSponsorMediaGallery';
 import type { EventSponsorsDTO, EventSponsorsJoinDTO, EventDetailsDTO } from '@/types';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import {
   fetchEventSponsorsServer,
   fetchEventSponsorsJoinServer,
@@ -923,6 +924,10 @@ export default function EventSponsorsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Sponsors assigned to this event."
+      />
       {/* Header with back button */}
       <div className="flex items-center mb-6">
         <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAdminTenantId } from '../AdminTenantContext';
 import { fetchNewsAdVisibility, saveNewsAdVisibility } from './ApiServerActions';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import {
   type NewsAdSlotRow,
   type NewsAdVisibility,
@@ -116,6 +117,11 @@ export default function NewsAdvertisementsClient() {
     <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8" style={{ paddingTop: '120px' }}>
       <div className="mb-6">
         <AdminBackButton href={tenantId ? `/admin?tenant=${encodeURIComponent(tenantId)}` : '/admin'} label="Back to admin home" />
+        <AdminTenantIdBanner
+          tenantId={tenantId}
+          contextLine="News page advertisement slots and master switch for this tenant."
+          className="mt-4"
+        />
         <h1 className="mt-3 text-2xl sm:text-3xl font-bold text-indigo-800">News advertisements</h1>
         <p className="mt-2 max-w-3xl text-sm text-gray-600">
           The highlighted switch controls every advertisement on this tenant&apos;s news page. Each row is one advertisement already published there.

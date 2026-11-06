@@ -12,6 +12,7 @@ import {
 } from '../ApiServerActions';
 import { hydrateCompetitionResults, parseResultsPodiumFromBlocks } from '@/lib/competitions/resultsPodium';
 import type { EventCompetitionResultDTO } from '@/types';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import Link from 'next/link';
 
 export default async function CompetitionResultsPage(props: {
@@ -45,6 +46,7 @@ export default async function CompetitionResultsPage(props: {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner contextLine="Competition results and placements for this event." />
       <Link href={`/admin/events/${eventId}/competitions/list`} className="text-blue-600 text-sm hover:underline">
         ← Competitions catalog
       </Link>

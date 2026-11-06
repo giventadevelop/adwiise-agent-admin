@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import AdminNavigation from '@/components/AdminNavigation';
 import { saveTenantProductBilling, setLocationIncludedInBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { YellowCheckbox } from '@/components/retail/RetailUi';
 import type { RetailLocationDTO } from '@/types/retail';
@@ -103,6 +104,10 @@ export default function BillingDesk({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6" style={{ paddingTop: '120px' }}>
+      <AdminNavigation
+        tenantId={tenantId}
+        contextLine="Platform billing for this tenant — event site and gas station fees."
+      />
       <h1 className="font-heading text-3xl text-foreground">Platform billing</h1>
       <p className="text-muted-foreground">Tenant {tenantId}. Cards and US bank accounts. Complimentary until the charge switch is on.</p>
       {lockedNotice && (

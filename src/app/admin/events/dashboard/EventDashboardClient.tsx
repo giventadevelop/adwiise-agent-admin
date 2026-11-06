@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import AdminNavigation from '@/components/AdminNavigation';
 import type { EventDashboardData } from './ApiServerActions';
 // Icons removed - using inline SVGs instead
 import Link from 'next/link';
@@ -56,6 +57,10 @@ export default function EventDashboardClient({ data }: EventDashboardClientProps
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8">
+      <AdminNavigation
+        tenantId={eventDetails?.tenantId}
+        contextLine="Registration and attendance overview for this event."
+      />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">

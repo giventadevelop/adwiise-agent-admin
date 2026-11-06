@@ -22,6 +22,7 @@ import {
 import EventDirectorPosterUploadDialog from '@/components/directors/EventDirectorPosterUploadDialog';
 import EventDirectorMediaGallery from '@/components/directors/EventDirectorMediaGallery';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 export default function EventProgramDirectorsPage() {
   const { userId } = useAuth();
@@ -513,6 +514,10 @@ export default function EventProgramDirectorsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Program directors for this event."
+      />
       {/* Header with back button */}
       <div className="flex items-center mb-6">
         <AdminBackButton href={`/admin/events/${eventId}/edit`} label="Back to Event" />

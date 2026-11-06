@@ -1,9 +1,9 @@
 import { fetchRecentTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import NewTenantSettingsClient from '@/app/admin/tenant-management/settings/new/NewTenantSettingsClient';
 import Link from 'next/link';
-import TenantConfigurationContextLabel from '@/app/admin/tenant-management/components/TenantConfigurationContextLabel';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 interface PageProps {
   searchParams: Promise<{ tenantId?: string }> | { tenantId?: string };
@@ -18,9 +18,6 @@ export default async function NewTenantSettingsPage({ searchParams }: PageProps)
   const organizations = await fetchRecentTenantOrganizationsForSelectServer();
   const access = await getCurrentAdminAccess();
   const initialTenantId = resolvedSearchParams.tenantId?.trim();
-  const organizationForTenant = initialTenantId
-    ? organizations.find((org) => org.tenantId === initialTenantId)
-    : undefined;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>
@@ -85,13 +82,14 @@ export default async function NewTenantSettingsPage({ searchParams }: PageProps)
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Create New Settings</h1>
         {initialTenantId ? (
-          <TenantConfigurationContextLabel
-            className="mt-2 text-sm text-gray-600"
-            tenantId={initialTenantId}
-            organizationName={organizationForTenant?.organizationName}
-          />
+          <div className="mt-4">
+            <AdminTenantIdBanner
+              tenantId={initialTenantId}
+              contextLine="Creating settings for this tenant — complete the form below."
+            />
+          </div>
         ) : null}
-        <p className={`text-sm text-gray-600 ${initialTenantId ? 'mt-1' : 'mt-2'}`}>
+        <p className={`text-sm text-gray-600 ${initialTenantId ? 'mt-2' : 'mt-2'}`}>
           Configure settings for a tenant organization. To add a new tenant with an auto-generated ID, create the organization first under{' '}
           <Link href="/admin/tenant-management/organizations/new" className="text-blue-600 hover:text-blue-800 font-medium">
             Organizations → New Organization

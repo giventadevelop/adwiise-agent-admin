@@ -43,9 +43,12 @@
     "record:scroll-video": "node scripts/record-mosc-scroll-video.js",
     "record:screenshot-scroll": "node scripts/record-screenshot-scroll-video.js",
     "gallery:migrate-covers": "node scripts/gallery-porting/migrate-local-album-covers-to-s3.mjs",
-    "gallery:migrate-covers:dry": "node scripts/gallery-porting/migrate-local-album-covers-to-s3.mjs --dry-run"
+    "gallery:migrate-covers:dry": "node scripts/gallery-porting/migrate-local-album-covers-to-s3.mjs --dry-run",
+    "test:admin-help": "tsx scripts/smoke-admin-help.ts",
+    "amplify:bedrock-env": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/set-amplify-bedrock-env.ps1"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1163.0",
     "@clerk/nextjs": "^7.0.5",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.6.0",

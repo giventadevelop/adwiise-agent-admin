@@ -42,7 +42,8 @@ const BUTTON_GUIDES: Record<string, string> = {
   'onboarding-requests': 'New customer applications. Approve one to create a tenant. The site type chosen here decides which tools that tenant sees.',
   'tenant-settings': 'Homepage sections, hero images, and feature flags for a tenant. Platform super admin only.',
   'profile-site': 'A personal or hybrid profile site: writings, projects, services, and contact blocks.',
-  retail: 'Morning brief, stores, integrations, and store comparison.',
+  retail:
+    'Helps manage the morning brief and recommendations for retail shops and stores — gas stations, liquor stores, Dunkin’ Donuts, 7-Eleven, and similar locations. Also covers store list, uploads, integrations, and comparison.',
   'platform-bill': 'What this tenant owes the platform for the software. This is not ticket revenue.',
   'platform-plans': 'The fee catalog used to charge tenants. Platform super admin only.',
   'tenant-test': 'Try create and update calls against tenant records. For checking the API, not for everyday content.',
@@ -484,9 +485,22 @@ export default function AdminPage() {
       href: '/admin/retail',
       icon: 'chart',
       label: 'Retail',
-      hint: 'Morning brief, stores, and integrations',
-      summary: 'Morning brief for gas, liquor, and other shops',
-      searchTerms: ['gas station', 'liquor', 'shop', 'store', 'morning brief'],
+      hint:
+        'Helps manage the morning brief and recommendations for retail shops and stores — gas stations, liquor stores, Dunkin’ Donuts, 7-Eleven, and similar locations.',
+      summary: 'shops / stores] [stations, liquor stores, Dunkin’, 7-Eleven, etc.',
+      searchTerms: [
+        'gas station',
+        'liquor',
+        'shop',
+        'store',
+        'shops',
+        'stores',
+        'morning brief',
+        'recommendation',
+        'dunkin',
+        '7-eleven',
+        'seven eleven',
+      ],
       color: 'teal',
       key: 'retail',
     },
@@ -985,9 +999,14 @@ export default function AdminPage() {
       )}
 
       <div className="relative max-w-xl mx-auto mb-6">
-        <p className="text-xs text-gray-500 mb-2 text-center">
-          Search features by name or related words, such as retail, soccer, sports team, or gas station.
-        </p>
+        <div className="mb-3 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 text-center shadow-sm">
+          <p className="text-sm sm:text-base font-bold text-indigo-900 leading-snug">
+            Search features by name or related words
+          </p>
+          <p className="mt-1 text-xs sm:text-sm font-semibold text-indigo-800 leading-snug">
+            Examples: retail, soccer, sports team, or gas station
+          </p>
+        </div>
         <div className="relative">
           <svg
             className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"

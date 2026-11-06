@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import AdminNavigation from '@/components/AdminNavigation';
 import { useAdminTenantId } from '../AdminTenantContext';
 import {
   fetchHomepageYoutubeOverride,
@@ -132,10 +132,8 @@ export default function HomepageYoutubeLiveClient() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '120px' }}>
+      <AdminNavigation contextLine="Homepage YouTube live stream override for this tenant." />
       <div className="mb-6">
-        <Link href="/admin" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
-          Admin Home
-        </Link>
         <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-indigo-800">Homepage YouTube live</h1>
         <p className="mt-2 text-sm text-gray-600">
           This URL is shown on the MOSC redesign homepage player while it is active and has not passed its end time,

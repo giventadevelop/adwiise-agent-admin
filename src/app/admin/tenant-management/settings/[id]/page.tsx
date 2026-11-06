@@ -6,10 +6,10 @@ import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import Link from 'next/link';
 import { TenantSettingsDTO, TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import TenantSettingsViewClient from './TenantSettingsViewClient';
-import TenantConfigurationContextLabel from '@/app/admin/tenant-management/components/TenantConfigurationContextLabel';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { parseTenantSettingsTab, tenantSettingsTabQuery } from '@/lib/tenantSettingsTabs';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 interface PageProps {
   params: { id: string };
@@ -183,10 +183,12 @@ export default async function TenantSettingsViewPage({ params, searchParams }: P
                 </span>
               )}
             </div>
-            <TenantConfigurationContextLabel
-              tenantId={settings?.tenantId}
-              organizationName={organization?.organizationName}
-            />
+            <div className="mt-4">
+              <AdminTenantIdBanner
+                tenantId={settings?.tenantId}
+                contextLine="Viewing tenant settings — switch tabs below for General, Integrations, Limits, Homepage Hero, and Customization."
+              />
+            </div>
           </div>
           <div className="flex gap-3">
             <Link

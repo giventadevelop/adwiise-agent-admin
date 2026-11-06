@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import AdminNavigation from '@/components/AdminNavigation';
 import { savePlatformBillingPlan } from '../ApiServerActions';
 import type { PlatformBillingPlanDTO, PlatformProduct } from '@/types/platformBilling';
 
@@ -64,6 +65,7 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '120px' }}>
+      <AdminNavigation contextLine="Platform fee catalog — list prices used to charge tenants (not ticket or membership prices)." />
       <h1 className="font-heading text-3xl text-foreground mb-2">Platform billing plans</h1>
       <p className="text-muted-foreground mb-8">
         Catalog prices for event sites and gas stations. These are not ticket prices and not membership plans.

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import AdminNavigation from '@/components/AdminNavigation';
 import { FaQrcode, FaCheckCircle, FaTimesCircle, FaSpinner } from 'react-icons/fa';
 
 // Dynamically import QrScanner to avoid SSR issues
@@ -121,6 +122,7 @@ export default function AdminQrScannerPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '120px' }}>
+      <AdminNavigation contextLine="Scan ticket QR codes to verify and check in attendees for this tenant." />
       <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

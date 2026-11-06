@@ -1,4 +1,5 @@
 import { getAppUrl } from '@/lib/env';
+import AdminNavigation from '@/components/AdminNavigation';
 
 async function fetchGroup(baseUrl: string, id: string) {
   try {
@@ -34,6 +35,10 @@ export default async function ManageGroupEventsPage({ params }: { params: { id: 
 
   return (
     <div className="px-8 pt-24 pb-8 max-w-5xl mx-auto">
+      <AdminNavigation
+        tenantId={group?.tenantId}
+        contextLine="Events linked to this focus group."
+      />
       <h1 className="text-2xl font-semibold mb-2">Manage Events for: {group?.name ?? 'Focus Group'}</h1>
       <div className="text-sm text-gray-600 mb-6">Link or unlink events to this focus group.</div>
 

@@ -6,6 +6,7 @@ import EventCompetitionSettingsForm from '@/components/admin/competitions/EventC
 import { fetchCompetitionSettingsForEventServer } from '../ApiServerActions';
 import Link from 'next/link';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 export default async function CompetitionSettingsPage(props: {
   params: Promise<{ id: string }> | { id: string };
@@ -22,6 +23,10 @@ export default async function CompetitionSettingsPage(props: {
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8" style={{ paddingTop: '180px' }}>
+      <AdminTenantIdBanner
+        tenantId={event?.tenantId}
+        contextLine="Competition scoring and display settings for this event."
+      />
       <div className="mb-6">
         <div className="flex flex-wrap gap-4 text-sm">
           <Link href={`/admin/events/${eventId}/competitions/list`} className="text-blue-600 hover:underline">

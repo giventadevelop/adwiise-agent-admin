@@ -143,7 +143,7 @@ export default function OrganizationPortfoliosClient() {
   return (
     <div className="w-full overflow-x-hidden box-border" style={adminPageTopStyle}>
       <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6 sm:mb-8">
-        <AdminNavigation />
+        <AdminNavigation contextLine="Organization portfolios — primary tenants and the sites grouped under them." />
       </div>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
