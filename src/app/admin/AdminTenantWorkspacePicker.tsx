@@ -216,6 +216,13 @@ export default function AdminTenantWorkspacePicker({
       'super admin'.startsWith(searchNormalized) ||
       searchNormalized.includes('super admin'));
 
+  const clearTenantSearch = () => {
+    setQuery('');
+    setSearchHits([]);
+    setSearchOpen(false);
+    setPage(0);
+  };
+
   const handleSelect = async (tenantId: string) => {
     setSaving(tenantId);
     setError(null);
@@ -227,6 +234,9 @@ export default function AdminTenantWorkspacePicker({
       }
       setSessionTenantId(result.tenantId);
       setSessionAllTenants(result.allTenants);
+      // Always clear search after a session pick so the grid shows the full
+      // paginated list again (Return to all tenants / card click).
+      clearTenantSearch();
       onSelectionChange?.(true);
       applyUrlTenant(result.tenantId);
     } catch (err) {

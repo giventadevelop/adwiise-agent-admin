@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Guide for the SCHOOL site type: tenant content tables, reused event and gallery data, admin screens, satellite pages, and India fee payments.">
+    <title>School Site Type Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        h1 {
+            font-size: 2.5em;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 12px;
+            margin-bottom: 8px;
+            color: #1a1a2e;
+        }
+        h2 {
+            font-size: 1.8em;
+            border-left: 4px solid #0066cc;
+            padding-left: 15px;
+            margin-top: 32px;
+            margin-bottom: 14px;
+            color: #1a1a2e;
+        }
+        h3 { font-size: 1.4em; margin-top: 18px; margin-bottom: 10px; color: #333; }
+        h4 { font-size: 1.2em; margin-top: 14px; margin-bottom: 8px; color: #555; }
+        p, li { margin-bottom: 10px; }
+        ul, ol { margin: 10px 0 14px 24px; }
+        a { color: #0066cc; }
+        a:focus-visible, button:focus-visible, input:focus-visible {
+            outline: 3px solid #0066cc;
+            outline-offset: 2px;
+        }
+        .doc-meta { color: #333; font-size: 0.95em; margin-bottom: 16px; }
+        .toc {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border: 1px solid #b8d4e3;
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin: 25px 0;
+        }
+        .toc h2 { border-left: none; padding-left: 0; margin-top: 0; font-size: 1.4em; color: #0066cc; }
+        .toc ul { margin-bottom: 0; }
+        .section-container {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 22px 0;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+        }
+        .section-container.usage {
+            background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%);
+            border-left-color: #9c27b0;
+        }
+        .section-container.parameters {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border-left-color: #ff9800;
+        }
+        .section-container.output {
+            background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%);
+            border-left-color: #28a745;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            padding: 12px 20px;
+            margin: -20px -20px 18px -20px;
+            border-radius: 8px 8px 0 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+        .section-intro {
+            background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+        }
+        .section-intro code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 3px 8px;
+            border-radius: 3px;
+            border: 1px solid #b8d4e3;
+        }
+        .info, .warning, .success, .error {
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 16px 0;
+        }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .info code, .info .code-highlight,
+        .warning code, .warning .code-highlight,
+        .success code, .success .code-highlight,
+        .error code, .error .code-highlight,
+        .section-container code,
+        .parameters-list code,
+        code, td code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .script-name {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            border: none;
+        }
+        .parameters-list {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border-left: 4px solid #ff9800;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .parameters-list strong { color: #c05600; font-weight: bold; }
+        pre, .code-block, pre code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #b8d4e3;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        pre code { background: transparent; border: none; padding: 0; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 102, 204, 0.12);
+        }
+        th, td { border: 1px solid #b8d4e3; padding: 12px; text-align: left; vertical-align: top; }
+        th {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+        tr:nth-child(even) { background-color: #e8f4f8; }
+        tr:hover { background-color: #d1ecf1; }
+        .command-block {
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            margin: 18px 0;
+            overflow: hidden;
+        }
+        .command-block.setup { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196f3; }
+        .command-block.verify { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4caf50; }
+        .command-block.advance { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #ff9800; }
+        .command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.55);
+        }
+        .command-type { font-weight: bold; color: #0d3b66; }
+        .command-header-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .copy-button, .copy-button-template {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+        }
+        .copy-button { background-color: #0066cc; }
+        .copy-button:hover { background-color: #0052a3; }
+        .copy-button-template { background-color: #0c5460; }
+        .copy-button-template:hover { background-color: #08343c; }
+        .copy-button.copied, .copy-button-template.copied { background-color: #28a745; }
+        .command-parameters {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.55);
+            border-bottom: 1px solid rgba(0, 102, 204, 0.15);
+        }
+        .command-parameters h5 { margin: 0 0 12px 0; font-size: 0.9em; color: #333; }
+        .parameter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .parameter-group.single { grid-template-columns: 1fr; }
+        .parameter-input { display: flex; flex-direction: column; gap: 4px; }
+        .parameter-input label { font-size: 0.8em; color: #333; font-weight: 600; }
+        .parameter-input input {
+            padding: 8px 12px;
+            border: 2px solid #8eb8d4;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            background: #fff;
+            color: #0d3b66;
+        }
+        .parameter-input input:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.15); }
+        .command-content {
+            margin: 0;
+            padding: 15px;
+            background: #e8f4f8;
+            color: #0d3b66;
+            border-top: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .command-single-line {
+            padding: 12px 15px;
+            background: #e8f4f8;
+            color: #0d3b66;
+            border-top: 1px solid #b8d4e3;
+        }
+        .command-single-line-label { color: #0c5460; font-size: 0.85em; font-weight: bold; margin-bottom: 6px; }
+        .command-single-line code {
+            display: block;
+            background: transparent;
+            border: none;
+            padding: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .flow {
+            background: #fff;
+            border: 1px solid #b8d4e3;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.8em; }
+            .parameter-group { grid-template-columns: 1fr; }
+            .command-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>School Site Type</h1>
+        <p class="doc-meta">Site type <code>SCHOOL</code> for campuses on the existing multi-tenant platform. India fee collection sits beside Stripe. Updated 7 November 2026.</p>
+
+        <div class="section-intro">
+            <p><code>SCHOOL</code> is a tenant site type for schools and campuses. A school satellite is the same deployment pattern as an existing satellite: its own domain, its own <code>NEXT_PUBLIC_TENANT_ID</code>, and the same Spring API. Content is tenant data. Do not copy another school's prose or photos into the product.</p>
+        </div>
+
+        <nav class="toc" aria-label="Table of contents">
+            <h2>Table of Contents</h2>
+            <ul>
+                <li><a href="#what-it-is">What SCHOOL is</a></li>
+                <li><a href="#flow">How a school site is wired</a></li>
+                <li><a href="#postgres">Postgres, not Strapi</a></li>
+                <li><a href="#reuse">Tables the school reuses</a></li>
+                <li><a href="#new-tables">New school tables</a></li>
+                <li><a href="#payments">India fee payments</a></li>
+                <li><a href="#api">REST resources</a></li>
+                <li><a href="#admin">Admin screens and the preset</a></li>
+                <li><a href="#satellite">Public satellite pages</a></li>
+                <li><a href="#checks">Operator checks</a></li>
+            </ul>
+        </nav>
+
+        <section id="what-it-is">
+            <h2>What SCHOOL is</h2>
+            <div class="section-container">
+                <div class="section-header">What the site type does</div>
+                <p>The catalog row is <code>SCHOOL</code>, label <code>School</code>, hint <code>Schools and campuses</code>, module key <code>SCHOOL</code>. It is stored on <code>tenant_organization.site_type</code>.</p>
+                <p><code>school_name</code> on a youth-competition participant is a field on that registration. It is not this site type.</p>
+                <div class="warning">
+                    <strong>Do not reuse the executive committee for teachers.</strong>
+                    <code class="code-highlight">executive_committee_team_members</code> is a church or organization committee (designation, bio, social links). School staff needs qualification, stage, subject, and class-teacher assignment. Mixing them would show teachers on church sites.
+                </div>
+            </div>
+        </section>
+
+        <section id="flow">
+            <h2>How a school site is wired</h2>
+            <div class="section-container usage">
+                <div class="section-header usage">Request path</div>
+                <div class="flow">
+                    <p>School admin uses <code>adwiise-agent-admin</code> at <code>/admin/school</code>.</p>
+                    <p>The admin app calls <code>adwiise-agent-service</code> with a service JWT and <code>X-Tenant-ID</code>.</p>
+                    <p>The service writes Postgres. The public satellite reads the same API when <code>site_type</code> is <code>SCHOOL</code>.</p>
+                    <p>A parent pays an open fee invoice. Razorpay checkout records a <code>school_fee_payment</code> row. The webhook marks the invoice paid. Stripe ticket and membership flows stay on their own tables.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="postgres">
+            <h2>Postgres, not Strapi</h2>
+            <div class="section-container">
+                <div class="section-header">System of record</div>
+                <p>Strapi in this platform is a narrow CMS for news advertisement slots and liturgical readings. School staff, departments, fees, and admissions join tenant id and payments through the same admin REST API as events.</p>
+                <ul>
+                    <li>Postgres holds tenant isolation, foreign keys, fee amounts, and payment status.</li>
+                    <li>Long text such as the principal's message, about, and a club page is a <code>school_page</code> row, so one admin screen owns the school site.</li>
+                    <li>Putting teachers or fee invoices in Strapi would split admin, break payment joins, and add a second auth model.</li>
+                </ul>
+                <div class="info">
+                    The canonical script is <code class="script-name">adwiise_agent_Latest_Schema.sql</code>. New school tables use a sequence per table, matching the rest of that file. The shared <code class="code-highlight">sequence_generator</code> is dropped at the top of the script, so these tables do not use it.
+                </div>
+            </div>
+        </section>
+
+        <section id="reuse">
+            <h2>Tables the school reuses</h2>
+            <div class="section-container">
+                <div class="section-header">Existing data, school meaning</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>School need</th>
+                            <th>Existing table</th>
+                            <th>How it is used</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Homepage announcement ticker</td>
+                            <td><code>news_flash</code></td>
+                            <td>Headline, link, and valid dates</td>
+                        </tr>
+                        <tr>
+                            <td>News and newsletters</td>
+                            <td><code>news_article</code>, <code>news_category</code></td>
+                            <td>Articles already used by other site types</td>
+                        </tr>
+                        <tr>
+                            <td>Merit Day and dated programs</td>
+                            <td><code>event_details</code></td>
+                            <td>Upcoming events on the school homepage</td>
+                        </tr>
+                        <tr>
+                            <td>Photo and video gallery</td>
+                            <td><code>gallery_album</code>, <code>gallery_category</code>, <code>gallery_youtube_video</code></td>
+                            <td>Public gallery routes stay in place</td>
+                        </tr>
+                        <tr>
+                            <td>Circulars, newsletters, admission forms as files</td>
+                            <td><code>official_document_category</code></td>
+                            <td>School slugs such as <code>circulars</code>, <code>newsletters</code>, <code>admission-forms</code></td>
+                        </tr>
+                        <tr>
+                            <td>Contact, phones, email, address</td>
+                            <td>Tenant organization and tenant settings</td>
+                            <td>No new contact table</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="new-tables">
+            <h2>New school tables</h2>
+            <div class="section-intro">
+                <p>Every school table is tenant-scoped with <code>tenant_id</code>, <code>created_at</code>, <code>updated_at</code>, and the <code>update_updated_at_column</code> trigger. Departments and staff reference each other: the department is created first, staff points at a department, then <code>head_staff_id</code> is added.</p>
+            </div>
+
+            <div class="section-container parameters">
+                <div class="section-header parameters">Content tables</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Table</th>
+                            <th>Purpose</th>
+                            <th>Important columns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>school_staff_member</code></td>
+                            <td>Teachers, administration, and supporting staff</td>
+                            <td><code>staff_category</code> is <code>ADMINISTRATION</code>, <code>TEACHING</code>, or <code>SUPPORTING</code>. <code>stage</code> is <code>KG</code>, <code>LP</code>, <code>UP</code>, <code>HS</code>, <code>HSS</code>, or <code>ALL</code>. Also name, designation, qualification, subject, class teacher, department, contact, photo, bio, and priority.</td>
+                        </tr>
+                        <tr>
+                            <td><code>school_department</code></td>
+                            <td>Subject departments</td>
+                            <td><code>name</code>, <code>slug</code>, summary, body, image, <code>head_staff_id</code>, sort order. Unique <code>(tenant_id, slug)</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>school_facility</code></td>
+                            <td>Labs, library, bus, music room</td>
+                            <td>Name, slug, summary, body, image, sort order. Unique <code>(tenant_id, slug)</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>school_activity</code></td>
+                            <td>Clubs, sports, and programs</td>
+                            <td><code>activity_kind</code> is <code>CLUB</code>, <code>SPORT</code>, or <code>PROGRAM</code>. Unique <code>(tenant_id, slug)</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>school_page</code></td>
+                            <td>About, principal's message, courses, languages</td>
+                            <td>Slug, title, summary, body, image. Unique <code>(tenant_id, slug)</code>. Homepage excerpt uses slug <code>principals-message</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>school_highlight</code></td>
+                            <td>Homepage merit names</td>
+                            <td>Person name, subtitle (class and year), image, academic year. These are not events and not staff.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-container parameters">
+                <div class="section-header parameters">Fee tables</div>
+                <p>Fee collection is separate from ticket sales. Stripe ticket columns stay on <code>event_ticket_transaction</code>.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Table</th>
+                            <th>Purpose</th>
+                            <th>Important columns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>school_fee_invoice</code></td>
+                            <td>A fee the parent can pay</td>
+                            <td><code>fee_kind</code> is <code>ADMISSION</code>, <code>TUITION</code>, <code>TRANSPORT</code>, or <code>OTHER</code>. <code>status</code> is <code>DRAFT</code>, <code>OPEN</code>, <code>PAID</code>, or <code>VOID</code>. <code>amount_due</code> is <code>numeric(21,2)</code>. Currency defaults to <code>INR</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>school_fee_payment</code></td>
+                            <td>One provider attempt against an invoice</td>
+                            <td><code>invoice_id</code>, <code>provider_name</code>, provider order id, provider payment id, amount, currency, status, <code>paid_at</code>.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="parameters-list">
+                    <p><strong>Invoice fields a payer sees</strong></p>
+                    <ul>
+                        <li><code>title</code> and <code>academic_year</code></li>
+                        <li><code>student_name</code> and <code>class_label</code></li>
+                        <li><code>payer_name</code>, <code>payer_email</code>, and <code>payer_phone</code></li>
+                        <li><code>due_date</code></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="payments">
+            <h2>India fee payments</h2>
+            <div class="section-container">
+                <div class="section-header">Stripe stays, Razorpay collects school fees</div>
+                <p>Stripe remains the card path for tickets and memberships. Those amounts stay in USD unless that tenant's Stripe account is India-enabled. School fee invoices are INR and need UPI, netbanking, and Indian cards.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>RAZORPAY</code></td>
+                            <td>One Checkout for UPI, Visa, Mastercard, Amex, RuPay, netbanking, and wallets</td>
+                            <td>Orders plus webhook are implemented</td>
+                        </tr>
+                        <tr>
+                            <td><code>NTT_DATA</code></td>
+                            <td>Same invoice and <code>school_fee_payment</code> rows, different redirect and hash</td>
+                            <td>Name is allowed. Checkout returns not enabled until a merchant hash spec is in hand</td>
+                        </tr>
+                        <tr>
+                            <td><code>STRIPE</code></td>
+                            <td>Existing ticket and membership flows</td>
+                            <td>Unchanged. Do not send Razorpay payments through <code class="script-name">StripeFeesTaxService</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="parameters-list">
+                    <p><strong>payment_provider_config</strong></p>
+                    <ul>
+                        <li><code>check_provider_name</code> includes <code>RAZORPAY</code> and <code>NTT_DATA</code></li>
+                        <li><code>check_payment_use_case</code> includes <code>FEE_COLLECTION</code></li>
+                        <li>Publishable values and gateway settings go in <code>publishable_key</code> and <code>configuration_json</code></li>
+                        <li>Secrets stay in <code>provider_secret_key_encrypted</code></li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    Batch jobs stay Stripe-only for fee, tax, and refund sync. There is no Razorpay settlement job in this slice. <code class="code-highlight">PaymentProvider</code> in the service and the batch-job copy both include the two new names so a config row can be stored.
+                </div>
+                <div class="info">
+                    <strong>Runtime keys for the first Razorpay adapter.</strong>
+                    The checkout route reads <code class="code-highlight">RAZORPAY_KEY_ID</code> and <code class="code-highlight">RAZORPAY_KEY_SECRET</code>, or the <code class="code-highlight">AMPLIFY_</code> copies. The webhook reads <code class="code-highlight">RAZORPAY_WEBHOOK_SECRET</code>. The route is <code class="script-name">route.ts</code> under <code>/api/webhooks/razorpay</code> and <code>/api/school/fee-checkout</code>.
+                </div>
+            </div>
+
+            <div class="section-container output">
+                <div class="section-header output">Checkout result</div>
+                <ol>
+                    <li>The admissions page lists open invoices whose <code>fee_kind</code> is <code>ADMISSION</code>.</li>
+                    <li><code>POST /api/school/fee-checkout</code> accepts only an <code>OPEN</code> invoice with a positive INR amount.</li>
+                    <li>Razorpay returns an order. The app inserts <code>school_fee_payment</code> with provider <code>RAZORPAY</code> and status <code>CREATED</code>.</li>
+                    <li>The webhook verifies <code>x-razorpay-signature</code>, then on <code>payment.captured</code> sets the payment to <code>CAPTURED</code> and the invoice to <code>PAID</code>.</li>
+                    <li>A request with provider <code>NTT_DATA</code> returns HTTP 501 and does not create a second invoice model.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="api">
+            <h2>REST resources</h2>
+            <div class="section-container usage">
+                <div class="section-header usage">Spring paths</div>
+                <p>Each resource follows the executive-committee shape: entity, DTO, criteria, query service, and REST resource. Create requires <code>tenantId</code>. Calls send <code>X-Tenant-ID</code>. The admin app proxies each resource with <code class="script-name">index.ts</code> and <code class="script-name">[...slug].ts</code> (<code>bodyParser: false</code>).</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Departments</td><td><code>/api/school-departments</code></td></tr>
+                        <tr><td>Staff</td><td><code>/api/school-staff-members</code></td></tr>
+                        <tr><td>Facilities</td><td><code>/api/school-facilities</code></td></tr>
+                        <tr><td>Activities</td><td><code>/api/school-activities</code></td></tr>
+                        <tr><td>Pages</td><td><code>/api/school-pages</code></td></tr>
+                        <tr><td>Highlights</td><td><code>/api/school-highlights</code></td></tr>
+                        <tr><td>Fee invoices</td><td><code>/api/school-fee-invoices</code></td></tr>
+                        <tr><td>Fee payments</td><td><code>/api/school-fee-payments</code></td></tr>
+                    </tbody>
+                </table>
+                <p>List, get, count, create, replace, merge-patch, and delete are on each resource. Server actions live in <code class="script-name">ApiServerActions.ts</code> and call <code>getApiBaseUrl()</code> with <code>fetchWithJwtRetry</code>.</p>
+            </div>
+        </section>
+
+        <section id="admin">
+            <h2>Admin screens and the preset</h2>
+            <div class="section-container">
+                <div class="section-header">Where an operator works</div>
+                <ul>
+                    <li>Onboarding and the organization form offer <code>School</code>.</li>
+                    <li>Choosing <code>SCHOOL</code> applies the school preset in <code class="script-name">siteTypePresets.ts</code>.</li>
+                    <li>The preset turns on events, news, gallery, downloads, about, and contact.</li>
+                    <li>The preset leaves sports tournaments, league standings, squad sections, and retail packs off.</li>
+                    <li><code>/admin/school</code> edits staff, departments, facilities, activities, pages, highlights, and fee invoices. Staff lists group by category and stage.</li>
+                    <li>Lower <code>priority_order</code> or <code>sort_order</code> appears first.</li>
+                </ul>
+                <div class="success">
+                    <strong>Admissions content.</strong> Publish a <code class="code-highlight">school_page</code> with slug <code class="code-highlight">admissions</code>, then an open <code class="code-highlight">school_fee_invoice</code> of kind <code class="code-highlight">ADMISSION</code>. A full application form waits until a school asks for that workflow.
+                </div>
+            </div>
+        </section>
+
+        <section id="satellite">
+            <h2>Public satellite pages</h2>
+            <div class="section-container usage">
+                <div class="section-header usage">Shown when site_type is SCHOOL</div>
+                <p>The satellite homepage, in the kcnj-style frontend, replaces the event homepage when the tenant organization site type is <code>SCHOOL</code>. Gallery, news, downloads, and contact stay on the existing routes.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nav label</th>
+                            <th>Route</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Home</td><td><code>/</code> and <code>/school</code></td><td>Ticker, principal excerpt, facilities, highlights, upcoming events</td></tr>
+                        <tr><td>About</td><td><code>/school/pages/about</code></td><td><code>school_page</code> slug <code>about</code></td></tr>
+                        <tr><td>Staff</td><td><code>/school/staff</code></td><td>Active staff grouped by category and stage</td></tr>
+                        <tr><td>Departments</td><td><code>/school/departments</code></td><td>Department list and slug page</td></tr>
+                        <tr><td>Facilities</td><td><code>/school/facilities</code></td><td>Facility list and slug page</td></tr>
+                        <tr><td>Activities</td><td><code>/school/activities</code></td><td>Clubs, sports, and programs</td></tr>
+                        <tr><td>Gallery</td><td><code>/gallery</code></td><td>Existing gallery</td></tr>
+                        <tr><td>News</td><td><code>/news</code></td><td>Existing news</td></tr>
+                        <tr><td>Downloads</td><td><code>/downloads</code></td><td>Existing official documents</td></tr>
+                        <tr><td>Admissions</td><td><code>/school/admissions</code></td><td>Admissions page plus open admission invoices and Razorpay pay</td></tr>
+                        <tr><td>Contact</td><td><code>/contact</code></td><td>Tenant organization contact</td></tr>
+                    </tbody>
+                </table>
+                <div class="parameters-list">
+                    <p><strong>Homepage slots</strong></p>
+                    <ul>
+                        <li><code>news_flash</code> for the ticker</li>
+                        <li><code>school_page</code> slug <code>principals-message</code></li>
+                        <li>Active <code>school_facility</code> rows</li>
+                        <li>Active <code>school_highlight</code> rows</li>
+                        <li><code>event_details</code> with a start date of today or later</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="checks">
+            <h2>Operator checks</h2>
+            <div class="section-intro">
+                <p>Apply <code class="script-name">adwiise_agent_Latest_Schema.sql</code> and restart the Spring service before these checks. Commands below are single-line so they paste into Windows PowerShell.</p>
+            </div>
+
+            <div class="section-container output">
+                <div class="section-header output">Confirm the catalog row</div>
+                <div class="command-block verify"
+                     data-command-type="verify"
+                     data-command-base="psql"
+                     data-template-command="psql &quot;postgresql://postgres:postgres@localhost:5432/adwiise&quot; -c &quot;SELECT code, label, module_key, sort_order FROM public.site_type_catalog WHERE code = 'SCHOOL';&quot;">
+                    <div class="command-header">
+                        <span class="command-type">Verify query</span>
+                        <div class="command-header-buttons">
+                            <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this, 'verify-school-catalog')" title="Copy template command" aria-label="Copy template catalog query">Template</button>
+                            <button class="copy-button" type="button" onclick="copyCommand(this, 'verify-school-catalog')" title="Copy customized command" aria-label="Copy customized catalog query">Copy</button>
+                        </div>
+                    </div>
+                    <div class="command-parameters">
+                        <h5>Customize parameters</h5>
+                        <div class="parameter-group single">
+                            <div class="parameter-input">
+                                <label for="verify-school-catalog-connection">Postgres connection URL</label>
+                                <input type="text" id="verify-school-catalog-connection" value="postgresql://postgres:postgres@localhost:5432/adwiise" oninput="updateCommand('verify-school-catalog', 'connection', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="command-content" id="verify-school-catalog">psql "postgresql://postgres:postgres@localhost:5432/adwiise" -c "SELECT code, label, module_key, sort_order FROM public.site_type_catalog WHERE code = 'SCHOOL';"</div>
+                    <div class="command-single-line" id="verify-school-catalog-single">
+                        <div class="command-single-line-label">Windows single-line</div>
+                        <code id="verify-school-catalog-single-code">psql "postgresql://postgres:postgres@localhost:5432/adwiise" -c "SELECT code, label, module_key, sort_order FROM public.site_type_catalog WHERE code = 'SCHOOL';"</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container usage">
+                <div class="section-header usage">List staff for one tenant</div>
+                <div class="parameters-list">
+                    <p><strong>Parameters</strong></p>
+                    <ul>
+                        <li><code>api-base</code> is the Spring base URL, without a trailing slash</li>
+                        <li><code>tenant-id</code> is sent as <code>X-Tenant-ID</code></li>
+                        <li><code>bearer-token</code> is the service JWT</li>
+                    </ul>
+                </div>
+                <div class="command-block setup"
+                     data-command-type="setup"
+                     data-command-base="curl.exe -s"
+                     data-template-command="curl.exe -s &quot;http://localhost:8080/api/school-staff-members?size=20&amp;sort=priorityOrder,asc&quot; -H &quot;Authorization: Bearer TOKEN&quot; -H &quot;X-Tenant-ID: tenant_school_001&quot;">
+                    <div class="command-header">
+                        <span class="command-type">Setup check</span>
+                        <div class="command-header-buttons">
+                            <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this, 'list-school-staff')" title="Copy template command" aria-label="Copy template staff request">Template</button>
+                            <button class="copy-button" type="button" onclick="copyCommand(this, 'list-school-staff')" title="Copy customized command" aria-label="Copy customized staff request">Copy</button>
+                        </div>
+                    </div>
+                    <div class="command-parameters">
+                        <h5>Customize parameters</h5>
+                        <div class="parameter-group">
+                            <div class="parameter-input">
+                                <label for="list-school-staff-api-base">API base</label>
+                                <input type="text" id="list-school-staff-api-base" value="http://localhost:8080" oninput="updateCommand('list-school-staff', 'api-base', this.value)">
+                            </div>
+                            <div class="parameter-input">
+                                <label for="list-school-staff-tenant-id">Tenant id</label>
+                                <input type="text" id="list-school-staff-tenant-id" value="tenant_school_001" oninput="updateCommand('list-school-staff', 'tenant-id', this.value)">
+                            </div>
+                        </div>
+                        <div class="parameter-group single">
+                            <div class="parameter-input">
+                                <label for="list-school-staff-bearer-token">Bearer token</label>
+                                <input type="text" id="list-school-staff-bearer-token" value="TOKEN" oninput="updateCommand('list-school-staff', 'bearer-token', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="command-content" id="list-school-staff">curl.exe -s "http://localhost:8080/api/school-staff-members?size=20&amp;sort=priorityOrder,asc" -H "Authorization: Bearer TOKEN" -H "X-Tenant-ID: tenant_school_001"</div>
+                    <div class="command-single-line" id="list-school-staff-single">
+                        <div class="command-single-line-label">Windows single-line</div>
+                        <code id="list-school-staff-single-code">curl.exe -s "http://localhost:8080/api/school-staff-members?size=20&amp;sort=priorityOrder,asc" -H "Authorization: Bearer TOKEN" -H "X-Tenant-ID: tenant_school_001"</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container parameters">
+                <div class="section-header parameters">Start a fee checkout</div>
+                <p>Call this on the school satellite, not on the Spring host. The route creates the Razorpay order and the payment row. An invoice must already be <code>OPEN</code>, currency <code>INR</code>, with a positive amount.</p>
+                <div class="command-block advance"
+                     data-command-type="advance"
+                     data-command-base="curl.exe -s -X POST"
+                     data-template-command="curl.exe -s -X POST &quot;http://localhost:3000/api/school/fee-checkout&quot; -H &quot;Content-Type: application/json&quot; -d &quot;{\&quot;invoiceId\&quot;: 1, \&quot;provider\&quot;: \&quot;RAZORPAY\&quot;}&quot;">
+                    <div class="command-header">
+                        <span class="command-type">Checkout check</span>
+                        <div class="command-header-buttons">
+                            <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this, 'fee-checkout')" title="Copy template command" aria-label="Copy template checkout request">Template</button>
+                            <button class="copy-button" type="button" onclick="copyCommand(this, 'fee-checkout')" title="Copy customized command" aria-label="Copy customized checkout request">Copy</button>
+                        </div>
+                    </div>
+                    <div class="command-parameters">
+                        <h5>Customize parameters</h5>
+                        <div class="parameter-group">
+                            <div class="parameter-input">
+                                <label for="fee-checkout-site-origin">Satellite origin</label>
+                                <input type="text" id="fee-checkout-site-origin" value="http://localhost:3000" oninput="updateCommand('fee-checkout', 'site-origin', this.value)">
+                            </div>
+                            <div class="parameter-input">
+                                <label for="fee-checkout-invoice-id">Invoice id</label>
+                                <input type="number" id="fee-checkout-invoice-id" value="1" min="1" oninput="updateCommand('fee-checkout', 'invoice-id', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="command-content" id="fee-checkout">curl.exe -s -X POST "http://localhost:3000/api/school/fee-checkout" -H "Content-Type: application/json" -d "{\"invoiceId\": 1, \"provider\": \"RAZORPAY\"}"</div>
+                    <div class="command-single-line" id="fee-checkout-single">
+                        <div class="command-single-line-label">Windows single-line</div>
+                        <code id="fee-checkout-single-code">curl.exe -s -X POST "http://localhost:3000/api/school/fee-checkout" -H "Content-Type: application/json" -d "{\"invoiceId\": 1, \"provider\": \"RAZORPAY\"}"</code>
+                    </div>
+                </div>
+                <div class="error">
+                    <strong>Checkout fails closed</strong> when Razorpay keys are missing, the invoice is not open, the currency is not INR, or the amount is not positive. Provider <code class="code-highlight">NTT_DATA</code> returns 501.
+                </div>
+            </div>
+        </section>
+    </main>
+    <script>
+        const commandParams = {};
+
+        function updateCommand(commandId, paramName, paramValue) {
+            if (!commandParams[commandId]) {
+                commandParams[commandId] = {};
+            }
+            commandParams[commandId][paramName] = paramValue;
+            updateCommandFromParams(commandId);
+        }
+
+        function updateCommandFromParams(commandId) {
+            const commandElement = document.getElementById(commandId);
+            if (!commandElement) return;
+            const params = commandParams[commandId] || {};
+            let command = '';
+
+            if (commandId === 'verify-school-catalog') {
+                const connection = (params.connection || '').trim();
+                command = 'psql "' + connection + '" -c "SELECT code, label, module_key, sort_order FROM public.site_type_catalog WHERE code = \'SCHOOL\';"';
+            } else if (commandId === 'list-school-staff') {
+                const apiBase = (params['api-base'] || '').trim().replace(/\/$/, '');
+                const tenantId = (params['tenant-id'] || '').trim();
+                const token = (params['bearer-token'] || '').trim();
+                command = 'curl.exe -s "' + apiBase + '/api/school-staff-members?size=20&sort=priorityOrder,asc" -H "Authorization: Bearer ' + token + '" -H "X-Tenant-ID: ' + tenantId + '"';
+            } else if (commandId === 'fee-checkout') {
+                const origin = (params['site-origin'] || '').trim().replace(/\/$/, '');
+                const invoiceId = String(params['invoice-id'] || '').trim();
+                command = 'curl.exe -s -X POST "' + origin + '/api/school/fee-checkout" -H "Content-Type: application/json" -d "{\\"invoiceId\\": ' + invoiceId + ', \\"provider\\": \\"RAZORPAY\\"}"';
+            }
+
+            if (!command) return;
+            commandElement.textContent = command;
+            const singleLineCode = document.getElementById(commandId + '-single-code');
+            if (singleLineCode) {
+                singleLineCode.textContent = command;
+            }
+        }
+
+        function fallbackCopy(text, button, label) {
+            const area = document.createElement('textarea');
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand('copy');
+            document.body.removeChild(area);
+            button.classList.add('copied');
+            button.textContent = 'Copied';
+            setTimeout(function () {
+                button.classList.remove('copied');
+                button.textContent = label;
+            }, 2000);
+        }
+
+        function copyTemplateCommand(button, commandId) {
+            const commandBlock = button.closest('.command-block');
+            if (!commandBlock) return;
+            let templateCommand = commandBlock.getAttribute('data-template-command') || '';
+            templateCommand = templateCommand.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(templateCommand).then(function () {
+                    button.classList.add('copied');
+                    button.textContent = 'Copied';
+                    setTimeout(function () {
+                        button.classList.remove('copied');
+                        button.textContent = 'Template';
+                    }, 2000);
+                }).catch(function () {
+                    fallbackCopy(templateCommand, button, 'Template');
+                });
+            } else {
+                fallbackCopy(templateCommand, button, 'Template');
+            }
+        }
+
+        function copyCommand(button, commandId) {
+            const commandElement = document.getElementById(commandId);
+            if (!commandElement) return;
+            const commandText = commandElement.textContent.trim();
+            const singleLineElement = document.getElementById(commandId + '-single');
+            if (singleLineElement) {
+                singleLineElement.classList.add('show');
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(commandText).then(function () {
+                    button.classList.add('copied');
+                    button.textContent = 'Copied';
+                    setTimeout(function () {
+                        button.classList.remove('copied');
+                        button.textContent = 'Copy';
+                    }, 2000);
+                }).catch(function () {
+                    fallbackCopy(commandText, button, 'Copy');
+                });
+            } else {
+                fallbackCopy(commandText, button, 'Copy');
+            }
+        }
+
+        function initializeCommands() {
+            document.querySelectorAll('.command-block[data-command-base]').forEach(function (block) {
+                const commandContent = block.querySelector('.command-content');
+                if (!commandContent || !commandContent.id) return;
+                const commandId = commandContent.id;
+                block.querySelectorAll('.parameter-input input').forEach(function (input) {
+                    if (!input.id || input.id.indexOf(commandId + '-') !== 0) return;
+                    const paramName = input.id.substring(commandId.length + 1);
+                    if (!commandParams[commandId]) {
+                        commandParams[commandId] = {};
+                    }
+                    commandParams[commandId][paramName] = input.value || '';
+                });
+                updateCommandFromParams(commandId);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeCommands);
+    </script>
+</body>
+</html>

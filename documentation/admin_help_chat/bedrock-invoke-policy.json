@@ -10,7 +10,11 @@
       ],
       "Resource": [
         "arn:aws:bedrock:us-east-1::foundation-model/*",
-        "arn:aws:bedrock:us-east-1:224674645062:inference-profile/*"
+        "arn:aws:bedrock:us-east-2::foundation-model/*",
+        "arn:aws:bedrock:us-west-2::foundation-model/*",
+        "arn:aws:bedrock:us-east-1:224674645062:inference-profile/*",
+        "arn:aws:bedrock:us-east-2:224674645062:inference-profile/*",
+        "arn:aws:bedrock:us-west-2:224674645062:inference-profile/*"
       ]
     }
   ]

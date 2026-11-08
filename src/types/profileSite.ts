@@ -204,6 +204,7 @@ export const TENANT_SITE_TYPE_LABELS: Record<string, string> = {
   PERSONAL_PROFILE: 'Personal profile / portfolio',
   HYBRID: 'Hybrid (profile + events)',
   RETAIL: 'Retail',
+  SCHOOL: 'School',
   GAS_STATION: 'Gas station (AI COO)',
   GAS_STATION_ENT: 'Gas station enterprise',
   LIQUOR_STORE: 'Liquor store',

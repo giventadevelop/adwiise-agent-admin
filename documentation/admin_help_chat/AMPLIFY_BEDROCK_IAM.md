@@ -42,7 +42,21 @@ cd F:\project_workspace\adwiise-agent-admin
 
 Local env files (`.env`, `.env.local`, `.env.production`) should also contain the same three Bedrock keys. `amplify.yml` must include `BEDROCK_` in the build-time env grep so SSR Lambdas see them.
 
-## Amplify compute role (preferred)
+## Amplify compute role (required)
+
+The service role's Bedrock policy does nothing for Admin Help until the app **compute role** is that same role. `computeRoleArn: null` means the Next.js server has no Bedrock credentials, `invokeAdminHelpBedrock` throws, and the route returns the short knowledge-pack stub (`backend: "stub"`). Local works because the developer credential chain can call Bedrock. `BEDROCK_ENABLED=true` only means the route will try the call.
+
+Follow the same ordered steps in [bedrock_llm_admin_help_and_chat_integration.html](./bedrock_llm_admin_help_and_chat_integration.html) section “Short stub on the hubs, long answer locally” and in `.cursor/rules/bedrock_llm_admin_help_and_chat_integration.mdc`.
+
+1. `aws amplify get-app --app-id <id> --region us-east-2 --query app.computeRoleArn` (add `--no-verify-ssl` on `CERTIFICATE_VERIFY_FAILED`).
+2. Attach `bedrock-invoke-policy.json` as inline policy `AdminHelpBedrockInvoke`. The `us.` profile needs foundation-model and inference-profile invoke in `us-east-1`, `us-east-2`, and `us-west-2`.
+3. `aws amplify update-app --app-id <id> --compute-role-arn <role-arn> --region us-east-2` for `d3gov7yn1ctow1` and `d3qk5eouzr7b80`. Do not pass `--environment-variables` unless the payload is the full map. Confirm the env key count did not drop.
+4. `aws amplify start-job --app-id <id> --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2`. A compute-role change is not live until this release.
+5. Sign in and confirm `POST /api/admin/help-chat` returns `"backend":"bedrock"`. `"backend":"stub"` means invoke still failed; read `/aws/amplify/<appId>` for `[adminHelp] Bedrock invoke failed`.
+
+Role ARN: `arn:aws:iam::224674645062:role/service-role/AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a`. Applied 2026-11-06 on prod release 152 and dev release 15.
+
+## Attach the invoke policy
 
 > Note: List Amplify apps with `aws amplify list-apps --region us-east-2`. An earlier “zero apps / app not found” failure was from querying **`us-east-1`** with a stale app id (`d1508w3f27cyps`). The live hub is `d3gov7yn1ctow1` in **us-east-2**.
 
@@ -67,8 +81,12 @@ Local env files (`.env`, `.env.local`, `.env.production`) should also contain th
         "bedrock:InvokeModelWithResponseStream"
       ],
       "Resource": [
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.*",
-        "arn:aws:bedrock:us-east-1:224674645062:inference-profile/*"
+        "arn:aws:bedrock:us-east-1::foundation-model/*",
+        "arn:aws:bedrock:us-east-2::foundation-model/*",
+        "arn:aws:bedrock:us-west-2::foundation-model/*",
+        "arn:aws:bedrock:us-east-1:224674645062:inference-profile/*",
+        "arn:aws:bedrock:us-east-2:224674645062:inference-profile/*",
+        "arn:aws:bedrock:us-west-2:224674645062:inference-profile/*"
       ]
     }
   ]

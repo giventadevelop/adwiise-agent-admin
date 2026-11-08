@@ -1,6 +1,16 @@
 import type { TenantSiteType } from './profileSite';
 
 export type { TenantSiteType };
+export type {
+  SchoolDepartmentDTO,
+  SchoolStaffMemberDTO,
+  SchoolFacilityDTO,
+  SchoolActivityDTO,
+  SchoolPageDTO,
+  SchoolHighlightDTO,
+  SchoolFeeInvoiceDTO,
+  SchoolFeePaymentDTO,
+} from './school';
 
 export interface UserTaskDTO {
   id: number;

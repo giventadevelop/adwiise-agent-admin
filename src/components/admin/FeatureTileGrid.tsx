@@ -35,6 +35,7 @@ const TONE_CARD: Record<string, string> = {
   violet: 'bg-violet-50 hover:bg-violet-100 text-violet-800',
   fuchsia: 'bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800',
   sky: 'bg-sky-50 hover:bg-sky-100 text-sky-800',
+  schoolCampus: 'bg-[#fff7ed] hover:bg-[#ffedd5] text-[#9a3412]',
 };
 
 const TONE_ICON: Record<string, string> = {
@@ -55,6 +56,7 @@ const TONE_ICON: Record<string, string> = {
   violet: 'bg-violet-100 text-violet-500',
   fuchsia: 'bg-fuchsia-100 text-fuchsia-500',
   sky: 'bg-sky-100 text-sky-500',
+  schoolCampus: 'bg-[#ffedd5] text-[#c2410c]',
 };
 
 export function toneCardClass(tone: string) {

@@ -18,6 +18,7 @@ export const ONBOARDING_SITE_TYPE_OPTIONS: { value: TenantSiteType; label: strin
   { value: 'PERSONAL_PROFILE', label: 'Personal profile', hint: 'Individual professional or personal site' },
   { value: 'HYBRID', label: 'Hybrid', hint: 'Profile plus events' },
   { value: 'RETAIL', label: 'Retail', hint: 'Shop archetype. The pack is gas, liquor, or another retailer type.' },
+  { value: 'SCHOOL', label: 'School', hint: 'Schools and campuses' },
 ];
 
 export const DOMAIN_OWNERSHIP_OPTIONS: { value: DomainOwnership; label: string }[] = [

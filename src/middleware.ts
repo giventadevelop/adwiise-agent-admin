@@ -38,6 +38,7 @@ const isPublicRoute = createRouteMatcher([
   '/auth/signout-redirect(.*)',
   '/oauth/zoho(.*)',
   '/api/webhooks(.*)',
+  '/api/school(.*)',
   '/api/public(.*)',
   '/api/proxy(.*)',
   '/api/event/success(.*)',

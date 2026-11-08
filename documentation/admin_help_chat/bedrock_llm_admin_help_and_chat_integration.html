@@ -345,24 +345,81 @@ BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5</pre>
     Use it for full restores, not for “add three Bedrock keys.” Prefer the merge script for Bedrock-only updates.
   </div>
 
-  <h2>6. Bolting Admin Help onto another admin / satellite frontend</h2>
+  <h2>6. Short stub on the hubs, long answer locally</h2>
+  <div class="section-intro">
+    <p>Localhost Admin Help can write a multi-step how-to while <code class="code-highlight">https://www.adwiiseagent.ai/admin</code> and <code class="code-highlight">https://dev.adwiiseagent.ai/admin</code> return one sentence, for example “Admin Home: Returns to this dashboard so you can open another admin area. It does not edit tenant data.”</p>
+  </div>
+  <div class="warning-box">
+    That sentence is <code class="code-highlight">stubAdminHelpAnswer</code> in <code class="code-highlight">src/lib/adminHelp/bedrock.ts</code>.
+    <code class="code-highlight">answerAdminHelpQuestion</code> uses the stub when Bedrock is off <strong>or</strong> when <code class="code-highlight">invokeAdminHelpBedrock</code> throws.
+    <code class="code-highlight">BEDROCK_ENABLED=true</code> only means the route will try the call. It does not prove the live server has credentials.
+  </div>
+  <div class="section-container parameters">
+    <div class="section-header">Cause confirmed 2026-11-06</div>
+    <div class="section-body">
+      <ul>
+        <li>Both hubs already had <code class="code-highlight">BEDROCK_ENABLED=true</code>, <code class="code-highlight">BEDROCK_REGION=us-east-1</code>, and <code class="code-highlight">BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5</code>.</li>
+        <li>Inline policy <code class="code-highlight">AdminHelpBedrockInvoke</code> was on <code class="code-highlight">AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a</code>.</li>
+        <li><code class="code-highlight">computeRoleArn</code> was null, so the Next.js server never assumed that role. The SDK had no credentials and the catch block returned the knowledge-pack stub.</li>
+        <li>Localhost works because the developer credential chain can call Bedrock.</li>
+      </ul>
+    </div>
+  </div>
+  <p>Fix both hubs. Prod app <code class="code-highlight">d3gov7yn1ctow1</code>, dev app <code class="code-highlight">d3qk5eouzr7b80</code>. The role trust policy must allow <code class="code-highlight">amplify.amazonaws.com</code> to <code class="code-highlight">sts:AssumeRole</code>.</p>
+  <ol>
+    <li>Read the compute role: <code class="code-highlight">aws amplify get-app --app-id &lt;id&gt; --region us-east-2 --query app.computeRoleArn</code>. Add <code class="code-highlight">--no-verify-ssl</code> when the CLI fails with <code class="code-highlight">CERTIFICATE_VERIFY_FAILED</code>.</li>
+    <li>Put <code class="script-name">bedrock-invoke-policy.json</code> on that role as inline policy <code class="code-highlight">AdminHelpBedrockInvoke</code>. The <code class="code-highlight">us.</code> inference profile needs invoke permission on foundation models and inference profiles in <code class="code-highlight">us-east-1</code>, <code class="code-highlight">us-east-2</code>, and <code class="code-highlight">us-west-2</code>. A us-east-1-only resource list denies the cross-region profile.</li>
+    <li>Set <code class="code-highlight">computeRoleArn</code> with <code class="code-highlight">update-app --compute-role-arn</code> only. Do not pass <code class="code-highlight">--environment-variables</code> unless the JSON is the full map; that flag replaces every key. Confirm the env key count did not drop.</li>
+    <li>RELEASE <code class="code-highlight">release/v1.0.0</code>. A compute-role change is not live until the next release. Prod auto-build can be off, so start a RELEASE job.</li>
+    <li>Sign in, ask Help, and inspect <code class="code-highlight">POST /api/admin/help-chat</code>. <code class="code-highlight">"backend":"bedrock"</code> is the live model. <code class="code-highlight">"backend":"stub"</code> means invoke still failed. Read CloudWatch <code class="code-highlight">/aws/amplify/&lt;appId&gt;</code> for <code class="code-highlight">[adminHelp] Bedrock invoke failed</code>.</li>
+  </ol>
+
+  <div class="command-block setup" data-command-type="setup">
+    <div class="command-header">
+      <span class="command-type">Set the hub compute role (does not replace env vars)</span>
+      <button type="button" class="copy-button" onclick="copyCommand(this,'set-compute-role')">Copy</button>
+    </div>
+    <pre class="command-content" id="set-compute-role">$role = "arn:aws:iam::224674645062:role/service-role/AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a"; aws amplify update-app --app-id d3gov7yn1ctow1 --compute-role-arn $role --region us-east-2 --no-verify-ssl --query "app.{id:appId,compute:computeRoleArn,envCount:length(keys(environmentVariables))}" --output json; aws amplify update-app --app-id d3qk5eouzr7b80 --compute-role-arn $role --region us-east-2 --no-verify-ssl --query "app.{id:appId,compute:computeRoleArn,envCount:length(keys(environmentVariables))}" --output json</pre>
+    <div class="command-single-line">
+      <div class="command-single-line-label">Windows single-line:</div>
+      <code id="set-compute-role-single-code">$role = "arn:aws:iam::224674645062:role/service-role/AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a"; aws amplify update-app --app-id d3gov7yn1ctow1 --compute-role-arn $role --region us-east-2 --no-verify-ssl --query "app.{id:appId,compute:computeRoleArn,envCount:length(keys(environmentVariables))}" --output json; aws amplify update-app --app-id d3qk5eouzr7b80 --compute-role-arn $role --region us-east-2 --no-verify-ssl --query "app.{id:appId,compute:computeRoleArn,envCount:length(keys(environmentVariables))}" --output json</code>
+    </div>
+  </div>
+
+  <div class="command-block setup" data-command-type="setup">
+    <div class="command-header">
+      <span class="command-type">Release both hubs so Next.js picks up the compute role</span>
+      <button type="button" class="copy-button" onclick="copyCommand(this,'release-hubs')">Copy</button>
+    </div>
+    <pre class="command-content" id="release-hubs">aws amplify start-job --app-id d3gov7yn1ctow1 --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2 --no-verify-ssl --query jobSummary.jobId --output text; aws amplify start-job --app-id d3qk5eouzr7b80 --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2 --no-verify-ssl --query jobSummary.jobId --output text</pre>
+    <div class="command-single-line">
+      <div class="command-single-line-label">Windows single-line:</div>
+      <code id="release-hubs-single-code">aws amplify start-job --app-id d3gov7yn1ctow1 --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2 --no-verify-ssl --query jobSummary.jobId --output text; aws amplify start-job --app-id d3qk5eouzr7b80 --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2 --no-verify-ssl --query jobSummary.jobId --output text</code>
+    </div>
+  </div>
+
+  <div class="success-box">
+    Applied 2026-11-06: production release <strong>152</strong> and dev release <strong>15</strong> succeeded with this compute role. Env key counts stayed 83 (prod) and 85 (dev).
+  </div>
+
+  <h2>7. Bolting Admin Help onto another admin / satellite frontend</h2>
   <ol>
     <li>Copy <code class="code-highlight">src/lib/adminHelp/</code>, the help-chat API route, and <code class="code-highlight">AdminHelpChat</code>; mount it in the admin layout client.</li>
     <li>Add dependency <code class="code-highlight">@aws-sdk/client-bedrock-runtime</code> and the three <code class="code-highlight">BEDROCK_*</code> env vars.</li>
     <li>Keep Clerk + admin role checks on the API route.</li>
     <li>Extend the knowledge pack (<code class="code-highlight">hubGuides</code>, <code class="code-highlight">howTos</code>, <code class="code-highlight">operatorGuides</code>, <code class="code-highlight">routeMap</code>) for that product’s tiles — do not dump every HTML PRD into the prompt.</li>
-    <li>Merge Amplify env (us-east-2 app id) and attach <code class="code-highlight">bedrock:InvokeModel</code> to that app’s SSR role.</li>
+    <li>Merge Amplify env (us-east-2 app id), attach <code class="code-highlight">AdminHelpBedrockInvoke</code>, and set <code class="code-highlight">computeRoleArn</code> to that role. A policy on the service role alone does not reach the Next.js server. Then RELEASE the branch.</li>
     <li>If the clone has retail, keep Retail Ask on Spring → engine; do not merge the two chat APIs.</li>
   </ol>
 
-  <h2>7. Retail Ask (engine) reminders</h2>
+  <h2>8. Retail Ask (engine) reminders</h2>
   <ul>
     <li>Client: <code class="code-highlight">gas_station_ai_engine/llm/bedrock.py</code> — <code class="code-highlight">explain</code> vs <code class="code-highlight">ask</code>, account gate <code class="code-highlight">PROJECT_ACCOUNT</code>.</li>
     <li>Brief grounding only; max tokens are tighter than Admin Help.</li>
     <li>Related deploy notes live under application-deployments aws-infrastructure engine HTTP scripts (dev/prod engine Bedrock for Upload / Grounded Ask).</li>
   </ul>
 
-  <h2>8. Anti-patterns</h2>
+  <h2>9. Anti-patterns</h2>
   <table>
     <thead>
       <tr><th>Avoid</th><th>Do instead</th></tr>
@@ -388,10 +445,22 @@ BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5</pre>
         <td>Teaching SUPER_ADMIN-only flows to tenant ADMIN</td>
         <td>Filter <code class="code-highlight">platformOnly</code> chunks</td>
       </tr>
+      <tr>
+        <td>Treat <code class="code-highlight">BEDROCK_ENABLED=true</code> as proof the live chat calls Bedrock</td>
+        <td>Check <code class="code-highlight">POST /api/admin/help-chat</code> for <code class="code-highlight">"backend":"bedrock"</code></td>
+      </tr>
+      <tr>
+        <td>Leave <code class="code-highlight">computeRoleArn</code> null after attaching the invoke policy to the service role</td>
+        <td>Set the compute role, then RELEASE <code class="code-highlight">release/v1.0.0</code></td>
+      </tr>
+      <tr>
+        <td>Limit the invoke policy to us-east-1 when the model id starts with <code class="code-highlight">us.</code></td>
+        <td>Allow foundation models and inference profiles in us-east-1, us-east-2, and us-west-2</td>
+      </tr>
     </tbody>
   </table>
 
-  <h2>9. Related files (keep copies aligned)</h2>
+  <h2>10. Related files (keep copies aligned)</h2>
   <div class="section-container output">
     <div class="section-header">Canonical locations</div>
     <div class="section-body">

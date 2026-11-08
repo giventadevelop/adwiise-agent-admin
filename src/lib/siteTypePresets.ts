@@ -35,6 +35,41 @@ export interface SiteTypePresetSettings {
   showNewsAdvertisements?: boolean;
 }
 
+const SCHOOL_PRESET: SiteTypePresetSettings = {
+  showEventsSectionInHomePage: true,
+  showTeamMembersSectionInHomePage: false,
+  showExecutiveCommitteeSectionInHomePage: false,
+  showSponsorsSectionInHomePage: false,
+  showPublicProfileHeroSection: false,
+  showProfileWritingsSection: false,
+  showProfileAchievementsSection: false,
+  showProfileAffiliationsSection: false,
+  showProfileMediaDownloadsSection: false,
+  showProfileContactSection: true,
+  showProfileProjectsSection: false,
+  showProfileServicesSection: false,
+  showProfileFamilySection: false,
+  showHeaderHome: true,
+  showHeaderAbout: true,
+  showHeaderEvents: true,
+  showHeaderFeatures: false,
+  showHeaderCalendar: false,
+  showHeaderGallery: true,
+  showHeaderContact: true,
+  showHeaderNews: true,
+  showHeaderDownloads: true,
+  showHeaderLinks: false,
+  showHeaderServices: false,
+  showHeaderAchievements: false,
+  showHeaderAffiliations: false,
+  showHeaderProjects: false,
+  showHeaderFamily: false,
+  showHeaderTournament: false,
+  showLeagueStandingsSectionInHomePage: false,
+  showHeaderLeagues: false,
+  showNewsAdvertisements: true,
+};
+
 const EVENT_ORG_PRESET: SiteTypePresetSettings = {
   showEventsSectionInHomePage: true,
   showTeamMembersSectionInHomePage: false,
@@ -193,6 +228,8 @@ export function getSiteTypePresetSettings(siteType: string, moduleKey?: string |
       return PERSONAL_PROFILE_PRESET;
     case 'HYBRID':
       return HYBRID_PRESET;
+    case 'SCHOOL':
+      return SCHOOL_PRESET;
     case 'EVENT':
     case 'EVENT_ORG':
     default:

@@ -1,6 +1,6 @@
 ---
 description: Bedrock LLM for Admin Help chat vs retail brief Ask — architecture, Amplify/IAM, knowledge pack, and how to bolt onto admin/satellite apps
-globs: src/lib/adminHelp/**/*.{ts,tsx}, src/app/api/admin/help-chat/**/*.ts, src/components/admin/AdminHelpChat.tsx, src/app/admin/**/*.{ts,tsx}, documentation/admin_help_chat/**/*, amplify.yml, scripts/set-amplify-bedrock-env.ps1, scripts/attach-amplify-bedrock-iam.ps1
+globs: documentation/aws-infrastructure/bedrock_llm_admin_help_and_chat_integration.html, documentation/aws-infrastructure/**/*bedrock*, **/adminHelp/**/*, **/help-chat/**/*, **/AdminHelpChat.tsx, **/amplify.yml, **/set-amplify-bedrock-env.ps1
 alwaysApply: false
 ---
 
@@ -69,16 +69,33 @@ List apps: `aws amplify list-apps --region us-east-2` (not us-east-1).
   - Refuses update if `get-app` JSON is dirty (SSL noise) or existing key count &lt; 10.
 - Full restore from dotenv: `scripts/set-amplify-env-vars.ps1` (replaces **all** app env — use carefully).
 - IAM inline policy: `scripts/attach-amplify-bedrock-iam.ps1` + `documentation/admin_help_chat/bedrock-invoke-policy.json`
-- Policy name: `AdminHelpBedrockInvoke` on Amplify SSR / service role (`bedrock:InvokeModel`).
+- Policy name: `AdminHelpBedrockInvoke` on role `AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a`.
 
 ```powershell
-# Merge Bedrock onto prod hub (defaults)
+# Merge Bedrock onto prod hub (defaults), then the dev hub
 .\scripts\set-amplify-bedrock-env.ps1
-# Dev hub
 .\scripts\set-amplify-bedrock-env.ps1 -AppId d3qk5eouzr7b80
 ```
 
-After env or `amplify.yml` changes: RELEASE on `release/v1.0.0`.
+After env, `amplify.yml`, or compute-role changes: RELEASE `release/v1.0.0`. Add `--no-verify-ssl` when the AWS CLI fails with `CERTIFICATE_VERIFY_FAILED`. Never pass `--environment-variables` on `update-app` unless the JSON is the full map; that flag replaces every key.
+
+## Short stub on the hubs, long answer locally
+
+**Symptom:** localhost Admin Help writes a multi-step how-to. `https://www.adwiiseagent.ai/admin` and `https://dev.adwiiseagent.ai/admin` return one sentence such as `Admin Home: Returns to this dashboard so you can open another admin area. It does not edit tenant data.`
+
+That sentence is `stubAdminHelpAnswer` in `src/lib/adminHelp/bedrock.ts`. `answerAdminHelpQuestion` uses the stub when Bedrock is off **or** `invokeAdminHelpBedrock` throws. `BEDROCK_ENABLED=true` on the Amplify app only means the route will try the call.
+
+**Cause (2026-11-06):** both hubs already had `BEDROCK_ENABLED=true`, `BEDROCK_REGION=us-east-1`, and `BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5`. Inline policy `AdminHelpBedrockInvoke` was on the service role, but `computeRoleArn` was null. The Next.js server never assumed that role, so the SDK had no credentials and the catch block returned the knowledge-pack stub. Localhost works because the developer credential chain can call Bedrock.
+
+**Fix both hubs** (`d3gov7yn1ctow1` prod, `d3qk5eouzr7b80` dev). The role ARN is `arn:aws:iam::224674645062:role/service-role/AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a`. Its trust policy must allow `amplify.amazonaws.com` to `sts:AssumeRole`.
+
+1. Read `computeRoleArn` with `aws amplify get-app --app-id <id> --region us-east-2 --query app.computeRoleArn`.
+2. Put `bedrock-invoke-policy.json` on that role as inline policy `AdminHelpBedrockInvoke` (`attach-amplify-bedrock-iam.ps1 -RoleName AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a`). The `us.` inference profile needs `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on foundation models **and** inference profiles in `us-east-1`, `us-east-2`, and `us-west-2`. A us-east-1-only resource list denies the cross-region profile.
+3. Set the compute role without touching env vars: `aws amplify update-app --app-id <id> --compute-role-arn <role-arn> --region us-east-2`. Confirm `length(keys(environmentVariables))` did not drop (prod 83, dev 85 after `ALL_TENANTS_ADMIN` was added).
+4. RELEASE `release/v1.0.0`. A compute-role change is not live until the next release. Prod auto-build can be off, so start the job: `aws amplify start-job --app-id <id> --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2`.
+5. Sign in, ask Help, and check `POST /api/admin/help-chat`. `"backend":"bedrock"` is the live model. `"backend":"stub"` means invoke still failed; read CloudWatch `/aws/amplify/<appId>` for `[adminHelp] Bedrock invoke failed`.
+
+Applied 2026-11-06: prod release **152** and dev release **15** succeeded with that compute role.
 
 ## Bolting Admin Help onto another frontend (satellite / clone)
 
@@ -86,7 +103,7 @@ After env or `amplify.yml` changes: RELEASE on `release/v1.0.0`.
 2. Add `@aws-sdk/client-bedrock-runtime`; set the three `BEDROCK_*` env vars.
 3. Ensure Clerk-gated admin access before invoke.
 4. Extend knowledge pack (`hubGuides`, `howTos`, `operatorGuides`, `routeMap`) for that product’s tiles — do not dump all `documentation/**/*.html` into the prompt.
-5. Push Amplify env with merge script (us-east-2 app id); attach Bedrock IAM to that app’s SSR role.
+5. Push Amplify env with the merge script (us-east-2 app id), attach `AdminHelpBedrockInvoke`, and set `computeRoleArn` to that role. A policy on the service role alone does not reach the Next.js server.
 6. Keep retail Ask wired through Spring → engine if the clone has retail; do not merge the two chat APIs.
 
 ## Retail Ask (engine) — reminders
@@ -103,6 +120,9 @@ After env or `amplify.yml` changes: RELEASE on `release/v1.0.0`.
 ❌ update-app with only BEDROCK_* after a failed get-app JSON parse (wipes env)
 ❌ Fine-tuning / “embed all admin pages into the model”
 ❌ Teaching SUPER_ADMIN-only flows to tenant ADMIN
+❌ Treat BEDROCK_ENABLED=true as proof the live chat calls Bedrock
+❌ Leave computeRoleArn null after attaching AdminHelpBedrockInvoke to the service role
+❌ Limit the invoke policy to us-east-1 when the model id is a us. cross-region profile
 ```
 
 ```text
@@ -110,6 +130,7 @@ After env or `amplify.yml` changes: RELEASE on `release/v1.0.0`.
 ✅ Curated knowledge pack + pathname retrieval
 ✅ Same Claude Sonnet model id, separate system prompt
 ✅ Amplify list/update in us-east-2; Bedrock invoke in us-east-1
+✅ computeRoleArn set to the role that holds AdminHelpBedrockInvoke, then RELEASE
 ```
 
 ## Full HTML guide (keep in sync across repos)

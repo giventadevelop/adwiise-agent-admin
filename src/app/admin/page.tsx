@@ -23,6 +23,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'media-management': 'Upload images and files used by events and pages. Public photo albums are managed under Gallery Albums.',
   'gallery-albums': 'Group public photos into albums shown on the gallery page.',
   'executive-committee': 'Officers shown on the public site: name, title, order, and photo. These are leaders, not squad players.',
+  'school-site': 'School staff, departments, facilities, activities, pages, merit highlights, and fee invoices. Teachers stay off the executive committee list.',
   'team-groups': 'Containers for a sports club or band, such as First XI, Under-16, or Choir. Create the group here, then add people on Squad roster. Whether the group is sports or music comes from team types in Roster catalogs.',
   'team-members': 'People inside a squad: name, sports, skills, achievements, and portrait. Choose their squad group on this form. Sport and achievement choices come from Roster catalogs.',
   'roster-catalogs': 'Dropdown lists used by squads: sports, achievement categories, and team types. A shared row is offered to every tenant. Only a platform super admin should change shared rows.',
@@ -278,6 +279,16 @@ export default function AdminPage() {
       searchTerms: ['leaders', 'board', 'officers'],
       color: 'amber',
       key: 'executive-committee'
+    },
+    {
+      href: '/admin/school',
+      icon: 'building',
+      label: 'School site',
+      hint: 'Staff, campus pages, and fee invoices',
+      summary: 'Teachers, departments, facilities, and school fees',
+      searchTerms: ['school', 'teachers', 'fees', 'admissions', 'staff'],
+      color: 'schoolCampus',
+      key: 'school-site'
     },
     {
       href: '/admin/team-groups',
@@ -717,6 +728,7 @@ export default function AdminPage() {
       violet: 'bg-violet-50 hover:bg-violet-100 text-violet-800',
       fuchsia: 'bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800',
       sky: 'bg-sky-50 hover:bg-sky-100 text-sky-800',
+      schoolCampus: 'bg-[#fff7ed] hover:bg-[#ffedd5] text-[#9a3412]',
       accessCatalog: 'bg-[#eefbf3] hover:bg-[#d3f9e0] text-[#0b6e4f]',
       // Custom colors for additional unique buttons (using Tailwind color shades)
       warmOrange: 'bg-orange-50 hover:bg-orange-100 text-orange-800',
@@ -771,6 +783,7 @@ export default function AdminPage() {
       violet: 'bg-violet-100',
       fuchsia: 'bg-fuchsia-100',
       sky: 'bg-sky-100',
+      schoolCampus: 'bg-[#ffedd5]',
       // Custom colors for additional unique buttons
       warmOrange: 'bg-orange-100',
       coolBlue: 'bg-blue-100',
@@ -824,6 +837,7 @@ export default function AdminPage() {
       violet: 'text-violet-500',
       fuchsia: 'text-fuchsia-500',
       sky: 'text-sky-500',
+      schoolCampus: 'text-[#c2410c]',
       // Custom colors for additional unique buttons
       warmOrange: 'text-orange-500',
       coolBlue: 'text-blue-500',

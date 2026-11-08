@@ -107,7 +107,7 @@ export default function TenantOrganizationForm({
     fetchRetailerTypes(tenantId)
       .then((rows) => {
         if (!cancelled) {
-          setPackOptions(rows.filter((row) => row.isActive !== false && row.code !== 'GAS_STATION_ENT' && row.code !== 'EVENT_ORG' && row.code !== 'CHURCH_ORG' && row.code !== 'SPORTS_TEAM' && row.code !== 'MUSIC_BAND' && row.code !== 'PERSONAL_PROFILE' && row.code !== 'HYBRID' && row.code !== 'RETAIL' && (row.siteTypeCode == null || row.siteTypeCode === 'RETAIL')));
+          setPackOptions(rows.filter((row) => row.isActive !== false && row.code !== 'GAS_STATION_ENT' && row.code !== 'EVENT_ORG' && row.code !== 'CHURCH_ORG' && row.code !== 'SPORTS_TEAM' && row.code !== 'MUSIC_BAND' && row.code !== 'PERSONAL_PROFILE' && row.code !== 'HYBRID' && row.code !== 'RETAIL' && row.code !== 'SCHOOL' && (row.siteTypeCode == null || row.siteTypeCode === 'RETAIL')));
         }
       })
       .catch(() => {});
