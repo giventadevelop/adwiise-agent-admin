@@ -22,6 +22,16 @@ export interface RetailerTypeDTO {
   isActive?: boolean | null;
 }
 
+export interface DomainOwnershipCatalogDTO {
+  id?: number | null;
+  tenantId?: string | null;
+  code: string;
+  label: string;
+  hint?: string | null;
+  sortOrder?: number | null;
+  isActive?: boolean | null;
+}
+
 export interface SubscriptionPlanCatalogDTO {
   id?: number | null;
   tenantId?: string | null;

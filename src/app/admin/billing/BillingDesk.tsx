@@ -24,6 +24,7 @@ export default function BillingDesk({
   plans,
   locations,
   lockedNotice,
+  complimentaryPlan = false,
 }: {
   tenantId: string;
   canEditSwitch: boolean;
@@ -31,6 +32,7 @@ export default function BillingDesk({
   plans: PlatformBillingPlanDTO[];
   locations: RetailLocationDTO[];
   lockedNotice?: boolean;
+  complimentaryPlan?: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [locationRows, setLocationRows] = useState(locations);
@@ -177,10 +179,16 @@ export default function BillingDesk({
                   />
                 </label>
                 <YellowCheckbox
-                  checked={!!row.chargeEnabled}
+                  checked={complimentaryPlan ? false : !!row.chargeEnabled}
+                  disabled={!canEditSwitch || complimentaryPlan}
                   onChange={checked => updateRow(product, { chargeEnabled: checked })}
                   label="Charge switch"
                 />
+                {complimentaryPlan && (
+                  <p className="text-sm text-emerald-800">
+                    This tenant plan is free or demo. The charge switch stays off, so Stripe is not called.
+                  </p>
+                )}
                 <button
                   type="button"
                   disabled={busy}
@@ -194,7 +202,7 @@ export default function BillingDesk({
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                disabled={busy || !row.id || !row.chargeEnabled}
+                disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
                 className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-4 font-semibold text-green-700 disabled:opacity-50"
                 onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: row.billingMode || 'RECURRING' })}
               >
@@ -203,7 +211,7 @@ export default function BillingDesk({
               {row.billingMode !== 'ONE_TIME' && (
                 <button
                   type="button"
-                  disabled={busy || !row.id || !row.chargeEnabled}
+                  disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
                   className="h-14 rounded-xl bg-emerald-100 hover:bg-emerald-200 px-4 font-semibold text-emerald-700 disabled:opacity-50"
                   onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'ONE_TIME' })}
                 >
@@ -242,7 +250,10 @@ export default function BillingDesk({
                 </button>
               )}
             </div>
-            {!row.chargeEnabled && <p className="text-sm text-muted-foreground">Switch is off. Stripe is not called.</p>}
+            {!complimentaryPlan && !row.chargeEnabled && <p className="text-sm text-muted-foreground">Switch is off. Stripe is not called.</p>}
+            <p className="text-sm text-muted-foreground">
+              Pay opens Stripe Checkout with a card or a US bank account. Bank debit appears when ACH Direct Debit is active on the Stripe account.
+            </p>
             {row.chargeEnabled && row.status !== 'ACTIVE' && (
               <p className="text-sm text-amber-800">
                 Charging is allowed. Use a pay link. A review-by date does not start the charge. Unpaid grace locks paid admin tools and leaves the site online.

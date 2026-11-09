@@ -108,3 +108,4 @@ export async function deleteSchoolRecordServer(resource: string, id: number): Pr
     throw new Error(`Failed to delete ${path}: ${res.status}`);
   }
 }
+

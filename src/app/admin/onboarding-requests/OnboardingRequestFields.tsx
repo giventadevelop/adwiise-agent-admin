@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { DOMAIN_OWNERSHIP_OPTIONS, onboardingInputClass } from '@/lib/onboarding/onboardingShared';
+import { onboardingInputClass, REGISTRAR_NOTES_OWNERSHIP, REGISTRAR_NOTES_PROMPT } from '@/lib/onboarding/onboardingShared';
+import { ownershipOptionsWithCurrent, useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
 import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { uploadTenantLogoClient } from '@/app/admin/tenant-management/settings/ApiServerActions';
@@ -15,6 +16,7 @@ export interface OnboardingFieldValues {
   requestedHostname: string;
   siteType: string;
   domainOwnership: string;
+  registrarNotes: string;
   description: string;
   contactFirstName: string;
   contactLastName: string;
@@ -38,6 +40,7 @@ export const EMPTY_ONBOARDING_FIELDS: OnboardingFieldValues = {
   requestedHostname: '',
   siteType: '',
   domainOwnership: '',
+  registrarNotes: '',
   description: '',
   contactFirstName: '',
   contactLastName: '',
@@ -135,6 +138,8 @@ export default function OnboardingRequestFields({
   tenantIdForLogoUpload,
 }: Props) {
   const siteTypeOptions = useRetailerTypeOptions('server');
+  const ownershipOptions = ownershipOptionsWithCurrent(useDomainOwnershipOptions('server'), values.domainOwnership);
+  const showRegistrarNotes = REGISTRAR_NOTES_OWNERSHIP.has(values.domainOwnership);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
@@ -269,14 +274,40 @@ export default function OnboardingRequestFields({
           className={onboardingInputClass(!!errors.domainOwnership)}
         >
           <option value="">Select domain ownership</option>
-          {DOMAIN_OWNERSHIP_OPTIONS.map((o) => (
+          {ownershipOptions.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        {values.domainOwnership ? (
+          <p className="text-xs text-gray-500 mt-1">
+            {ownershipOptions.find((o) => o.value === values.domainOwnership)?.hint}
+          </p>
+        ) : null}
         {errors.domainOwnership && (
           <div className="text-red-500 text-sm mt-1">{errors.domainOwnership}</div>
         )}
       </div>
+      {showRegistrarNotes && (
+        <div className="md:col-span-2">
+          <label htmlFor="onb-registrarNotes" className="block text-sm font-medium text-gray-700">
+            Registrar details
+          </label>
+          <p className="text-xs text-gray-500 mt-1">{REGISTRAR_NOTES_PROMPT}</p>
+          <textarea
+            ref={registerRef?.('registrarNotes')}
+            id="onb-registrarNotes"
+            name="registrarNotes"
+            rows={4}
+            value={values.registrarNotes}
+            onChange={handle}
+            disabled={disabled}
+            className={onboardingInputClass(!!errors.registrarNotes)}
+          />
+          {errors.registrarNotes && (
+            <div className="text-red-500 text-sm mt-1">{errors.registrarNotes}</div>
+          )}
+        </div>
+      )}
 
       {/* Optional tenant logo — purple upload styling (icons_buttons / media gallery patterns) */}
       <div className="md:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 via-violet-50 to-purple-50 border-2 border-purple-300/50 shadow-md">

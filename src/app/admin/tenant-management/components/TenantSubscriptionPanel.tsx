@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { fetchSubscriptionPlans } from '@/app/admin/access-catalogs/ApiServerActions';
+import { applyComplimentaryPlatformBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { patchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { isComplimentarySubscriptionPlan } from '@/lib/platformBilling/complimentaryPlan';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 
 const FALLBACK_PLANS = [
@@ -75,7 +77,12 @@ export default function TenantSubscriptionPanel({ organization, editable = false
         monthlyFeeUsd: fee != null && Number.isFinite(fee) ? fee : undefined,
         stripeCustomerId: stripeCustomerId.trim() || undefined,
       });
-      setMessage('Subscription saved for this tenant.');
+      if (isComplimentarySubscriptionPlan(plan) && organization.tenantId) {
+        await applyComplimentaryPlatformBilling(organization.tenantId);
+        setMessage('Subscription saved. This plan is free or demo, so the platform charge switch is off and Stripe is not called.');
+      } else {
+        setMessage('Subscription saved for this tenant.');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save subscription');
     } finally {

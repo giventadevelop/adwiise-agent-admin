@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import ErrorDialog from '@/components/ErrorDialog';
 import SuccessDialog from '@/components/SuccessDialog';
+import Modal from '@/components/ui/Modal';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import { useAdminTenantId } from '../AdminTenantContext';
 import { CatalogCheck, CatalogHubCard, catalogTone, type CatalogTone } from '../catalogChrome';
@@ -175,6 +176,56 @@ function SaveButton({
   );
 }
 
+function RosterFields({
+  row,
+  shared,
+  canEditGlobal,
+  onChange,
+  onShared,
+}: {
+  row: RosterCatalogDTO;
+  shared: boolean;
+  canEditGlobal: boolean;
+  onChange: (row: RosterCatalogDTO) => void;
+  onShared: (shared: boolean) => void;
+}) {
+  return (
+    <>
+      <div>
+        <label className="block text-base font-medium">Code</label>
+        <input
+          value={row.code}
+          onChange={(e) => onChange({ ...row, code: e.target.value })}
+          className="mt-1 w-full rounded-xl border border-gray-400 px-4 py-3"
+        />
+      </div>
+      <div>
+        <label className="block text-base font-medium">Label</label>
+        <input
+          value={row.label}
+          onChange={(e) => onChange({ ...row, label: e.target.value })}
+          className="mt-1 w-full rounded-xl border border-gray-400 px-4 py-3"
+        />
+      </div>
+      <div>
+        <label className="block text-base font-medium">Sort order</label>
+        <input
+          type="number"
+          value={row.sortOrder ?? 0}
+          onChange={(e) => onChange({ ...row, sortOrder: Number(e.target.value) || 0 })}
+          className="mt-1 w-full rounded-xl border border-gray-400 px-4 py-3"
+        />
+      </div>
+      <div className="flex items-end gap-4">
+        <CatalogCheck checked={row.isActive !== false} onChange={(checked) => onChange({ ...row, isActive: checked })} label="Active" />
+        {canEditGlobal && (
+          <CatalogCheck checked={shared} disabled={row.id != null} onChange={onShared} label="Shared with every tenant" />
+        )}
+      </div>
+    </>
+  );
+}
+
 function CatalogSection({
   resource,
   title,
@@ -207,7 +258,10 @@ function CatalogSection({
   onChange: (rows: RosterCatalogDTO[]) => void;
 }) {
   const [draft, setDraft] = useState<RosterCatalogDTO>(blankRow());
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<RosterCatalogDTO | null>(null);
   const [shared, setShared] = useState(false);
+  const [editShared, setEditShared] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
@@ -218,8 +272,9 @@ function CatalogSection({
 
   const startEdit = (row: RosterCatalogDTO) => {
     if (!editable(row)) return;
-    setDraft(row);
-    setShared(!row.tenantId);
+    setAdding(false);
+    setEditing(row);
+    setEditShared(!row.tenantId);
     setError('');
   };
 
@@ -229,8 +284,14 @@ function CatalogSection({
     try {
       await saveRosterCatalog(resource, row, asShared, tenantId);
       onChange(await fetchRosterCatalog(resource, tenantId));
-      setDraft(blankRow());
-      setShared(false);
+      if (row.id == null) {
+        setDraft(blankRow());
+        setShared(false);
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+        setEditShared(false);
+      }
       if (announce) setSaved(row.id != null ? `${title} was updated.` : `${title} was added.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -262,6 +323,25 @@ function CatalogSection({
       </div>
       <div className="p-6">
         <p className={colors.intro}>{hint}</p>
+        <button
+          type="button"
+          title={addLabel}
+          aria-label={addLabel}
+          onClick={() => {
+            setDraft(blankRow());
+            setShared(false);
+            setEditing(null);
+            setAdding(true);
+          }}
+          className={`mb-6 flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl px-6 transition-all duration-300 hover:scale-105 ${saveTones[tone].button}`}
+        >
+          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${saveTones[tone].iconBox}`}>
+            <svg className={`h-6 w-6 ${saveTones[tone].icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <span className={`font-semibold ${saveTones[tone].label}`}>{addLabel}</span>
+        </button>
         <CatalogTable
           rows={rows}
           itemLabel={itemLabel}
@@ -326,81 +406,103 @@ function CatalogSection({
         </div>
           )}
         </CatalogTable>
-
-        <form
-          className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!draft.code.trim() || !draft.label.trim()) {
-              setError('Code and label are required');
-              return;
+        <Modal
+          isOpen={adding}
+          onClose={() => {
+            if (!saving) {
+              setAdding(false);
+              setDraft(blankRow());
+              setShared(false);
             }
-            void persist(draft, shared && canEditGlobal, true);
           }}
+          title={`Add ${title.toLowerCase()}`}
+          size="lg"
         >
-          <div>
-            <label className="block text-base font-medium">Code</label>
-            <input
-              value={draft.code}
-              onChange={(e) => setDraft({ ...draft, code: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-gray-400 px-4 py-3"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">Label</label>
-            <input
-              value={draft.label}
-              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-gray-400 px-4 py-3"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">Sort order</label>
-            <input
-              type="number"
-              value={draft.sortOrder ?? 0}
-              onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) || 0 })}
-              className="mt-1 w-full rounded-xl border border-gray-400 px-4 py-3"
-            />
-          </div>
-          <div className="flex items-end gap-4">
-            <CatalogCheck
-              checked={draft.isActive !== false}
-              onChange={(checked) => setDraft({ ...draft, isActive: checked })}
-              label="Active"
-            />
-            {canEditGlobal && (
-              <CatalogCheck
-                checked={shared}
-                disabled={draft.id != null}
-                onChange={setShared}
-                label="Shared with every tenant"
-              />
-            )}
-          </div>
-          <div className="flex flex-wrap gap-3 md:col-span-2">
-            <SaveButton saving={saving} editing={draft.id != null} addLabel={addLabel} updateLabel={updateLabel} tone={tone} />
-            {draft.id != null && (
+          <form
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            onSubmit={(event: FormEvent) => {
+              event.preventDefault();
+              if (!draft.code.trim() || !draft.label.trim()) {
+                setError('Code and label are required');
+                return;
+              }
+              void persist(draft, shared && canEditGlobal, true);
+            }}
+          >
+            <RosterFields row={draft} shared={shared} canEditGlobal={canEditGlobal} onChange={setDraft} onShared={setShared} />
+            <div className="flex flex-wrap gap-3 md:col-span-2">
+              <SaveButton saving={saving} editing={false} addLabel={addLabel} updateLabel={updateLabel} tone={tone} />
               <button
                 type="button"
-                title="Cancel edit"
-                aria-label="Cancel edit"
-                className="flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-gray-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-gray-200"
+                title="Cancel"
+                aria-label="Cancel"
+                disabled={saving}
                 onClick={() => {
+                  setAdding(false);
                   setDraft(blankRow());
                   setShared(false);
                 }}
+                className="flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-gray-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-gray-200 disabled:opacity-50"
               >
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200">
                   <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <span className="font-semibold text-gray-700">Cancel edit</span>
+                <span className="font-semibold text-gray-700">Cancel</span>
               </button>
+            </div>
+          </form>
+        </Modal>
+        <Modal
+          isOpen={editing != null}
+          onClose={() => {
+            if (!saving) {
+              setEditing(null);
+              setEditShared(false);
+            }
+          }}
+          title={editing ? `Edit ${title.toLowerCase()} ${editing.code}` : `Edit ${title.toLowerCase()}`}
+          size="lg"
+        >
+          <form
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            onSubmit={(event: FormEvent) => {
+              event.preventDefault();
+              if (!editing) return;
+              if (!editing.code.trim() || !editing.label.trim()) {
+                setError('Code and label are required');
+                return;
+              }
+              void persist(editing, editShared && canEditGlobal, true);
+            }}
+          >
+            {editing && (
+              <RosterFields row={editing} shared={editShared} canEditGlobal={canEditGlobal} onChange={setEditing} onShared={setEditShared} />
             )}
-          </div>
-        </form>
+            <div className="flex flex-wrap gap-3 md:col-span-2">
+              <SaveButton saving={saving} editing addLabel={updateLabel} updateLabel={updateLabel} tone={tone} />
+              <button
+                type="button"
+                title="Cancel"
+                aria-label="Cancel"
+                disabled={saving}
+                onClick={() => {
+                  setEditing(null);
+                  setEditShared(false);
+                }}
+                className="flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-gray-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-gray-200 disabled:opacity-50"
+              >
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200">
+                  <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <span className="font-semibold text-gray-700">Cancel</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
       <SuccessDialog isOpen={saved != null} onClose={() => setSaved(null)} title="Saved" message={saved || ''} buttonText="OK" />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />

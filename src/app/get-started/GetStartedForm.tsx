@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
-  DOMAIN_OWNERSHIP_OPTIONS,
+  REGISTRAR_NOTES_OWNERSHIP,
+  REGISTRAR_NOTES_PROMPT,
   validateOnboardingSubmit,
 } from '@/lib/onboarding/onboardingShared';
+import { ownershipOptionsWithCurrent, useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
 import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -15,6 +17,7 @@ interface FormState {
   requestedHostname: string;
   siteType: string;
   domainOwnership: string;
+  registrarNotes: string;
   description: string;
   contactFirstName: string;
   contactLastName: string;
@@ -39,6 +42,7 @@ const INITIAL_STATE: FormState = {
   requestedHostname: '',
   siteType: '',
   domainOwnership: '',
+  registrarNotes: '',
   description: '',
   contactFirstName: '',
   contactLastName: '',
@@ -81,6 +85,8 @@ export default function GetStartedForm() {
   const [requestCode, setRequestCode] = useState<string | null | undefined>(undefined);
   const fieldRefs = useRef<Record<string, FieldElement>>({});
   const siteTypeOptions = useRetailerTypeOptions('proxy');
+  const ownershipOptions = ownershipOptionsWithCurrent(useDomainOwnershipOptions('proxy'), formData.domainOwnership);
+  const showRegistrarNotes = REGISTRAR_NOTES_OWNERSHIP.has(formData.domainOwnership);
 
   const registerRef = (name: string) => (el: FieldElement | null) => {
     if (el) fieldRefs.current[name] = el;
@@ -263,13 +269,28 @@ export default function GetStartedForm() {
               <label htmlFor="domainOwnership" className="block text-sm font-medium text-gray-700">Domain ownership *</label>
               <select id="domainOwnership" name="domainOwnership" value={formData.domainOwnership} onChange={handleChange} className={inputClass(!!errors.domainOwnership)}>
                 <option value="">Select domain ownership</option>
-                {DOMAIN_OWNERSHIP_OPTIONS.map((o) => (
+                {ownershipOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
               {errors.domainOwnership && <div className="text-red-500 text-sm mt-1">{errors.domainOwnership}</div>}
             </div>
           </div>
+          {showRegistrarNotes && (
+            <div className="mt-4">
+              <label htmlFor="registrarNotes" className="block text-sm font-medium text-gray-700">Registrar details</label>
+              <p className="text-xs text-gray-500 mt-1">{REGISTRAR_NOTES_PROMPT}</p>
+              <textarea
+                id="registrarNotes"
+                name="registrarNotes"
+                rows={4}
+                value={formData.registrarNotes}
+                onChange={handleChange}
+                className={inputClass(!!errors.registrarNotes)}
+              />
+              {errors.registrarNotes && <div className="text-red-500 text-sm mt-1">{errors.registrarNotes}</div>}
+            </div>
+          )}
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700">About your organization</label>

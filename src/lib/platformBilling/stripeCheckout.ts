@@ -1,5 +1,6 @@
 import { getApiBaseUrl, getAppUrlFromRequestHeaders } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
+import { isComplimentarySubscriptionPlan, isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
 import { initStripeConfig } from '@/lib/stripe/init';
 import type { PlatformBillingPlanDTO, TenantProductBillingDTO } from '@/types/platformBilling';
 import type { RetailLocationDTO } from '@/types/retail';
@@ -111,7 +112,14 @@ export async function createPlatformCheckout(input: {
 
   const org = await loadOrganization(billing.tenantId);
   if (!org?.id) throw new Error('Tenant organization was not found');
+  if (billing.product !== 'RETAIL' && isComplimentarySubscriptionPlan(org.subscriptionPlan)) {
+    throw new Error('This tenant plan is free or demo. Stripe is not called.');
+  }
+  if (billing.product !== 'RETAIL' && isCoveredByPortfolio(billing.notes)) {
+    throw new Error('This tenant is covered by an organization portfolio charge.');
+  }
   const customerId = await ensureStripeCustomer(org);
+  await confirmPlatformBankDebit(stripe);
 
   const customFee = billing.customFeeUsd != null && Number(billing.customFeeUsd) > 0;
   const quantity = billing.product === 'GAS_STATION' && !customFee ? await countBillableLocations(billing.tenantId) : 1;
@@ -125,10 +133,17 @@ export async function createPlatformCheckout(input: {
     const amount = customFee ? Number(billing.customFeeUsd) : Number(plan?.listPriceUsd ?? 0);
     if (!amount || amount <= 0) throw new Error('Set a catalog price or a custom fee before charging.');
     const interval = (billing.billingMode === 'ONE_TIME' ? plan?.billingInterval : plan?.billingInterval) || 'MONTH';
+    const portfolioFee = (billing.notes || '').includes('portfolio-flat:');
     const price = await stripe.prices.create({
       currency: 'usd',
       unit_amount: dollarsToCents(amount),
-      product_data: { name: customFee ? `Custom ${billing.product} fee` : plan?.name || 'Platform fee' },
+      product_data: {
+        name: portfolioFee
+          ? 'Organization portfolio fee'
+          : customFee
+            ? `Custom ${billing.product} fee`
+            : plan?.name || 'Platform fee',
+      },
       ...(mode === 'RECURRING'
         ? { recurring: { interval: interval === 'YEAR' ? 'year' : 'month' } }
         : {}),
@@ -162,6 +177,29 @@ export async function createPlatformCheckout(input: {
   });
   if (!session.url) throw new Error('Stripe did not return a checkout link');
   return { url: session.url };
+}
+
+const ACH_CAPABILITY = 'us_bank_account_ach_payments';
+
+/**
+ * Platform Checkout already asks for card and us_bank_account.
+ * Request ACH Direct Debit on the Stripe account when it is not active yet.
+ */
+export async function confirmPlatformBankDebit(existing?: Stripe | null): Promise<{ status: string }> {
+  try {
+    const stripe = existing ?? initStripeConfig();
+    if (!stripe) return { status: 'unconfigured' };
+    const account = await stripe.accounts.retrieve();
+    const current = account.capabilities?.[ACH_CAPABILITY] || 'inactive';
+    if (current === 'active' || current === 'pending') return { status: current };
+    const updated = await stripe.accounts.update(account.id, {
+      capabilities: { [ACH_CAPABILITY]: { requested: true } },
+    });
+    return { status: updated.capabilities?.[ACH_CAPABILITY] || current };
+  } catch (error) {
+    console.error('[platform-billing] ACH capability request failed', error);
+    return { status: 'unknown' };
+  }
 }
 
 export async function openCustomerPortal(tenantId: string): Promise<{ url: string }> {

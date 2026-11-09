@@ -14,7 +14,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  DOMAIN_OWNERSHIP_OPTIONS,
   ONBOARDING_STATUS_STYLES,
   ONBOARDING_SITE_TYPE_OPTIONS,
   SATELLITE_KEY_PATTERN,
@@ -36,6 +35,7 @@ import {
   extractTenantIdSequence,
   suggestTenantIdPrefixFromName,
 } from '@/lib/tenantIdGeneration';
+import { useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
 import type { OrganizationPortfolioDTO, TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
@@ -61,7 +61,9 @@ import {
   updateOnboardingRequestServer,
   type OnboardingAvailability,
 } from '../ApiServerActions';
+import { applyComplimentaryPlatformBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { patchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { isComplimentarySubscriptionPlan } from '@/lib/platformBilling/complimentaryPlan';
 
 interface ProvisioningValues {
   tenantPrefix: string;
@@ -86,6 +88,7 @@ function toFieldValues(r: TenantOnboardingRequestDTO): OnboardingFieldValues {
     requestedHostname: r.requestedHostname ?? '',
     siteType: r.siteType ?? 'EVENT_ORG',
     domainOwnership: r.domainOwnership ?? 'CUSTOMER_REGISTRAR',
+    registrarNotes: r.registrarNotes ?? '',
     description: r.description ?? '',
     contactFirstName: r.contactFirstName ?? '',
     contactLastName: r.contactLastName ?? '',
@@ -146,7 +149,11 @@ function diffFields(original: OnboardingFieldValues, current: OnboardingFieldVal
   (Object.keys(current) as (keyof OnboardingFieldValues)[]).forEach((key) => {
     if (current[key] !== original[key]) {
       const value = current[key];
-      patch[key] = typeof value === 'string' ? value.trim() || null : value;
+      if (key === 'registrarNotes' && typeof value === 'string') {
+        patch[key] = value.trim();
+      } else {
+        patch[key] = typeof value === 'string' ? value.trim() || null : value;
+      }
     }
   });
   return patch as Partial<TenantOnboardingRequestDTO>;
@@ -159,6 +166,7 @@ export default function OnboardingRequestReviewClient({
   initialRequest: TenantOnboardingRequestDTO;
   portfolios?: OrganizationPortfolioDTO[];
 }) {
+  const ownershipOptions = useDomainOwnershipOptions('server');
   const [request, setRequest] = useState(initialRequest);
   const [savedFields, setSavedFields] = useState(() => toFieldValues(initialRequest));
   const [fields, setFields] = useState(() => toFieldValues(initialRequest));
@@ -482,6 +490,10 @@ export default function OnboardingRequestReviewClient({
             monthlyFeeUsd: Number.isFinite(fee) ? fee : 0,
             stripeCustomerId: draftForPatch.stripeCustomerId || undefined,
           });
+          const tenantForBilling = res.data.request.assignedTenantId || prov.tenantId;
+          if (isComplimentarySubscriptionPlan(draftForPatch.subscriptionPlan) && tenantForBilling) {
+            await applyComplimentaryPlatformBilling(tenantForBilling);
+          }
         } catch (error) {
           console.error('[onboarding-requests] subscription patch after approve failed', error);
           res.data.warnings.push(
@@ -538,11 +550,11 @@ export default function OnboardingRequestReviewClient({
   const organizationId = organizationIdFromResult;
   const clonedAdmins = Array.isArray(result?.clonedAdmins) ? (result?.clonedAdmins as { email?: string; userRole?: string }[]) : [];
   const siteTypeDisplay = siteTypeLabel(request.siteType);
-  const domainOwnershipDisplay = domainOwnershipLabel(request.domainOwnership);
-  const domainOwnershipHint =
-    DOMAIN_OWNERSHIP_OPTIONS.find((o) => o.value === request.domainOwnership)?.label ||
-    request.domainOwnership ||
-    'Not set';
+  const ownershipMatch = ownershipOptions.find((o) => o.value === request.domainOwnership);
+  const domainOwnershipDisplay = ownershipMatch
+    ? `${ownershipMatch.label} (${ownershipMatch.value})`
+    : domainOwnershipLabel(request.domainOwnership);
+  const domainOwnershipHint = ownershipMatch?.label || request.domainOwnership || 'Not set';
   const siteTypeHint =
     ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === request.siteType)?.hint || '';
   const manualStepsText = buildManualStepsText(request, tenantIdForLinks);
@@ -677,6 +689,9 @@ export default function OnboardingRequestReviewClient({
                         <>Confirm the existing Route 53 hosted zone and Amplify domain mapping before changing DNS.</>
                       )}
                       {!request.domainOwnership && <>{domainOwnershipHint}</>}
+                      {request.registrarNotes?.trim() && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-blue-950">{request.registrarNotes}</p>
+                      )}
                     </dd>
                   </div>
                 </dl>

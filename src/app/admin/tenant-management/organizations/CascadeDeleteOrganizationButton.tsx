@@ -45,9 +45,19 @@ export default function CascadeDeleteOrganizationButton({
   };
 
   const handleOpenChange = (next: boolean) => {
-    if (busy) return;
+    if (busy || result) return;
     setOpen(next);
     if (!next) reset();
+  };
+
+  const acknowledgeReport = () => {
+    const succeeded = result?.ok === true;
+    setOpen(false);
+    reset();
+    if (succeeded) {
+      router.push('/admin/tenant-management/organizations');
+      router.refresh();
+    }
   };
 
   const runCascadeDelete = async () => {
@@ -58,12 +68,6 @@ export default function CascadeDeleteOrganizationButton({
     try {
       const res = await cascadeDeleteTenantOrganizationServer(organizationId, tenantId);
       setResult(res);
-      if (res.ok) {
-        setTimeout(() => {
-          router.push('/admin/tenant-management/organizations');
-          router.refresh();
-        }, 1200);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Cascade delete failed');
     } finally {
@@ -94,7 +98,15 @@ export default function CascadeDeleteOrganizationButton({
       </button>
 
       <AlertDialog open={open} onOpenChange={handleOpenChange}>
-        <AlertDialogContent className="max-w-lg">
+        <AlertDialogContent
+          className="max-w-lg"
+          onEscapeKeyDown={(event) => {
+            if (busy || result) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (busy || result) event.preventDefault();
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Cascade delete organization?</AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -154,6 +166,22 @@ export default function CascadeDeleteOrganizationButton({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-row gap-3 sm:gap-4">
+            {result ? (
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault();
+                  acknowledgeReport();
+                }}
+                className="flex-1 flex-shrink-0 h-14 rounded-xl bg-green-100 hover:bg-green-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="font-semibold text-green-700">OK</span>
+              </AlertDialogAction>
+            ) : (
             <AlertDialogCancel
               disabled={busy}
               className="flex-1 flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50"
@@ -163,9 +191,10 @@ export default function CascadeDeleteOrganizationButton({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <span className="font-semibold text-blue-700">{result?.ok ? 'Close' : 'Keep organization'}</span>
+              <span className="font-semibold text-blue-700">Keep organization</span>
             </AlertDialogCancel>
-            {!result?.ok && (
+            )}
+            {!result && (
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();

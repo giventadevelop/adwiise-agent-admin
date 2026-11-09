@@ -5,6 +5,7 @@ import AdminNavigation from '@/components/AdminNavigation';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import type { OrganizationPortfolioDTO, OrganizationPortfolioMemberDTO } from '@/types';
 import TenantOrganizationSearchSelect from '@/app/admin/tenant-management/components/TenantOrganizationSearchSelect';
+import PortfolioFlatFeePanel from './PortfolioFlatFeePanel';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -314,6 +315,7 @@ export default function OrganizationPortfoliosClient() {
                     </div>
                     {open && (
                       <div className="mt-4 space-y-3">
+                        <PortfolioFlatFeePanel portfolioId={id} primaryTenantId={portfolio.primaryTenantId} />
                         <ul className="space-y-2">
                           {rows.map((member) => (
                             <li

@@ -1,9 +1,18 @@
 'use server';
 
 import { assertPlatformSuperAdmin, getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
+import { fetchTenantProductBillings, saveTenantProductBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { getBackendApiUrl } from '@/lib/env';
+import {
+  coveredByPortfolioNote,
+  portfolioChargeNote,
+  withNoteLine,
+  withoutNoteLine,
+} from '@/lib/platformBilling/complimentaryPlan';
+import { cancelPlatformSubscription } from '@/lib/platformBilling/stripeCheckout';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import type { OrganizationPortfolioDTO, OrganizationPortfolioMemberDTO } from '@/types';
+import type { PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 const unscoped = {
   cache: 'no-store' as const,
@@ -330,7 +339,170 @@ export async function addOrganizationPortfolioMember(portfolioId: number, tenant
   if (!response.ok) {
     throw new Error(await readError(response, 'Failed to add tenant'));
   }
-  return (await response.json()) as OrganizationPortfolioMemberDTO;
+  const member = (await response.json()) as OrganizationPortfolioMemberDTO;
+  try {
+    await coverTenantWhenPortfolioIsCharged(portfolioId, tenantId.trim());
+  } catch (error) {
+    console.error('[portfolio-billing] new member was not marked covered', error);
+  }
+  return member;
+}
+
+const SITE_PRODUCTS: PlatformProduct[] = ['EVENT_SITE', 'GAS_STATION'];
+
+function findPortfolioCharge(rows: TenantProductBillingDTO[], portfolioId: number): TenantProductBillingDTO | null {
+  const note = portfolioChargeNote(portfolioId);
+  return rows.find((row) => row.product === 'RETAIL' && (row.notes || '').includes(note)) ?? null;
+}
+
+async function portfolioTenantIds(portfolioId: number, primaryTenantId: string): Promise<string[]> {
+  const members = await listOrganizationPortfolioMembers(portfolioId);
+  const ids = new Set<string>();
+  if (primaryTenantId.trim()) ids.add(primaryTenantId.trim());
+  for (const member of members) {
+    if (member.tenantId) ids.add(member.tenantId);
+  }
+  return [...ids];
+}
+
+async function markTenantCovered(tenantId: string, portfolioId: number): Promise<void> {
+  const note = coveredByPortfolioNote(portfolioId);
+  const rows = await fetchTenantProductBillings(tenantId);
+  for (const product of SITE_PRODUCTS) {
+    const row = rows.find((entry) => entry.product === product);
+    if (row?.stripeSubscriptionId && row.chargeEnabled) {
+      try {
+        await cancelPlatformSubscription(row, false);
+      } catch (error) {
+        console.error('[portfolio-billing] member subscription cancel skipped', error);
+      }
+    }
+    await saveTenantProductBilling({
+      ...(row || { tenantId, product, graceDays: 14, billingMode: 'RECURRING' }),
+      tenantId,
+      product,
+      chargeEnabled: false,
+      status: row?.status === 'LOCKED' ? 'LOCKED' : 'COMPLIMENTARY',
+      notes: withNoteLine(row?.notes, note),
+    });
+  }
+}
+
+async function uncoverTenant(tenantId: string, portfolioId: number): Promise<void> {
+  const note = coveredByPortfolioNote(portfolioId);
+  const rows = await fetchTenantProductBillings(tenantId);
+  for (const product of SITE_PRODUCTS) {
+    const row = rows.find((entry) => entry.product === product);
+    if (!row?.id || !(row.notes || '').includes(note)) continue;
+    await saveTenantProductBilling({
+      ...row,
+      notes: withoutNoteLine(row.notes, note),
+    });
+  }
+}
+
+export type PortfolioFlatFee = {
+  billingId: number | null;
+  monthlyUsd: number | null;
+  chargeEnabled: boolean;
+  status: string | null;
+};
+
+export async function loadPortfolioFlatFee(portfolioId: number, primaryTenantId: string): Promise<PortfolioFlatFee> {
+  await assertPlatformSuperAdmin();
+  const rows = await fetchTenantProductBillings(primaryTenantId);
+  const row = findPortfolioCharge(rows, portfolioId);
+  return {
+    billingId: row?.id ?? null,
+    monthlyUsd: row?.customFeeUsd != null ? Number(row.customFeeUsd) : null,
+    chargeEnabled: !!row?.chargeEnabled,
+    status: row?.status ?? null,
+  };
+}
+
+async function coverTenantWhenPortfolioIsCharged(portfolioId: number, tenantId: string): Promise<void> {
+  const response = await fetchWithJwtRetry(apiUrl(`/${portfolioId}`), unscoped);
+  if (!response.ok) return;
+  const portfolio = (await response.json()) as OrganizationPortfolioDTO;
+  if (!portfolio.primaryTenantId) return;
+  const fee = await loadPortfolioFlatFee(portfolioId, portfolio.primaryTenantId);
+  if (!fee.chargeEnabled || fee.monthlyUsd == null || fee.monthlyUsd <= 0) return;
+  await markTenantCovered(tenantId, portfolioId);
+}
+
+export async function savePortfolioFlatFee(input: {
+  portfolioId: number;
+  primaryTenantId: string;
+  monthlyUsd: number;
+}): Promise<PortfolioFlatFee> {
+  await assertPlatformSuperAdmin();
+  const amount = Math.round(Number(input.monthlyUsd) * 100) / 100;
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error('Enter a monthly amount of zero or more.');
+  }
+  const primaryTenantId = input.primaryTenantId.trim();
+  const note = portfolioChargeNote(input.portfolioId);
+  const tenantIds = await portfolioTenantIds(input.portfolioId, primaryTenantId);
+  const primaryRows = await fetchTenantProductBillings(primaryTenantId);
+  const existing = findPortfolioCharge(primaryRows, input.portfolioId);
+
+  if (amount <= 0) {
+    if (existing?.id) {
+      await saveTenantProductBilling({
+        ...existing,
+        chargeEnabled: false,
+        status: 'COMPLIMENTARY',
+        customFeeUsd: null,
+        clearCustomFee: true,
+      });
+    }
+    for (const tenantId of tenantIds) {
+      await uncoverTenant(tenantId, input.portfolioId);
+    }
+    return { billingId: existing?.id ?? null, monthlyUsd: null, chargeEnabled: false, status: 'COMPLIMENTARY' };
+  }
+
+  for (const tenantId of tenantIds) {
+    if (tenantId === primaryTenantId) continue;
+    const otherRows = await fetchTenantProductBillings(tenantId);
+    const stale = findPortfolioCharge(otherRows, input.portfolioId);
+    if (!stale?.id) continue;
+    if (stale.stripeSubscriptionId) {
+      try {
+        await cancelPlatformSubscription(stale, false);
+      } catch (error) {
+        console.error('[portfolio-billing] previous primary subscription cancel skipped', error);
+      }
+    }
+    await saveTenantProductBilling({
+      ...stale,
+      chargeEnabled: false,
+      status: 'COMPLIMENTARY',
+    });
+  }
+
+  const saved = await saveTenantProductBilling({
+    ...(existing || { tenantId: primaryTenantId, product: 'RETAIL', graceDays: 14 }),
+    tenantId: primaryTenantId,
+    product: 'RETAIL',
+    customFeeUsd: amount,
+    chargeEnabled: true,
+    billingMode: 'RECURRING',
+    status: existing?.status === 'ACTIVE' || existing?.status === 'PAST_DUE' ? existing.status : 'PAYMENT_DUE',
+    notes: withNoteLine(existing?.notes, note),
+    clearCustomFee: false,
+  });
+
+  for (const tenantId of tenantIds) {
+    await markTenantCovered(tenantId, input.portfolioId);
+  }
+
+  return {
+    billingId: saved.id ?? null,
+    monthlyUsd: amount,
+    chargeEnabled: true,
+    status: saved.status ?? 'PAYMENT_DUE',
+  };
 }
 
 export async function removeOrganizationPortfolioMember(portfolioId: number, memberId: number): Promise<void> {

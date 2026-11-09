@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { fetchAdminAccessForClerkUser } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import { fetchPlatformBillingPlans, fetchTenantProductBillings } from '@/app/admin/platform-billing/ApiServerActions';
+import { fetchPlatformBillingPlans, prepareTenantBillingDesk } from '@/app/admin/platform-billing/ApiServerActions';
 import type { RetailLocationDTO } from '@/types/retail';
 import BillingDesk from '@/app/admin/billing/BillingDesk';
 
@@ -28,18 +28,19 @@ export default async function TenantPlatformBillingPage({
   );
   const locationData = locationResponse.ok ? await locationResponse.json() : [];
   const locations: RetailLocationDTO[] = Array.isArray(locationData) ? locationData : locationData?.content ?? [];
-  const [rows, plans] = await Promise.all([
-    fetchTenantProductBillings(tenantId).catch(() => []),
+  const [desk, plans] = await Promise.all([
+    prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false })),
     fetchPlatformBillingPlans().catch(() => []),
   ]);
   return (
     <BillingDesk
       tenantId={tenantId}
       canEditSwitch
-      initialRows={rows}
+      initialRows={desk.rows}
       plans={plans}
       locations={locations}
-      lockedNotice={rows.some((row) => row.status === 'LOCKED')}
+      complimentaryPlan={desk.complimentaryPlan}
+      lockedNotice={desk.rows.some((row) => row.status === 'LOCKED')}
     />
   );
 }

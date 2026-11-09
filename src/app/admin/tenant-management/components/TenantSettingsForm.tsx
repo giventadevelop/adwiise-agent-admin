@@ -17,6 +17,7 @@ import {
 import TenantDefaultHeroManager from '@/app/admin/tenant-management/components/TenantDefaultHeroManager';
 import TenantOrganizationSearchSelect from '@/app/admin/tenant-management/components/TenantOrganizationSearchSelect';
 import TenantSubscriptionPanel from '@/app/admin/tenant-management/components/TenantSubscriptionPanel';
+import TenantPaymentGateways from '@/app/admin/tenant-management/components/TenantPaymentGateways';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import { buildSiteFooterEmailHtmlFromTenant } from '@/lib/newsletter/siteFooterEmailHtml';
 import { tenantSettingsTabQuery, type TenantSettingsTab } from '@/lib/tenantSettingsTabs';
@@ -1235,6 +1236,7 @@ export default function TenantSettingsForm({
         {activeTab === 'integrations' && (
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-gray-900">Integration Settings</h3>
+            <TenantPaymentGateways tenantId={tenantIdForUpload} />
 
             {/* Gas Station AI Engine (GAS_STATION site type) */}
             <div className="space-y-6">

@@ -112,16 +112,24 @@ export async function fetchOnboardingRequestsServer(options: {
       const criteria: { key: string; value: string }[] = [];
       if (/^onb-/i.test(search)) {
         criteria.push({ key: 'requestCode.contains', value: search.toUpperCase() });
+        criteria.push({ key: 'assignedTenantId.contains', value: search });
       } else if (search.includes('@')) {
         criteria.push({ key: 'contactEmail.contains', value: search.toLowerCase() });
+        criteria.push({ key: 'assignedTenantId.contains', value: search });
       } else if (search.includes('.')) {
         criteria.push({ key: 'requestedHostname.contains', value: search.toLowerCase() });
         criteria.push({ key: 'organizationName.contains', value: search });
+        criteria.push({ key: 'assignedTenantId.contains', value: search });
       } else {
         criteria.push({ key: 'organizationName.contains', value: search });
         criteria.push({ key: 'contactEmail.contains', value: search.toLowerCase() });
         criteria.push({ key: 'requestedHostname.contains', value: search.toLowerCase() });
         criteria.push({ key: 'requestCode.contains', value: search.toUpperCase() });
+        criteria.push({ key: 'assignedTenantId.contains', value: search });
+        if (/^\d+$/.test(search)) {
+          criteria.push({ key: 'id.equals', value: search });
+          criteria.push({ key: 'sourceOrganizationId.equals', value: search });
+        }
       }
 
       const results = await Promise.all(

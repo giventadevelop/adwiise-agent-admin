@@ -1,4 +1,6 @@
 export type PlatformProduct = 'EVENT_SITE' | 'GAS_STATION';
+/** RETAIL holds the one monthly portfolio charge. Catalog plans stay event site and gas station. */
+export type BillingRowProduct = PlatformProduct | 'RETAIL';
 export type PlatformBillingMode = 'RECURRING' | 'ONE_TIME' | 'BOTH';
 export type PlatformBillingInterval = 'MONTH' | 'YEAR';
 export type TenantPlatformBillingStatus =
@@ -29,7 +31,7 @@ export interface PlatformBillingPlanDTO {
 export interface TenantProductBillingDTO {
   id?: number | null;
   tenantId: string;
-  product: PlatformProduct;
+  product: BillingRowProduct;
   chargeEnabled?: boolean | null;
   status?: TenantPlatformBillingStatus | null;
   platformPlanId?: number | null;

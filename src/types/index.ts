@@ -1296,7 +1296,8 @@ export interface SatelliteDomainDTO {
 
 export type OnboardingRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'FAILED' | 'CANCELLED';
 export type OnboardingRequestSource = 'PUBLIC_FORM' | 'ADMIN_MANUAL';
-export type DomainOwnership = 'PLATFORM_REGISTERS' | 'CUSTOMER_REGISTRAR' | 'ALREADY_IN_PLATFORM';
+/** Catalog code from domain_ownership_catalog. */
+export type DomainOwnership = string;
 
 /**
  * New customer onboarding request, matches backend TenantOnboardingRequestDTO
@@ -1322,6 +1323,8 @@ export interface TenantOnboardingRequestDTO {
   country?: string | null;
   requestedHostname: string;
   domainOwnership?: DomainOwnership;
+  registrarNotes?: string | null;
+  sourceOrganizationId?: number | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
   logoUrl?: string | null;
@@ -1361,6 +1364,8 @@ export interface TenantOnboardingSubmitDTO {
   zipCode?: string;
   country?: string;
   domainOwnership?: DomainOwnership;
+  registrarNotes?: string;
+  sourceOrganizationId?: number;
   primaryColor?: string;
   secondaryColor?: string;
   logoUrl?: string;

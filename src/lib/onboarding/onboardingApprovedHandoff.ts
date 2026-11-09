@@ -57,6 +57,7 @@ export function buildManualStepsText(request: TenantOnboardingRequestDTO, tenant
     `Domain ownership: ${ownership}`,
     '',
     domainOwnershipGuidance(request.domainOwnership),
+    ...(request.registrarNotes?.trim() ? ['', 'Registrar notes:', request.registrarNotes.trim()] : []),
     '',
     `1. DNS: point ${host} (and bare domain ${bare}) at the satellite Amplify app.`,
     `2. Amplify: add the custom domain, then set NEXT_PUBLIC_TENANT_ID=${tid} and the site env vars on the satellite app.`,

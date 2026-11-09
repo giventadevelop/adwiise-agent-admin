@@ -27,6 +27,12 @@ export const DOMAIN_OWNERSHIP_OPTIONS: { value: DomainOwnership; label: string }
   { value: 'ALREADY_IN_PLATFORM', label: 'The domain is already managed by your team' },
 ];
 
+/** Ownership codes that ask for registrar, name server, and forwarding notes. */
+export const REGISTRAR_NOTES_OWNERSHIP = new Set(['CUSTOMER_REGISTRAR', 'ALREADY_IN_PLATFORM']);
+
+export const REGISTRAR_NOTES_PROMPT =
+  'Paste the registrar name, the domain, the name servers, and any URL-forwarding notes. You can update this later on the request.';
+
 export const ONBOARDING_STATUS_STYLES: Record<OnboardingRequestStatus, string> = {
   PENDING: 'bg-amber-100 text-amber-800 border-amber-300',
   APPROVED: 'bg-green-100 text-green-800 border-green-300',
@@ -153,10 +159,13 @@ export function validateOnboardingSubmit(
 
   const domainOwnershipRaw =
     typeof input.domainOwnership === 'string' ? input.domainOwnership.trim() : '';
-  const domainOwnership = DOMAIN_OWNERSHIP_OPTIONS.some((o) => o.value === domainOwnershipRaw)
-    ? (domainOwnershipRaw as DomainOwnership)
-    : undefined;
+  const domainOwnership = domainOwnershipRaw ? domainOwnershipRaw.slice(0, 64) : undefined;
   if (!domainOwnership) errors.domainOwnership = 'Domain ownership is required';
+
+  const sourceOrganizationId =
+    typeof input.sourceOrganizationId === 'number' && Number.isFinite(input.sourceOrganizationId)
+      ? input.sourceOrganizationId
+      : undefined;
 
   const primaryColor = trimmed(input.primaryColor, 7);
   if (primaryColor && !isValidHexColor(primaryColor)) errors.primaryColor = 'Use a hex color like #1E40AF';
@@ -172,6 +181,8 @@ export function validateOnboardingSubmit(
     requestedHostname,
     siteType,
     domainOwnership,
+    registrarNotes: trimmed(input.registrarNotes, 8000),
+    sourceOrganizationId,
     description: trimmed(input.description, 4000),
     contactFirstName,
     contactLastName,

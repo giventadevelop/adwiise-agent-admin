@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { fetchAdminAccessForClerkUser, resolveSessionTenantForAccess } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl, getTenantIdOptional } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import { fetchPlatformBillingPlans, fetchTenantProductBillings } from '@/app/admin/platform-billing/ApiServerActions';
+import { fetchPlatformBillingPlans, prepareTenantBillingDesk } from '@/app/admin/platform-billing/ApiServerActions';
 import type { RetailLocationDTO } from '@/types/retail';
 import BillingDesk from './BillingDesk';
 
@@ -36,8 +36,8 @@ export default async function TenantBillingPage({
   const resolvedSearch = typeof (searchParams as Promise<{ reason?: string }>).then === 'function'
     ? await (searchParams as Promise<{ reason?: string }>)
     : (searchParams as { reason?: string });
-  const [rows, plans, locations] = await Promise.all([
-    fetchTenantProductBillings(tenantId).catch(() => []),
+  const [desk, plans, locations] = await Promise.all([
+    prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false })),
     fetchPlatformBillingPlans().catch(() => []),
     loadLocations(tenantId).catch(() => []),
   ]);
@@ -45,10 +45,11 @@ export default async function TenantBillingPage({
     <BillingDesk
       tenantId={tenantId}
       canEditSwitch={access.isPlatformSuperAdmin}
-      initialRows={rows}
+      initialRows={desk.rows}
       plans={plans}
       locations={locations}
-      lockedNotice={resolvedSearch.reason === 'locked' || rows.some((row) => row.status === 'LOCKED')}
+      complimentaryPlan={desk.complimentaryPlan}
+      lockedNotice={resolvedSearch.reason === 'locked' || desk.rows.some((row) => row.status === 'LOCKED')}
     />
   );
 }

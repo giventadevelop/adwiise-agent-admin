@@ -143,7 +143,7 @@ export default function OnboardingRequestsListClient() {
                   setPage(0);
                 }}
                 fetchSuggestions={fetchSuggestions}
-                placeholder="Name, email, domain or ONB- code"
+                placeholder="Organization, email, domain, tenant id, organization id, or ONB- code"
                 inputId="onboarding-list-search"
               />
             </div>

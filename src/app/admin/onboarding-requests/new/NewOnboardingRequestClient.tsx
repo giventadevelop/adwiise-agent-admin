@@ -241,7 +241,10 @@ export default function NewOnboardingRequestClient() {
     setErrors({});
     setShowErrors(false);
     setSaving(true);
-    const result = await createManualOnboardingRequestServer({ ...values });
+    const result = await createManualOnboardingRequestServer({
+      ...values,
+      sourceOrganizationId,
+    });
     setSaving(false);
     if (!result.ok) {
       setSaveError(result.error);

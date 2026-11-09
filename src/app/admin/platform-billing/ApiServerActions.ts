@@ -4,7 +4,9 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { fetchAdminAccessForClerkUser } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import type { PlatformBillingPlanDTO, TenantProductBillingDTO } from '@/types/platformBilling';
+import { isComplimentarySubscriptionPlan, isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
+import { cancelPlatformSubscription, loadOrganization } from '@/lib/platformBilling/stripeCheckout';
+import type { PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 function apiBase() {
   return getApiBaseUrl();
@@ -125,8 +127,75 @@ export async function tenantHasLockedPlatformBilling(tenantId: string): Promise<
   }
 }
 
+const SITE_PRODUCTS: PlatformProduct[] = ['EVENT_SITE', 'GAS_STATION'];
+
+async function refuseSeparateCharge(row: TenantProductBillingDTO): Promise<void> {
+  if (!row.chargeEnabled) return;
+  if (row.product !== 'EVENT_SITE' && row.product !== 'GAS_STATION') return;
+  if (isCoveredByPortfolio(row.notes)) {
+    throw new Error(
+      'This tenant is covered by an organization portfolio charge. Clear that portfolio fee before charging this tenant on its own.'
+    );
+  }
+  const org = await loadOrganization(row.tenantId);
+  if (isComplimentarySubscriptionPlan(org?.subscriptionPlan)) {
+    throw new Error('This tenant plan is free or demo. The platform charge switch stays off, so Stripe is not called.');
+  }
+}
+
+export async function applyComplimentaryPlatformBilling(tenantId: string): Promise<TenantProductBillingDTO[]> {
+  await assertPlatformSuperAdmin();
+  const org = await loadOrganization(tenantId);
+  const existing = await fetchTenantProductBillings(tenantId);
+  if (!isComplimentarySubscriptionPlan(org?.subscriptionPlan)) return existing;
+
+  const saved: TenantProductBillingDTO[] = [];
+  for (const product of SITE_PRODUCTS) {
+    const row = existing.find((entry) => entry.product === product);
+    if (row?.id && !row.chargeEnabled && (row.status === 'COMPLIMENTARY' || row.status === 'LOCKED')) {
+      saved.push(row);
+      continue;
+    }
+    if (row?.stripeSubscriptionId && row.chargeEnabled) {
+      try {
+        await cancelPlatformSubscription(row, false);
+      } catch (error) {
+        console.error('[platform-billing] complimentary cancel skipped', error);
+      }
+    }
+    saved.push(
+      await saveTenantProductBilling({
+        ...(row || { tenantId, product, graceDays: 14, billingMode: 'RECURRING' }),
+        tenantId,
+        product,
+        chargeEnabled: false,
+        status: row?.status === 'LOCKED' ? 'LOCKED' : 'COMPLIMENTARY',
+      })
+    );
+  }
+  return [...saved, ...existing.filter((entry) => entry.product === 'RETAIL')];
+}
+
+export async function prepareTenantBillingDesk(tenantId: string): Promise<{
+  rows: TenantProductBillingDTO[];
+  complimentaryPlan: boolean;
+}> {
+  const org = await loadOrganization(tenantId);
+  const complimentaryPlan = isComplimentarySubscriptionPlan(org?.subscriptionPlan);
+  if (!complimentaryPlan) {
+    return { rows: await fetchTenantProductBillings(tenantId), complimentaryPlan: false };
+  }
+  try {
+    return { rows: await applyComplimentaryPlatformBilling(tenantId), complimentaryPlan: true };
+  } catch (error) {
+    console.error('[platform-billing] complimentary apply skipped', error);
+    return { rows: await fetchTenantProductBillings(tenantId).catch(() => []), complimentaryPlan: true };
+  }
+}
+
 export async function saveTenantProductBilling(row: TenantProductBillingDTO): Promise<TenantProductBillingDTO> {
   await assertPlatformSuperAdmin();
+  await refuseSeparateCharge(row);
   const now = new Date().toISOString();
   const headers = {
     ...tenantHeaders(row.tenantId),

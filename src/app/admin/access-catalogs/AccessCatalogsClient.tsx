@@ -1,30 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import ErrorDialog from '@/components/ErrorDialog';
 import SuccessDialog from '@/components/SuccessDialog';
+import Modal from '@/components/ui/Modal';
+import AdminTenantFilterField from '@/app/admin/AdminTenantFilterField';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 import { CatalogCheck, CatalogHubCard } from '@/app/admin/catalogChrome';
 import { CatalogTable } from '@/app/admin/CatalogTable';
-import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO, SubscriptionPlanCatalogDTO } from '@/types/accessCatalog';
+import type { AccessRoleDTO, DomainOwnershipCatalogDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO, SubscriptionPlanCatalogDTO } from '@/types/accessCatalog';
 import {
   deleteAccessRole,
   deleteRecommendationCategory,
   deleteRetailerSizeBand,
   deleteRetailerType,
   deleteSiteType,
+  deleteDomainOwnership,
   deleteSubscriptionPlan,
   fetchAccessRoles,
   fetchRecommendationCategories,
   fetchRetailerSizeBands,
   fetchRetailerTypes,
   fetchSiteTypes,
+  fetchDomainOwnerships,
   fetchSubscriptionPlans,
   saveAccessRole,
   saveRecommendationCategory,
   saveRetailerSizeBand,
   saveRetailerType,
   saveSiteType,
+  saveDomainOwnership,
   saveSubscriptionPlan,
 } from './ApiServerActions';
 
@@ -104,6 +109,12 @@ const saveTones = {
     icon: 'text-rose-600',
     label: 'text-rose-700',
   },
+  cyan: {
+    button: 'bg-cyan-100 hover:bg-cyan-200',
+    iconBox: 'bg-cyan-200',
+    icon: 'text-cyan-700',
+    label: 'text-cyan-800',
+  },
 } as const;
 
 function SaveButton({
@@ -157,6 +168,139 @@ function SavedNotice({ message, onClose }: { message: string | null; onClose: ()
   );
 }
 
+function AddCatalogButton({
+  label,
+  tone,
+  onClick,
+}: {
+  label: string;
+  tone: keyof typeof saveTones;
+  onClick: () => void;
+}) {
+  const colors = saveTones[tone];
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className={`mb-6 flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl px-6 transition-all duration-300 hover:scale-105 ${colors.button}`}
+    >
+      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${colors.iconBox}`}>
+        <svg className={`h-6 w-6 ${colors.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      </div>
+      <span className={`font-semibold ${colors.label}`}>{label}</span>
+    </button>
+  );
+}
+
+function CatalogEditDialog({
+  open,
+  title,
+  saving,
+  onClose,
+  onSubmit,
+  tone,
+  updateLabel,
+  addLabel,
+  editing = true,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  saving: boolean;
+  onClose: () => void;
+  onSubmit: (event: FormEvent) => void;
+  tone: keyof typeof saveTones;
+  updateLabel: string;
+  addLabel?: string;
+  editing?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Modal
+      isOpen={open}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      title={title}
+      size="lg"
+    >
+      <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onSubmit}>
+        {children}
+        <div className="flex flex-wrap gap-3 md:col-span-2">
+          <SaveButton saving={saving} editing={editing} addLabel={addLabel || updateLabel} updateLabel={updateLabel} tone={tone} />
+          <button
+            type="button"
+            title="Cancel"
+            aria-label="Cancel"
+            disabled={saving}
+            onClick={onClose}
+            className="flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-gray-100 px-6 transition-all duration-300 hover:scale-105 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+          >
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200">
+              <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <span className="font-semibold text-gray-700">Cancel</span>
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function AccessRoleFields({
+  row,
+  shared,
+  canEditGlobal,
+  onChange,
+  onShared,
+}: {
+  row: AccessRoleDTO;
+  shared: boolean;
+  canEditGlobal: boolean;
+  onChange: (row: AccessRoleDTO) => void;
+  onShared: (shared: boolean) => void;
+}) {
+  const locked = row.code === 'SUPER_ADMIN' || row.code === 'ADMIN';
+  return (
+    <>
+      <label className="block text-base font-medium">
+        Code
+        <input className={inputClass} value={row.code} disabled={locked || row.id != null} onChange={(e) => onChange({ ...row, code: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Label
+        <input className={inputClass} value={row.label} onChange={(e) => onChange({ ...row, label: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Sort order
+        <input className={inputClass} type="number" value={row.sortOrder ?? 0} onChange={(e) => onChange({ ...row, sortOrder: Number(e.target.value) })} />
+      </label>
+      <label className="block text-base font-medium">
+        Location scope
+        <select className={inputClass} value={row.locationScope || 'NONE'} onChange={(e) => onChange({ ...row, locationScope: e.target.value })}>
+          <option value="NONE">None</option>
+          <option value="ASSIGNED">Assigned locations</option>
+          <option value="ALL">All locations</option>
+        </select>
+      </label>
+      <CatalogCheck checked={row.grantsAdmin === true} onChange={(checked) => onChange({ ...row, grantsAdmin: checked })} label="Opens the admin menu" />
+      <CatalogCheck
+        checked={row.platformSuper === true}
+        disabled={!canEditGlobal || !shared}
+        onChange={(checked) => onChange({ ...row, platformSuper: checked })}
+        label="Platform super admin"
+      />
+      <CatalogCheck checked={shared} disabled={!canEditGlobal || row.id != null} onChange={onShared} label="Shared with every tenant" />
+    </>
+  );
+}
+
 function AccessRoleSection({
   rows,
   canEditGlobal,
@@ -169,21 +313,23 @@ function AccessRoleSection({
   onChange: (rows: AccessRoleDTO[]) => void;
 }) {
   const tenantId = useAdminTenantId();
-  const [draft, setDraft] = useState<AccessRoleDTO>({
+  const emptyRole = (): AccessRoleDTO => ({
     code: '',
     label: '',
-    sortOrder: rows.length,
+    sortOrder: 0,
     isActive: true,
     grantsAdmin: false,
     platformSuper: false,
     locationScope: 'NONE',
   });
+  const [draft, setDraft] = useState<AccessRoleDTO>({ ...emptyRole(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<AccessRoleDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [shared, setShared] = useState(false);
+  const [editShared, setEditShared] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
-  const locked = draft.code === 'SUPER_ADMIN' || draft.code === 'ADMIN';
-
   const reload = async () => onChange(await fetchAccessRoles(tenantId));
 
   const persist = async (row: AccessRoleDTO, asShared: boolean, announce = false) => {
@@ -192,16 +338,14 @@ function AccessRoleSection({
     try {
       await saveAccessRole(row, asShared, tenantId);
       await reload();
-      setDraft({
-        code: '',
-        label: '',
-        sortOrder: 0,
-        isActive: true,
-        grantsAdmin: false,
-        platformSuper: false,
-        locationScope: 'NONE',
-      });
-      setShared(false);
+      if (row.id == null) {
+        setDraft(emptyRole());
+        setShared(false);
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+        setEditShared(false);
+      }
       if (announce) setSaved(row.id != null ? 'The access role was updated.' : 'The access role was added.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -243,6 +387,16 @@ function AccessRoleSection({
       <p className="mb-4 rounded-lg border-2 border-indigo-700 bg-indigo-200 px-4 py-3 text-base text-indigo-950">
         A new role can open the admin menu or a location scope from here. Platform super stays limited to the shared catalog.
       </p>
+      <AddCatalogButton
+        label="Add role"
+        tone="indigo"
+        onClick={() => {
+          setDraft(emptyRole());
+          setShared(false);
+          setEditing(null);
+          setAdding(true);
+        }}
+      />
       <CatalogTable
         rows={rows}
         itemLabel="access roles"
@@ -272,7 +426,7 @@ function AccessRoleSection({
                 <td className="py-2 text-right">
                   {editable(row, canEditGlobal) ? (
                     <CatalogActions
-                      onEdit={() => { setDraft(row); setShared(!row.tenantId); }}
+                      onEdit={() => { setEditing(row); setEditShared(!row.tenantId); }}
                       onDeactivate={() => persist({ ...row, isActive: false }, !row.tenantId)}
                       onRemove={async () => {
                         setSaving(true);
@@ -298,49 +452,89 @@ function AccessRoleSection({
       </div>
         )}
       </CatalogTable>
-      <form
-        className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+      <CatalogEditDialog
+        open={adding}
+        title="Add access role"
+        saving={saving}
+        tone="indigo"
+        editing={false}
+        addLabel="Add role"
+        updateLabel="Update role"
+        onClose={() => {
+          setAdding(false);
+          setDraft(emptyRole());
+          setShared(false);
+        }}
         onSubmit={(e) => {
           e.preventDefault();
           persist(draft, shared, true);
         }}
       >
-        <label className="block text-base font-medium">
-          Code
-          <input className={inputClass} value={draft.code} disabled={locked || draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
-        </label>
-        <label className="block text-base font-medium">
-          Label
-          <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
-        </label>
-        <label className="block text-base font-medium">
-          Sort order
-          <input className={inputClass} type="number" value={draft.sortOrder ?? 0} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} />
-        </label>
-        <label className="block text-base font-medium">
-          Location scope
-          <select className={inputClass} value={draft.locationScope || 'NONE'} onChange={(e) => setDraft({ ...draft, locationScope: e.target.value })}>
-            <option value="NONE">None</option>
-            <option value="ASSIGNED">Assigned locations</option>
-            <option value="ALL">All locations</option>
-          </select>
-        </label>
-        <CatalogCheck checked={draft.grantsAdmin === true} onChange={(checked) => setDraft({ ...draft, grantsAdmin: checked })} label="Opens the admin menu" />
-        <CatalogCheck
-          checked={draft.platformSuper === true}
-          disabled={!canEditGlobal || !shared}
-          onChange={(checked) => setDraft({ ...draft, platformSuper: checked })}
-          label="Platform super admin"
-        />
-        <CatalogCheck checked={shared} disabled={!canEditGlobal || draft.id != null} onChange={setShared} label="Shared with every tenant" />
-        <div className="md:col-span-2">
-          <SaveButton saving={saving} editing={draft.id != null} addLabel="Add role" updateLabel="Update role" tone="indigo" />
-        </div>
-      </form>
+        <AccessRoleFields row={draft} shared={shared} canEditGlobal={canEditGlobal} onChange={setDraft} onShared={setShared} />
+      </CatalogEditDialog>
+      <CatalogEditDialog
+        open={editing != null}
+        title={editing ? `Edit access role ${editing.code}` : 'Edit access role'}
+        saving={saving}
+        tone="indigo"
+        updateLabel="Update role"
+        onClose={() => { setEditing(null); setEditShared(false); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (editing) persist(editing, editShared, true);
+        }}
+      >
+        {editing && (
+          <AccessRoleFields row={editing} shared={editShared} canEditGlobal={canEditGlobal} onChange={setEditing} onShared={setEditShared} />
+        )}
+      </CatalogEditDialog>
       </div>
       <SavedNotice message={saved} onClose={() => setSaved(null)} />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
     </section>
+  );
+}
+
+function RetailerFields({
+  row,
+  shared,
+  canEditGlobal,
+  parents,
+  onChange,
+  onShared,
+}: {
+  row: RetailerTypeDTO;
+  shared: boolean;
+  canEditGlobal: boolean;
+  parents: { code: string; label: string }[];
+  onChange: (row: RetailerTypeDTO) => void;
+  onShared: (shared: boolean) => void;
+}) {
+  const options = parents.length > 0 ? parents : [{ code: 'RETAIL', label: 'Retail' }];
+  return (
+    <>
+      <label className="block text-base font-medium">
+        Code
+        <input className={inputClass} value={row.code} disabled={row.code === 'GAS_STATION' || row.id != null} onChange={(e) => onChange({ ...row, code: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Label
+        <input className={inputClass} value={row.label} onChange={(e) => onChange({ ...row, label: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Hint
+        <input className={inputClass} value={row.hint || ''} onChange={(e) => onChange({ ...row, hint: e.target.value })} />
+      </label>
+      <label className="block text-base font-medium">
+        Site type
+        <select className={inputClass} value={row.siteTypeCode || 'RETAIL'} onChange={(e) => onChange({ ...row, siteTypeCode: e.target.value })}>
+          {options.map((site) => (
+            <option key={site.code} value={site.code}>{site.label}</option>
+          ))}
+        </select>
+      </label>
+      <CatalogCheck checked={shared} disabled={!canEditGlobal || row.id != null} onChange={onShared} label="Shared with every tenant" />
+    </>
   );
 }
 
@@ -359,16 +553,20 @@ function RetailerSection({
 }) {
   const tenantId = useAdminTenantId();
   const parents = siteTypes.filter((row) => row.isActive !== false);
-  const [draft, setDraft] = useState<RetailerTypeDTO>({
+  const emptyRetailer = (): RetailerTypeDTO => ({
     code: '',
     label: '',
     hint: '',
     moduleKey: 'RETAIL',
     siteTypeCode: 'RETAIL',
-    sortOrder: rows.length,
+    sortOrder: 0,
     isActive: true,
   });
+  const [draft, setDraft] = useState<RetailerTypeDTO>({ ...emptyRetailer(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<RetailerTypeDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [shared, setShared] = useState(false);
+  const [editShared, setEditShared] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -380,8 +578,14 @@ function RetailerSection({
     try {
       await saveRetailerType(row, asShared, tenantId);
       await reload();
-      setDraft({ code: '', label: '', hint: '', moduleKey: 'RETAIL', siteTypeCode: 'RETAIL', sortOrder: 0, isActive: true });
-      setShared(false);
+      if (row.id == null) {
+        setDraft(emptyRetailer());
+        setShared(false);
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+        setEditShared(false);
+      }
       if (announce) setSaved(row.id != null ? 'The retailer pack was updated.' : 'The retailer pack was added.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -423,6 +627,16 @@ function RetailerSection({
       <p className="mb-4 rounded-lg border-2 border-emerald-700 bg-emerald-200 px-4 py-3 text-base text-emerald-950">
         A pack belongs to a site type. Shops use RETAIL, then a pack such as gas station or liquor store. Size bands are the next section.
       </p>
+      <AddCatalogButton
+        label="Add type"
+        tone="emerald"
+        onClick={() => {
+          setDraft(emptyRetailer());
+          setShared(false);
+          setEditing(null);
+          setAdding(true);
+        }}
+      />
       <CatalogTable
         rows={rows}
         itemLabel="retailer packs"
@@ -450,7 +664,7 @@ function RetailerSection({
                 <td className="py-2 text-right">
                   {editable(row, canEditGlobal) ? (
                     <CatalogActions
-                      onEdit={() => { setDraft(row); setShared(!row.tenantId); }}
+                      onEdit={() => { setEditing(row); setEditShared(!row.tenantId); }}
                       onDeactivate={() => persist({ ...row, isActive: false }, !row.tenantId)}
                       onRemove={async () => {
                         setSaving(true);
@@ -476,42 +690,85 @@ function RetailerSection({
       </div>
         )}
       </CatalogTable>
-      <form
-        className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+      <CatalogEditDialog
+        open={adding}
+        title="Add retailer pack"
+        saving={saving}
+        tone="emerald"
+        editing={false}
+        addLabel="Add type"
+        updateLabel="Update type"
+        onClose={() => {
+          setAdding(false);
+          setDraft(emptyRetailer());
+          setShared(false);
+        }}
         onSubmit={(e) => {
           e.preventDefault();
           persist(draft, shared, true);
         }}
       >
-        <label className="block text-base font-medium">
-          Code
-          <input className={inputClass} value={draft.code} disabled={draft.code === 'GAS_STATION' || draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
-        </label>
-        <label className="block text-base font-medium">
-          Label
-          <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
-        </label>
-        <label className="block text-base font-medium">
-          Hint
-          <input className={inputClass} value={draft.hint || ''} onChange={(e) => setDraft({ ...draft, hint: e.target.value })} />
-        </label>
-        <label className="block text-base font-medium">
-          Site type
-          <select className={inputClass} value={draft.siteTypeCode || 'RETAIL'} onChange={(e) => setDraft({ ...draft, siteTypeCode: e.target.value })}>
-            {(parents.length > 0 ? parents : [{ code: 'RETAIL', label: 'Retail' }]).map((site) => (
-              <option key={site.code} value={site.code}>{site.label}</option>
-            ))}
-          </select>
-        </label>
-        <CatalogCheck checked={shared} disabled={!canEditGlobal || draft.id != null} onChange={setShared} label="Shared with every tenant" />
-        <div>
-          <SaveButton saving={saving} editing={draft.id != null} addLabel="Add type" updateLabel="Update type" tone="emerald" />
-        </div>
-      </form>
+        <RetailerFields row={draft} shared={shared} canEditGlobal={canEditGlobal} parents={parents} onChange={setDraft} onShared={setShared} />
+      </CatalogEditDialog>
+      <CatalogEditDialog
+        open={editing != null}
+        title={editing ? `Edit retailer pack ${editing.code}` : 'Edit retailer pack'}
+        saving={saving}
+        tone="emerald"
+        updateLabel="Update type"
+        onClose={() => { setEditing(null); setEditShared(false); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (editing) persist(editing, editShared, true);
+        }}
+      >
+        {editing && (
+          <RetailerFields row={editing} shared={editShared} canEditGlobal={canEditGlobal} parents={parents} onChange={setEditing} onShared={setEditShared} />
+        )}
+      </CatalogEditDialog>
       </div>
       <SavedNotice message={saved} onClose={() => setSaved(null)} />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
     </section>
+  );
+}
+
+function SizeBandFields({
+  row,
+  packs,
+  onChange,
+}: {
+  row: RetailerSizeBandDTO;
+  packs: RetailerTypeDTO[];
+  onChange: (row: RetailerSizeBandDTO) => void;
+}) {
+  return (
+    <>
+      <label className="block text-base font-medium">
+        Retailer type
+        <select className={inputClass} value={row.retailerTypeCode} onChange={(e) => onChange({ ...row, retailerTypeCode: e.target.value })}>
+          {packs.map((pack) => (
+            <option key={pack.code} value={pack.code}>{pack.label}</option>
+          ))}
+        </select>
+      </label>
+      <label className="block text-base font-medium">
+        Code
+        <input className={inputClass} value={row.code} disabled={row.id != null} onChange={(e) => onChange({ ...row, code: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Label
+        <input className={inputClass} value={row.label} onChange={(e) => onChange({ ...row, label: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Minimum locations
+        <input className={inputClass} type="number" min={1} value={row.minLocations ?? 1} onChange={(e) => onChange({ ...row, minLocations: Number(e.target.value) })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Maximum locations
+        <input className={inputClass} type="number" min={1} value={row.maxLocations ?? ''} placeholder="No limit" onChange={(e) => onChange({ ...row, maxLocations: e.target.value === '' ? null : Number(e.target.value) })} />
+      </label>
+    </>
   );
 }
 
@@ -529,15 +786,18 @@ function SizeBandSection({
   onChange: (rows: RetailerSizeBandDTO[]) => void;
 }) {
   const packs = retailers.filter((row) => row.isActive !== false && row.code !== 'RETAIL' && row.code !== 'GAS_STATION_ENT' && (row.siteTypeCode || 'RETAIL') === 'RETAIL');
-  const [draft, setDraft] = useState<RetailerSizeBandDTO>({
+  const emptyBand = (): RetailerSizeBandDTO => ({
     retailerTypeCode: packs[0]?.code || 'GAS_STATION',
     code: '',
     label: '',
     minLocations: 1,
     maxLocations: null,
-    sortOrder: rows.length,
+    sortOrder: 0,
     isActive: true,
   });
+  const [draft, setDraft] = useState<RetailerSizeBandDTO>({ ...emptyBand(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<RetailerSizeBandDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -550,15 +810,12 @@ function SizeBandSection({
     try {
       await saveRetailerSizeBand(row);
       await reload();
-      setDraft({
-        retailerTypeCode: packs[0]?.code || 'GAS_STATION',
-        code: '',
-        label: '',
-        minLocations: 1,
-        maxLocations: null,
-        sortOrder: 0,
-        isActive: true,
-      });
+      if (row.id == null) {
+        setDraft(emptyBand());
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+      }
       if (announce) setSaved(row.id != null ? 'The size band was updated.' : 'The size band was added.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -600,6 +857,17 @@ function SizeBandSection({
       <p className="mb-4 rounded-lg border-2 border-amber-700 bg-amber-200 px-4 py-3 text-base text-amber-950">
         Each band belongs to one retailer type. Gas uses single, mid, and enterprise. Other packs start with one standard band. A blank upper limit means no maximum.
       </p>
+      {canEditGlobal && (
+        <AddCatalogButton
+          label="Add band"
+          tone="amber"
+          onClick={() => {
+            setDraft(emptyBand());
+            setEditing(null);
+            setAdding(true);
+          }}
+        />
+      )}
       <CatalogTable
         rows={rows}
         itemLabel="size bands"
@@ -627,7 +895,7 @@ function SizeBandSection({
                 <td className="py-2 text-right">
                   {canEditGlobal ? (
                     <CatalogActions
-                      onEdit={() => setDraft(row)}
+                      onEdit={() => setEditing(row)}
                       onDeactivate={() => persist({ ...row, isActive: false })}
                       onRemove={async () => {
                         setSaving(true);
@@ -653,47 +921,64 @@ function SizeBandSection({
       </div>
         )}
       </CatalogTable>
-      {canEditGlobal && (
-        <form
-          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            persist(draft, true);
-          }}
-        >
-          <label className="block text-base font-medium">
-            Retailer type
-            <select className={inputClass} value={draft.retailerTypeCode} onChange={(e) => setDraft({ ...draft, retailerTypeCode: e.target.value })}>
-              {packs.map((pack) => (
-                <option key={pack.code} value={pack.code}>{pack.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-base font-medium">
-            Code
-            <input className={inputClass} value={draft.code} disabled={draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
-          </label>
-          <label className="block text-base font-medium">
-            Label
-            <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
-          </label>
-          <label className="block text-base font-medium">
-            Minimum locations
-            <input className={inputClass} type="number" min={1} value={draft.minLocations ?? 1} onChange={(e) => setDraft({ ...draft, minLocations: Number(e.target.value) })} required />
-          </label>
-          <label className="block text-base font-medium">
-            Maximum locations
-            <input className={inputClass} type="number" min={1} value={draft.maxLocations ?? ''} placeholder="No limit" onChange={(e) => setDraft({ ...draft, maxLocations: e.target.value === '' ? null : Number(e.target.value) })} />
-          </label>
-          <div className="md:col-span-2">
-            <SaveButton saving={saving} editing={draft.id != null} addLabel="Add band" updateLabel="Update band" tone="amber" />
-          </div>
-        </form>
-      )}
+      <CatalogEditDialog
+        open={adding}
+        title="Add size band"
+        saving={saving}
+        tone="amber"
+        editing={false}
+        addLabel="Add band"
+        updateLabel="Update band"
+        onClose={() => {
+          setAdding(false);
+          setDraft(emptyBand());
+        }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          persist(draft, true);
+        }}
+      >
+        <SizeBandFields row={draft} packs={packs} onChange={setDraft} />
+      </CatalogEditDialog>
+      <CatalogEditDialog
+        open={editing != null}
+        title={editing ? `Edit size band ${editing.code}` : 'Edit size band'}
+        saving={saving}
+        tone="amber"
+        updateLabel="Update band"
+        onClose={() => setEditing(null)}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (editing) persist(editing, true);
+        }}
+      >
+        {editing && <SizeBandFields row={editing} packs={packs} onChange={setEditing} />}
+      </CatalogEditDialog>
       </div>
       <SavedNotice message={saved} onClose={() => setSaved(null)} />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
     </section>
+  );
+}
+
+function CategoryFields({
+  row,
+  onChange,
+}: {
+  row: RecommendationCategoryDTO;
+  onChange: (row: RecommendationCategoryDTO) => void;
+}) {
+  return (
+    <>
+      <label className="block text-base font-medium">
+        Code
+        <input className={inputClass} value={row.code} disabled={row.id != null} onChange={(e) => onChange({ ...row, code: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Label
+        <input className={inputClass} value={row.label} onChange={(e) => onChange({ ...row, label: e.target.value })} required />
+      </label>
+    </>
   );
 }
 
@@ -708,12 +993,10 @@ function CategorySection({
   fullPage?: boolean;
   onChange: (rows: RecommendationCategoryDTO[]) => void;
 }) {
-  const [draft, setDraft] = useState<RecommendationCategoryDTO>({
-    code: '',
-    label: '',
-    sortOrder: rows.length,
-    isActive: true,
-  });
+  const emptyCategory = (): RecommendationCategoryDTO => ({ code: '', label: '', sortOrder: 0, isActive: true });
+  const [draft, setDraft] = useState<RecommendationCategoryDTO>({ ...emptyCategory(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<RecommendationCategoryDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -726,7 +1009,12 @@ function CategorySection({
     try {
       await saveRecommendationCategory(row);
       await reload();
-      setDraft({ code: '', label: '', sortOrder: 0, isActive: true });
+      if (row.id == null) {
+        setDraft(emptyCategory());
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+      }
       if (announce) setSaved(row.id != null ? 'The recommendation category was updated.' : 'The recommendation category was added.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -768,6 +1056,17 @@ function CategorySection({
       <p className="mb-4 rounded-lg border-2 border-violet-800 bg-violet-200 px-4 py-3 text-base text-violet-950">
         Card kinds for the morning list. A new kind is a row here. The card status list stays fixed.
       </p>
+      {canEditGlobal && (
+        <AddCatalogButton
+          label="Add category"
+          tone="violet"
+          onClick={() => {
+            setDraft(emptyCategory());
+            setEditing(null);
+            setAdding(true);
+          }}
+        />
+      )}
       <CatalogTable
         rows={rows}
         itemLabel="recommendation categories"
@@ -793,7 +1092,7 @@ function CategorySection({
                 <td className="py-2 text-right">
                   {canEditGlobal ? (
                     <CatalogActions
-                      onEdit={() => setDraft(row)}
+                      onEdit={() => setEditing(row)}
                       onDeactivate={() => persist({ ...row, isActive: false })}
                       onRemove={async () => {
                         setSaving(true);
@@ -819,31 +1118,80 @@ function CategorySection({
       </div>
         )}
       </CatalogTable>
-      {canEditGlobal && (
-        <form
-          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            persist(draft, true);
-          }}
-        >
-          <label className="block text-base font-medium">
-            Code
-            <input className={inputClass} value={draft.code} disabled={draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
-          </label>
-          <label className="block text-base font-medium">
-            Label
-            <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
-          </label>
-          <div className="md:col-span-2">
-            <SaveButton saving={saving} editing={draft.id != null} addLabel="Add category" updateLabel="Update category" tone="violet" />
-          </div>
-        </form>
-      )}
+      <CatalogEditDialog
+        open={adding}
+        title="Add recommendation category"
+        saving={saving}
+        tone="violet"
+        editing={false}
+        addLabel="Add category"
+        updateLabel="Update category"
+        onClose={() => {
+          setAdding(false);
+          setDraft(emptyCategory());
+        }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          persist(draft, true);
+        }}
+      >
+        <CategoryFields row={draft} onChange={setDraft} />
+      </CatalogEditDialog>
+      <CatalogEditDialog
+        open={editing != null}
+        title={editing ? `Edit recommendation category ${editing.code}` : 'Edit recommendation category'}
+        saving={saving}
+        tone="violet"
+        updateLabel="Update category"
+        onClose={() => setEditing(null)}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (editing) persist(editing, true);
+        }}
+      >
+        {editing && <CategoryFields row={editing} onChange={setEditing} />}
+      </CatalogEditDialog>
       </div>
       <SavedNotice message={saved} onClose={() => setSaved(null)} />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
     </section>
+  );
+}
+
+function SiteTypeFields({
+  row,
+  shared,
+  canEditGlobal,
+  onChange,
+  onShared,
+}: {
+  row: SiteTypeCatalogDTO;
+  shared: boolean;
+  canEditGlobal: boolean;
+  onChange: (row: SiteTypeCatalogDTO) => void;
+  onShared: (shared: boolean) => void;
+}) {
+  const locked = row.code === 'EVENT_ORG' || row.code === 'RETAIL';
+  return (
+    <>
+      <label className="block text-base font-medium">
+        Code
+        <input className={inputClass} value={row.code} disabled={locked || row.id != null} onChange={(e) => onChange({ ...row, code: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Label
+        <input className={inputClass} value={row.label} onChange={(e) => onChange({ ...row, label: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Hint
+        <input className={inputClass} value={row.hint || ''} onChange={(e) => onChange({ ...row, hint: e.target.value })} />
+      </label>
+      <label className="block text-base font-medium">
+        Module
+        <input className={inputClass} value={row.moduleKey || 'EVENT'} onChange={(e) => onChange({ ...row, moduleKey: e.target.value })} />
+      </label>
+      <CatalogCheck checked={shared} disabled={!canEditGlobal || row.id != null} onChange={onShared} label="Shared with every tenant" />
+    </>
   );
 }
 
@@ -859,19 +1207,22 @@ function SiteTypeSection({
   onChange: (rows: SiteTypeCatalogDTO[]) => void;
 }) {
   const tenantId = useAdminTenantId();
-  const [draft, setDraft] = useState<SiteTypeCatalogDTO>({
+  const emptySiteType = (): SiteTypeCatalogDTO => ({
     code: '',
     label: '',
     hint: '',
     moduleKey: 'EVENT',
-    sortOrder: rows.length,
+    sortOrder: 0,
     isActive: true,
   });
+  const [draft, setDraft] = useState<SiteTypeCatalogDTO>({ ...emptySiteType(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<SiteTypeCatalogDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [shared, setShared] = useState(false);
+  const [editShared, setEditShared] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
-  const locked = draft.code === 'EVENT_ORG' || draft.code === 'RETAIL';
 
   const reload = async () => onChange(await fetchSiteTypes(tenantId));
   const persist = async (row: SiteTypeCatalogDTO, asShared: boolean, announce = false) => {
@@ -880,8 +1231,14 @@ function SiteTypeSection({
     try {
       await saveSiteType(row, asShared, tenantId);
       await reload();
-      setDraft({ code: '', label: '', hint: '', moduleKey: 'EVENT', sortOrder: 0, isActive: true });
-      setShared(false);
+      if (row.id == null) {
+        setDraft(emptySiteType());
+        setShared(false);
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+        setEditShared(false);
+      }
       if (announce) setSaved(row.id != null ? 'The site type was updated.' : 'The site type was added.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -923,6 +1280,16 @@ function SiteTypeSection({
       <p className="mb-4 rounded-lg border-2 border-sky-700 bg-sky-200 px-4 py-3 text-base text-sky-950">
         The organization site type. A shop is RETAIL. The pack, such as gas station, is a retailer type under that site type.
       </p>
+      <AddCatalogButton
+        label="Add site type"
+        tone="sky"
+        onClick={() => {
+          setDraft(emptySiteType());
+          setShared(false);
+          setEditing(null);
+          setAdding(true);
+        }}
+      />
       <CatalogTable
         rows={rows}
         itemLabel="site types"
@@ -950,7 +1317,7 @@ function SiteTypeSection({
                 <td className="py-2 text-right">
                   {editable(row, canEditGlobal) ? (
                     <CatalogActions
-                      onEdit={() => { setDraft(row); setShared(!row.tenantId); }}
+                      onEdit={() => { setEditing(row); setEditShared(!row.tenantId); }}
                       onDeactivate={() => persist({ ...row, isActive: false }, !row.tenantId)}
                       onRemove={async () => {
                         setSaving(true);
@@ -976,34 +1343,42 @@ function SiteTypeSection({
       </div>
         )}
       </CatalogTable>
-      <form
-        className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+      <CatalogEditDialog
+        open={adding}
+        title="Add site type"
+        saving={saving}
+        tone="sky"
+        editing={false}
+        addLabel="Add site type"
+        updateLabel="Update site type"
+        onClose={() => {
+          setAdding(false);
+          setDraft(emptySiteType());
+          setShared(false);
+        }}
         onSubmit={(e) => {
           e.preventDefault();
           persist(draft, shared, true);
         }}
       >
-        <label className="block text-base font-medium">
-          Code
-          <input className={inputClass} value={draft.code} disabled={locked || draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
-        </label>
-        <label className="block text-base font-medium">
-          Label
-          <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
-        </label>
-        <label className="block text-base font-medium">
-          Hint
-          <input className={inputClass} value={draft.hint || ''} onChange={(e) => setDraft({ ...draft, hint: e.target.value })} />
-        </label>
-        <label className="block text-base font-medium">
-          Module
-          <input className={inputClass} value={draft.moduleKey || 'EVENT'} onChange={(e) => setDraft({ ...draft, moduleKey: e.target.value })} />
-        </label>
-        <CatalogCheck checked={shared} disabled={!canEditGlobal || draft.id != null} onChange={setShared} label="Shared with every tenant" />
-        <div>
-          <SaveButton saving={saving} editing={draft.id != null} addLabel="Add site type" updateLabel="Update site type" tone="sky" />
-        </div>
-      </form>
+        <SiteTypeFields row={draft} shared={shared} canEditGlobal={canEditGlobal} onChange={setDraft} onShared={setShared} />
+      </CatalogEditDialog>
+      <CatalogEditDialog
+        open={editing != null}
+        title={editing ? `Edit site type ${editing.code}` : 'Edit site type'}
+        saving={saving}
+        tone="sky"
+        updateLabel="Update site type"
+        onClose={() => { setEditing(null); setEditShared(false); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (editing) persist(editing, editShared, true);
+        }}
+      >
+        {editing && (
+          <SiteTypeFields row={editing} shared={editShared} canEditGlobal={canEditGlobal} onChange={setEditing} onShared={setEditShared} />
+        )}
+      </CatalogEditDialog>
       </div>
       <SavedNotice message={saved} onClose={() => setSaved(null)} />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
@@ -1012,6 +1387,41 @@ function SiteTypeSection({
 }
 
 const BUILT_IN_PLANS = new Set(['BASIC', 'PROFESSIONAL', 'ENTERPRISE']);
+
+function HintCatalogFields<T extends { id?: number | null; tenantId?: string | null; code: string; label: string; hint?: string | null }>({
+  row,
+  shared,
+  canEditGlobal,
+  builtIn,
+  onChange,
+  onShared,
+}: {
+  row: T;
+  shared: boolean;
+  canEditGlobal: boolean;
+  builtIn: Set<string>;
+  onChange: (row: T) => void;
+  onShared: (shared: boolean) => void;
+}) {
+  const locked = row.tenantId == null && builtIn.has(row.code);
+  return (
+    <>
+      <label className="block text-base font-medium">
+        Code
+        <input className={inputClass} value={row.code} disabled={locked || row.id != null} onChange={(e) => onChange({ ...row, code: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Label
+        <input className={inputClass} value={row.label} onChange={(e) => onChange({ ...row, label: e.target.value })} required />
+      </label>
+      <label className="block text-base font-medium">
+        Hint
+        <input className={inputClass} value={row.hint || ''} onChange={(e) => onChange({ ...row, hint: e.target.value })} />
+      </label>
+      <CatalogCheck checked={shared} disabled={!canEditGlobal || row.id != null} onChange={onShared} label="Shared with every tenant" />
+    </>
+  );
+}
 
 function SubscriptionPlanSection({
   rows,
@@ -1025,18 +1435,15 @@ function SubscriptionPlanSection({
   onChange: (rows: SubscriptionPlanCatalogDTO[]) => void;
 }) {
   const tenantId = useAdminTenantId();
-  const [draft, setDraft] = useState<SubscriptionPlanCatalogDTO>({
-    code: '',
-    label: '',
-    hint: '',
-    sortOrder: rows.length,
-    isActive: true,
-  });
+  const emptyPlan = (): SubscriptionPlanCatalogDTO => ({ code: '', label: '', hint: '', sortOrder: 0, isActive: true });
+  const [draft, setDraft] = useState<SubscriptionPlanCatalogDTO>({ ...emptyPlan(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<SubscriptionPlanCatalogDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [shared, setShared] = useState(false);
+  const [editShared, setEditShared] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
-  const locked = draft.tenantId == null && BUILT_IN_PLANS.has(draft.code);
 
   const reload = async () => onChange(await fetchSubscriptionPlans(tenantId));
   const persist = async (row: SubscriptionPlanCatalogDTO, asShared: boolean, announce = false) => {
@@ -1045,8 +1452,14 @@ function SubscriptionPlanSection({
     try {
       await saveSubscriptionPlan(row, asShared, tenantId);
       await reload();
-      setDraft({ code: '', label: '', hint: '', sortOrder: 0, isActive: true });
-      setShared(false);
+      if (row.id == null) {
+        setDraft(emptyPlan());
+        setShared(false);
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+        setEditShared(false);
+      }
       if (announce) setSaved(row.id != null ? 'The subscription plan was updated.' : 'The subscription plan was added.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -1088,6 +1501,16 @@ function SubscriptionPlanSection({
         <p className="mb-4 rounded-lg border-2 border-rose-700 bg-rose-200 px-4 py-3 text-base text-rose-950">
           These names fill the Subscription Plan list. The organization stores the code. Shared rows are edited by a platform super admin. Basic, Professional, and Enterprise stay in the shared list.
         </p>
+        <AddCatalogButton
+          label="Add plan"
+          tone="rose"
+          onClick={() => {
+            setDraft(emptyPlan());
+            setShared(false);
+            setEditing(null);
+            setAdding(true);
+          }}
+        />
         <CatalogTable
           rows={rows}
           itemLabel="subscription plans"
@@ -1113,7 +1536,7 @@ function SubscriptionPlanSection({
                       <td className="py-2 text-right">
                         {editable(row, canEditGlobal) ? (
                           <CatalogActions
-                            onEdit={() => { setDraft(row); setShared(!row.tenantId); }}
+                            onEdit={() => { setEditing(row); setEditShared(!row.tenantId); }}
                             onDeactivate={() => persist({ ...row, isActive: false }, !row.tenantId)}
                             onRemove={async () => {
                               setSaving(true);
@@ -1139,30 +1562,226 @@ function SubscriptionPlanSection({
             </div>
           )}
         </CatalogTable>
-        <form
-          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+        <CatalogEditDialog
+          open={adding}
+          title="Add subscription plan"
+          saving={saving}
+          tone="rose"
+          editing={false}
+          addLabel="Add plan"
+          updateLabel="Update plan"
+          onClose={() => {
+            setAdding(false);
+            setDraft(emptyPlan());
+            setShared(false);
+          }}
           onSubmit={(e) => {
             e.preventDefault();
             persist(draft, shared, true);
           }}
         >
-          <label className="block text-base font-medium">
-            Code
-            <input className={inputClass} value={draft.code} disabled={locked || draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
-          </label>
-          <label className="block text-base font-medium">
-            Label
-            <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
-          </label>
-          <label className="block text-base font-medium">
-            Hint
-            <input className={inputClass} value={draft.hint || ''} onChange={(e) => setDraft({ ...draft, hint: e.target.value })} />
-          </label>
-          <CatalogCheck checked={shared} disabled={!canEditGlobal || draft.id != null} onChange={setShared} label="Shared with every tenant" />
-          <div>
-            <SaveButton saving={saving} editing={draft.id != null} addLabel="Add plan" updateLabel="Update plan" tone="rose" />
-          </div>
-        </form>
+          <HintCatalogFields row={draft} shared={shared} canEditGlobal={canEditGlobal} builtIn={BUILT_IN_PLANS} onChange={setDraft} onShared={setShared} />
+        </CatalogEditDialog>
+        <CatalogEditDialog
+          open={editing != null}
+          title={editing ? `Edit subscription plan ${editing.code}` : 'Edit subscription plan'}
+          saving={saving}
+          tone="rose"
+          updateLabel="Update plan"
+          onClose={() => { setEditing(null); setEditShared(false); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (editing) persist(editing, editShared, true);
+          }}
+        >
+          {editing && (
+            <HintCatalogFields row={editing} shared={editShared} canEditGlobal={canEditGlobal} builtIn={BUILT_IN_PLANS} onChange={setEditing} onShared={setEditShared} />
+          )}
+        </CatalogEditDialog>
+      </div>
+      <SavedNotice message={saved} onClose={() => setSaved(null)} />
+      <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
+    </section>
+  );
+}
+
+const BUILT_IN_OWNERSHIP = new Set(['CUSTOMER_REGISTRAR', 'PLATFORM_REGISTERS', 'ALREADY_IN_PLATFORM']);
+
+function DomainOwnershipSection({
+  rows,
+  canEditGlobal,
+  fullPage = false,
+  onChange,
+}: {
+  rows: DomainOwnershipCatalogDTO[];
+  canEditGlobal: boolean;
+  fullPage?: boolean;
+  onChange: (rows: DomainOwnershipCatalogDTO[]) => void;
+}) {
+  const tenantId = useAdminTenantId();
+  const emptyOwnership = (): DomainOwnershipCatalogDTO => ({ code: '', label: '', hint: '', sortOrder: 0, isActive: true });
+  const [draft, setDraft] = useState<DomainOwnershipCatalogDTO>({ ...emptyOwnership(), sortOrder: rows.length });
+  const [editing, setEditing] = useState<DomainOwnershipCatalogDTO | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [editShared, setEditShared] = useState(false);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
+
+  const reload = async () => onChange(await fetchDomainOwnerships(tenantId));
+  const persist = async (row: DomainOwnershipCatalogDTO, asShared: boolean, announce = false) => {
+    setSaving(true);
+    setError('');
+    try {
+      await saveDomainOwnership(row, asShared, tenantId);
+      await reload();
+      if (row.id == null) {
+        setDraft(emptyOwnership());
+        setShared(false);
+        setAdding(false);
+      } else {
+        setEditing((current) => (current?.id === row.id ? null : current));
+        setEditShared(false);
+      }
+      if (announce) setSaved(row.id != null ? 'The domain ownership was updated.' : 'The domain ownership was added.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!fullPage) {
+    return (
+      <CatalogHubCard
+        id="domain-ownerships"
+        title="Domain ownership"
+        hint="Choices on the new-request form and Get Started. The saved value is the code."
+        count={rows.length}
+        href="/admin/access-catalogs/domain-ownerships"
+        manageLabel="Manage domain ownership"
+        tone="cyan"
+        icon={
+          <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+          </svg>
+        }
+      />
+    );
+  }
+
+  return (
+    <section id="domain-ownerships" className="scroll-mt-44 overflow-hidden rounded-xl border-2 border-cyan-700 bg-cyan-200 text-cyan-950 shadow-lg">
+      <div className="flex items-center gap-3 bg-cyan-700 px-6 py-4 text-white">
+        <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-800 text-white">
+          <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-semibold">Domain ownership</h2>
+      </div>
+      <div className="p-6">
+        <p className="mb-4 rounded-lg border-2 border-cyan-700 bg-cyan-200 px-4 py-3 text-base text-cyan-950">
+          These names fill the Domain ownership list on a new onboarding request and on Get Started. The request stores the code. The three built-in choices stay in the shared list.
+        </p>
+        <AddCatalogButton
+          label="Add ownership"
+          tone="cyan"
+          onClick={() => {
+            setDraft(emptyOwnership());
+            setShared(false);
+            setEditing(null);
+            setAdding(true);
+          }}
+        />
+        <CatalogTable
+          rows={rows}
+          itemLabel="domain ownership choices"
+          searchText={(row) => `${row.code} ${row.label} ${row.hint || ''} ${row.tenantId ? 'this tenant' : 'shared'}`}
+        >
+          {(pageRows) => (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-base">
+                <thead>
+                  <tr className="text-left font-semibold">
+                    <th className="py-2 pr-4">Code</th>
+                    <th className="py-2 pr-4">Label</th>
+                    <th className="py-2 pr-4">Scope</th>
+                    <th className="py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pageRows.map((row) => (
+                    <tr key={row.id ?? row.code}>
+                      <td className="py-2 pr-4 font-mono text-sm">{row.code}</td>
+                      <td className="py-2 pr-4">{row.label}</td>
+                      <td className="py-2 pr-4">{row.tenantId ? 'This tenant' : 'Shared'}</td>
+                      <td className="py-2 text-right">
+                        {editable(row, canEditGlobal) ? (
+                          <CatalogActions
+                            onEdit={() => { setEditing(row); setEditShared(!row.tenantId); }}
+                            onDeactivate={() => persist({ ...row, isActive: false }, !row.tenantId)}
+                            onRemove={async () => {
+                              setSaving(true);
+                              setError('');
+                              try {
+                                await deleteDomainOwnership(row);
+                                await reload();
+                              } catch (e) {
+                                setError(e instanceof Error ? e.message : 'Remove failed');
+                              } finally {
+                                setSaving(false);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="font-medium">Shared</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CatalogTable>
+        <CatalogEditDialog
+          open={adding}
+          title="Add domain ownership"
+          saving={saving}
+          tone="cyan"
+          editing={false}
+          addLabel="Add ownership"
+          updateLabel="Update ownership"
+          onClose={() => {
+            setAdding(false);
+            setDraft(emptyOwnership());
+            setShared(false);
+          }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            persist(draft, shared, true);
+          }}
+        >
+          <HintCatalogFields row={draft} shared={shared} canEditGlobal={canEditGlobal} builtIn={BUILT_IN_OWNERSHIP} onChange={setDraft} onShared={setShared} />
+        </CatalogEditDialog>
+        <CatalogEditDialog
+          open={editing != null}
+          title={editing ? `Edit domain ownership ${editing.code}` : 'Edit domain ownership'}
+          saving={saving}
+          tone="cyan"
+          updateLabel="Update ownership"
+          onClose={() => { setEditing(null); setEditShared(false); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (editing) persist(editing, editShared, true);
+          }}
+        >
+          {editing && (
+            <HintCatalogFields row={editing} shared={editShared} canEditGlobal={canEditGlobal} builtIn={BUILT_IN_OWNERSHIP} onChange={setEditing} onShared={setEditShared} />
+          )}
+        </CatalogEditDialog>
       </div>
       <SavedNotice message={saved} onClose={() => setSaved(null)} />
       <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
@@ -1174,6 +1793,7 @@ export type AccessCatalogSection =
   | 'access-roles'
   | 'site-types'
   | 'subscription-plans'
+  | 'domain-ownerships'
   | 'retailer-types'
   | 'retailer-size-bands'
   | 'recommendation-categories';
@@ -1183,6 +1803,7 @@ export default function AccessCatalogsClient({
   initialRetailers,
   initialSiteTypes,
   initialPlans,
+  initialOwnerships,
   initialSizeBands,
   initialCategories,
   canEditGlobal,
@@ -1192,6 +1813,7 @@ export default function AccessCatalogsClient({
   initialRetailers: RetailerTypeDTO[];
   initialSiteTypes: SiteTypeCatalogDTO[];
   initialPlans: SubscriptionPlanCatalogDTO[];
+  initialOwnerships: DomainOwnershipCatalogDTO[];
   initialSizeBands: RetailerSizeBandDTO[];
   initialCategories: RecommendationCategoryDTO[];
   canEditGlobal: boolean;
@@ -1201,16 +1823,52 @@ export default function AccessCatalogsClient({
   const [retailers, setRetailers] = useState(initialRetailers);
   const [siteTypes, setSiteTypes] = useState(initialSiteTypes);
   const [plans, setPlans] = useState(initialPlans);
+  const [ownerships, setOwnerships] = useState(initialOwnerships);
   const [sizeBands, setSizeBands] = useState(initialSizeBands);
   const [categories, setCategories] = useState(initialCategories);
+  const tenantId = useAdminTenantId();
 
   useEffect(() => {
     const id = window.location.hash.replace('#', '');
     if (!id) return;
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetchAccessRoles(tenantId),
+      fetchRetailerTypes(tenantId),
+      fetchSiteTypes(tenantId),
+      fetchSubscriptionPlans(tenantId),
+      fetchDomainOwnerships(tenantId),
+      fetchRetailerSizeBands(),
+      fetchRecommendationCategories(),
+    ])
+      .then(([nextRoles, nextRetailers, nextSiteTypes, nextPlans, nextOwnerships, nextBands, nextCategories]) => {
+        if (cancelled) return;
+        setRoles(nextRoles);
+        setRetailers(nextRetailers);
+        setSiteTypes(nextSiteTypes);
+        setPlans(nextPlans);
+        setOwnerships(nextOwnerships);
+        setSizeBands(nextBands);
+        setCategories(nextCategories);
+      })
+      .catch((error) => console.error('[AccessCatalogs] reload failed', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
   return (
     <div className="space-y-8">
+      <div className="rounded-xl border-l-4 border-sky-700 bg-sky-200 p-6 text-sky-950 shadow-lg">
+        <AdminTenantFilterField />
+        <p className="mt-3 text-base font-medium">
+          Pick the organization before adding a row for that tenant. Shared rows stay available to every organization.
+        </p>
+      </div>
       {(!only || only === 'access-roles') && (
         <AccessRoleSection rows={roles} canEditGlobal={canEditGlobal} fullPage={only === 'access-roles'} onChange={setRoles} />
       )}
@@ -1219,6 +1877,9 @@ export default function AccessCatalogsClient({
       )}
       {(!only || only === 'subscription-plans') && (
         <SubscriptionPlanSection rows={plans} canEditGlobal={canEditGlobal} fullPage={only === 'subscription-plans'} onChange={setPlans} />
+      )}
+      {(!only || only === 'domain-ownerships') && (
+        <DomainOwnershipSection rows={ownerships} canEditGlobal={canEditGlobal} fullPage={only === 'domain-ownerships'} onChange={setOwnerships} />
       )}
       {(!only || only === 'retailer-types') && (
         <RetailerSection rows={retailers} siteTypes={siteTypes} canEditGlobal={canEditGlobal} fullPage={only === 'retailer-types'} onChange={setRetailers} />
