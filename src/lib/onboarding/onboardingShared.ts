@@ -35,6 +35,12 @@ export const ONBOARDING_STATUS_STYLES: Record<OnboardingRequestStatus, string> =
   CANCELLED: 'bg-blue-100 text-blue-800 border-blue-300',
 };
 
+/** Shared input classes for onboarding admin forms (matches form_validation_styling). */
+export const onboardingInputClass = (hasError = false) =>
+  `mt-1 block w-full border rounded-xl focus:ring-blue-500 px-4 py-3 text-base disabled:bg-gray-100 disabled:text-gray-600 ${
+    hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-400 focus:border-blue-500'
+  }`;
+
 const HOSTNAME_PATTERN = /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
@@ -87,22 +93,52 @@ function trimmed(value: unknown, max: number): string | undefined {
   return t.slice(0, max);
 }
 
+export type ValidateOnboardingSubmitOptions = {
+  /**
+   * When true (new org — no existing organization selected), require contact
+   * first name, last name, and phone in addition to email.
+   */
+  requireContactDetails?: boolean;
+  /**
+   * When true, skip contact email / name / phone / address validation
+   * (admin onboarding selects an existing Organization that already has CRM data).
+   */
+  skipCrmFieldValidation?: boolean;
+};
+
 /**
  * Validates and normalizes untrusted submit input (public route + admin manual entry).
  * Returns per-field error messages keyed by field name.
  */
-export function validateOnboardingSubmit(input: Record<string, unknown>): {
+export function validateOnboardingSubmit(
+  input: Record<string, unknown>,
+  options: ValidateOnboardingSubmitOptions = {}
+): {
   payload: TenantOnboardingSubmitDTO;
   errors: Record<string, string>;
 } {
   const errors: Record<string, string> = {};
+  const { requireContactDetails = false, skipCrmFieldValidation = false } = options;
 
   const organizationName = trimmed(input.organizationName, 255) ?? '';
   if (!organizationName) errors.organizationName = 'Organization name is required';
 
   const contactEmail = (trimmed(input.contactEmail, 255) ?? '').toLowerCase();
-  if (!contactEmail) errors.contactEmail = 'Contact email is required';
-  else if (!isValidOnboardingEmail(contactEmail)) errors.contactEmail = 'Please enter a valid email address';
+  if (!skipCrmFieldValidation) {
+    if (!contactEmail) errors.contactEmail = 'Contact email is required';
+    else if (!isValidOnboardingEmail(contactEmail)) errors.contactEmail = 'Please enter a valid email address';
+  } else if (contactEmail && !isValidOnboardingEmail(contactEmail)) {
+    errors.contactEmail = 'Please enter a valid email address';
+  }
+
+  const contactFirstName = trimmed(input.contactFirstName, 100);
+  const contactLastName = trimmed(input.contactLastName, 100);
+  const contactPhone = trimmed(input.contactPhone, 50);
+  if (requireContactDetails && !skipCrmFieldValidation) {
+    if (!contactFirstName) errors.contactFirstName = 'Contact first name is required for a new organization';
+    if (!contactLastName) errors.contactLastName = 'Contact last name is required for a new organization';
+    if (!contactPhone) errors.contactPhone = 'Contact phone is required for a new organization';
+  }
 
   const requestedHostname = normalizeOnboardingHostname(trimmed(input.requestedHostname, 255));
   if (!requestedHostname) errors.requestedHostname = 'Website domain is required';
@@ -110,12 +146,17 @@ export function validateOnboardingSubmit(input: Record<string, unknown>): {
     errors.requestedHostname = 'Enter a domain like www.example.org';
   }
 
-  const siteType = ONBOARDING_SITE_TYPE_OPTIONS.some((o) => o.value === input.siteType)
-    ? (input.siteType as TenantSiteType)
+  // Site types may come from the access-catalog API (beyond the static fallback list).
+  const siteTypeRaw = typeof input.siteType === 'string' ? input.siteType.trim() : '';
+  if (!siteTypeRaw) errors.siteType = 'Site type is required';
+  const siteType = siteTypeRaw ? (siteTypeRaw as TenantSiteType) : undefined;
+
+  const domainOwnershipRaw =
+    typeof input.domainOwnership === 'string' ? input.domainOwnership.trim() : '';
+  const domainOwnership = DOMAIN_OWNERSHIP_OPTIONS.some((o) => o.value === domainOwnershipRaw)
+    ? (domainOwnershipRaw as DomainOwnership)
     : undefined;
-  const domainOwnership = DOMAIN_OWNERSHIP_OPTIONS.some((o) => o.value === input.domainOwnership)
-    ? (input.domainOwnership as DomainOwnership)
-    : undefined;
+  if (!domainOwnership) errors.domainOwnership = 'Domain ownership is required';
 
   const primaryColor = trimmed(input.primaryColor, 7);
   if (primaryColor && !isValidHexColor(primaryColor)) errors.primaryColor = 'Use a hex color like #1E40AF';
@@ -132,9 +173,9 @@ export function validateOnboardingSubmit(input: Record<string, unknown>): {
     siteType,
     domainOwnership,
     description: trimmed(input.description, 4000),
-    contactFirstName: trimmed(input.contactFirstName, 100),
-    contactLastName: trimmed(input.contactLastName, 100),
-    contactPhone: trimmed(input.contactPhone, 50),
+    contactFirstName,
+    contactLastName,
+    contactPhone,
     addressLine1: trimmed(input.addressLine1, 255),
     addressLine2: trimmed(input.addressLine2, 255),
     city: trimmed(input.city, 100),
@@ -162,19 +203,49 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
   'error.invalidTransition': 'This request is no longer pending, so it cannot be changed.',
   'error.notEditable': 'Only PENDING or FAILED requests can be edited.',
   'error.provisioningFailed': 'Provisioning failed and everything was rolled back.',
+  'error.idnotfound': 'The selected portfolio was not found.',
+  'error.inactive': 'The selected portfolio is inactive. Choose an active portfolio or none.',
+  'error.validation': 'One or more approval fields failed validation.',
 };
+
+/** Spring/Problem titles that are too generic to show instead of detail/fieldErrors. */
+const GENERIC_PROBLEM_TITLES = new Set([
+  'bad request',
+  'method argument not valid',
+  'constraint violation',
+  'validation failed',
+]);
+
+function isGenericProblemTitle(title?: string): boolean {
+  return !title || GENERIC_PROBLEM_TITLES.has(title.trim().toLowerCase());
+}
 
 /** Turns a backend problem+json body into a readable message. */
 export function describeOnboardingBackendError(raw: string, fallback: string): string {
   try {
-    const parsed = JSON.parse(raw) as { message?: string; title?: string; detail?: string; fieldErrors?: { field: string; message: string }[] };
-    const known = parsed.message ? BACKEND_ERROR_MESSAGES[parsed.message] : undefined;
-    if (parsed.message === 'error.provisioningFailed' && parsed.title) return parsed.title;
-    if (known) return known;
+    const parsed = JSON.parse(raw) as {
+      message?: string;
+      title?: string;
+      detail?: string;
+      fieldErrors?: { field: string; message: string }[];
+    };
     if (parsed.fieldErrors?.length) {
       return parsed.fieldErrors.map((f) => `${f.field}: ${f.message}`).join('; ');
     }
-    return parsed.title || parsed.detail || fallback;
+    const known = parsed.message ? BACKEND_ERROR_MESSAGES[parsed.message] : undefined;
+    if (parsed.message === 'error.provisioningFailed' && parsed.title && !isGenericProblemTitle(parsed.title)) {
+      return parsed.title;
+    }
+    if (known) {
+      if (parsed.detail && parsed.detail.trim() && known === BACKEND_ERROR_MESSAGES['error.validation']) {
+        return `${known} ${parsed.detail.trim()}`;
+      }
+      return known;
+    }
+    if (parsed.detail?.trim()) return parsed.detail.trim();
+    if (parsed.title?.trim() && !isGenericProblemTitle(parsed.title)) return parsed.title.trim();
+    if (parsed.message?.trim()) return parsed.message.trim();
+    return fallback;
   } catch {
     return raw?.trim() ? raw.trim().slice(0, 300) : fallback;
   }

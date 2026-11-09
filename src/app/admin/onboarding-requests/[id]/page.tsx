@@ -28,7 +28,8 @@ export default async function OnboardingRequestReviewPage({ params }: { params: 
 
   let portfolios: OrganizationPortfolioDTO[] = [];
   try {
-    portfolios = await listOrganizationPortfolios();
+    const listed = await listOrganizationPortfolios({ page: 0, size: 200 });
+    portfolios = listed.items;
   } catch (error) {
     console.error('[onboarding-requests] portfolio list failed', error);
   }

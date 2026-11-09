@@ -3,7 +3,6 @@
 import React, {
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -116,7 +115,8 @@ export default function AdminTenantFilterField({
     },
     [canQueryAllTenants, allowedTenantIds],
   );
-  const listboxId = useId();
+  // Stable id avoids SSR/client useId() hydration mismatches on aria-controls.
+  const listboxId = 'admin-tenant-id-listbox';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +125,9 @@ export default function AdminTenantFilterField({
   const resolveAttemptedRef = useRef<string | null>(null);
   const cachedOrgsRef = useRef<TenantOrganizationDTO[]>([]);
   const isTypingRef = useRef(false);
+  /** Keep latest allowlist filter without re-running mount effects (server actions refresh RSC). */
+  const filterToAllowlistRef = useRef(filterToAllowlist);
+  filterToAllowlistRef.current = filterToAllowlist;
 
   const [inputValue, setInputValue] = useState(selectedTenantId);
   const [open, setOpen] = useState(false);
@@ -162,14 +165,16 @@ export default function AdminTenantFilterField({
     [pathname, router, searchParams],
   );
 
-  // Load recent orgs once
+  // Load recent orgs once on mount. Do NOT depend on filterToAllowlist — layout
+  // rebuilds a new allowedTenantIds array after every server-action refresh, which
+  // would re-fire this effect forever (user-profiles + tenant-organizations spam).
   useEffect(() => {
     let cancelled = false;
 
     async function loadRecent() {
       setLoading(true);
       try {
-        const recent = filterToAllowlist(await fetchRecentTenantOrganizationsForSelectServer());
+        const recent = filterToAllowlistRef.current(await fetchRecentTenantOrganizationsForSelectServer());
         if (cancelled) return;
         setCachedOrgs(recent);
         setDisplayOrgs(recent.slice(0, MAX_SUGGESTIONS));
@@ -187,7 +192,7 @@ export default function AdminTenantFilterField({
     return () => {
       cancelled = true;
     };
-  }, [filterToAllowlist]);
+  }, []);
 
   // URL → input label (skip while user is actively typing)
   useEffect(() => {
@@ -225,7 +230,7 @@ export default function AdminTenantFilterField({
 
     async function resolveSelected() {
       try {
-        const results = filterToAllowlist(await searchTenantOrganizationsForSelectServer(tid));
+        const results = filterToAllowlistRef.current(await searchTenantOrganizationsForSelectServer(tid));
         if (cancelled) return;
         // Only accept an exact tenantId match — never results[0] (that caused infinite loops for partial queries like "fa")
         const match = results.find((org) => org.tenantId === tid);
@@ -243,11 +248,12 @@ export default function AdminTenantFilterField({
     return () => {
       cancelled = true;
     };
-  }, [selectedTenantId, filterToAllowlist]);
+  }, [selectedTenantId]);
 
   const runSearch = useCallback((term: string) => {
     const trimmed = term.trim();
     const cache = cachedOrgsRef.current;
+    const filter = filterToAllowlistRef.current;
 
     if (!trimmed) {
       setDisplayOrgs(cache.slice(0, MAX_SUGGESTIONS));
@@ -261,9 +267,9 @@ export default function AdminTenantFilterField({
     searchTimerRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = filterToAllowlist(await searchTenantOrganizationsForSelectServer(trimmed));
+        const results = filter(await searchTenantOrganizationsForSelectServer(trimmed));
         // Prefer server hits; keep local matches so a slow/empty name-only API never blanks ID matches
-        const merged = mergeOrgs(results, filterToAllowlist(localMatches)).slice(0, MAX_SUGGESTIONS);
+        const merged = mergeOrgs(results, filter(localMatches)).slice(0, MAX_SUGGESTIONS);
         setDisplayOrgs(merged);
         if (results.length > 0) {
           setCachedOrgs((prev) => mergeOrgs(prev, results));
@@ -274,7 +280,7 @@ export default function AdminTenantFilterField({
         setLoading(false);
       }
     }, SEARCH_DEBOUNCE_MS);
-  }, [filterToAllowlist]);
+  }, []);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -389,7 +395,7 @@ export default function AdminTenantFilterField({
           type="text"
           role="combobox"
           aria-expanded={open}
-          aria-controls={listboxId}
+          aria-controls={open ? listboxId : undefined}
           aria-autocomplete="list"
           aria-label="Filter by Tenant ID (type to search organizations)"
           title="Type to search organizations. Select a suggestion or press Enter to apply Tenant ID."

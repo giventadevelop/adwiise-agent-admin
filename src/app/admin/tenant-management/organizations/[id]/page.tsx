@@ -11,6 +11,8 @@ import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizati
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
+import CascadeDeleteOrganizationButton from '@/app/admin/tenant-management/organizations/CascadeDeleteOrganizationButton';
+import { listPortfolioSitesForTenant } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
 
 interface PageProps {
   params: { id: string };
@@ -29,6 +31,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
   // Fetch organization data
   let organization: TenantOrganizationDTO | null = null;
   let settings: TenantSettingsDTO | null = null;
+  let portfolioSites: Awaited<ReturnType<typeof listPortfolioSitesForTenant>> | null = null;
   let error = null;
 
   try {
@@ -43,6 +46,12 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
     } catch (settingsError) {
       console.warn('Settings not found for organization:', settingsError);
       // Settings are optional, so we continue without them
+    }
+
+    try {
+      portfolioSites = await listPortfolioSitesForTenant(organization.tenantId);
+    } catch (portfolioError) {
+      console.warn('Portfolio sites not loaded:', portfolioError);
     }
   } catch (err) {
     console.error('Error fetching organization:', err);
@@ -359,31 +368,6 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">
-                    Subscription Status
-                  </dt>
-                  <dd className="mt-1">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${organization?.subscriptionStatus === 'ACTIVE'
-                        ? 'bg-green-100 text-green-800'
-                        : organization?.subscriptionStatus === 'TRIAL'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}
-                    >
-                      {organization?.subscriptionStatus || 'Unknown'}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">
-                    Subscription Plan
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {organization?.subscriptionPlan || 'Not specified'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">
                     Created At
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -405,6 +389,63 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
               </dl>
             </div>
           </div>
+
+          {portfolioSites?.available !== false && (
+          <div className="mt-6 bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Websites for this organization</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Each row is a tenant id in this organization&apos;s portfolio. Subscription and site settings stay on that tenant.
+                </p>
+              </div>
+              {portfolioSites?.portfolio?.id ? (
+                <Link
+                  href="/admin/tenant-management/portfolios"
+                  className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center px-6 font-semibold text-indigo-700"
+                >
+                  Edit portfolio
+                </Link>
+              ) : null}
+            </div>
+            <div className="px-6 py-4">
+              {!portfolioSites?.portfolio ? (
+                <p className="text-sm text-gray-600">
+                  No portfolio yet. Approving an onboarding request for this organization creates one and lists its sites here.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700">
+                    Portfolio: <span className="font-semibold">{portfolioSites.portfolio.portfolioName}</span>
+                  </p>
+                  <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                    {portfolioSites.sites.map((site) => (
+                      <li key={site.tenantId} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <p className="font-mono text-sm text-gray-900">{site.tenantId}</p>
+                          <p className="text-sm text-gray-600">
+                            {site.organizationName || 'Tenant'}
+                            {site.isPrimary ? ' · Home site' : ''}
+                          </p>
+                        </div>
+                        {site.settingsId != null ? (
+                          <Link
+                            href={`/admin/tenant-management/settings/${site.settingsId}`}
+                            className="text-sm font-semibold text-blue-700 hover:text-blue-900"
+                          >
+                            Tenant settings
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-gray-500">No settings row</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+          )}
 
           {/* Branding Section */}
           <div className="mt-6 bg-white shadow rounded-lg">
@@ -506,6 +547,13 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                   <span className="font-semibold text-green-700">Create Settings</span>
                 </Link>
               )}
+              {organization?.id != null && organization.tenantId && (
+                <CascadeDeleteOrganizationButton
+                  organizationId={organization.id}
+                  tenantId={organization.tenantId}
+                  organizationName={organization.organizationName || organization.tenantId}
+                />
+              )}
             </div>
           </div>
 
@@ -597,13 +645,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Subscription</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    {organization?.subscriptionStatus || 'Unknown'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Plan</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {organization?.subscriptionPlan || 'Not specified'}
+                    Edited on this tenant&apos;s settings page.
                   </dd>
                 </div>
               </dl>

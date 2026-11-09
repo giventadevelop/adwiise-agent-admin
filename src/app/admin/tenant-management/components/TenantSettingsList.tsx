@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAdminTenantId } from '../../AdminTenantContext';
+import Link from 'next/link';
+import { useAdminAccess, useAdminTenantId } from '../../AdminTenantContext';
 import AdminTenantFilterField from '../../AdminTenantFilterField';
-import { deleteTenantSetting, fetchTenantSettings } from '../settings/ApiServerActions';
+import { deleteTenantSetting, fetchTenantSettings, type OrganizationWithoutSettings } from '../settings/ApiServerActions';
 import AdminTableActionButtons from '@/components/admin/AdminTableActionButtons';
 import { useAdminHoverTooltip } from '@/lib/admin/useAdminHoverTooltip';
 import TenantSettingsDetailsTooltip from './TenantSettingsDetailsTooltip';
@@ -94,7 +95,9 @@ export default function TenantSettingsList({
   onRefresh
 }: TenantSettingsListProps) {
   const urlTenantId = useAdminTenantId();
+  const { isPlatformSuperAdmin } = useAdminAccess();
   const [settings, setSettings] = useState<TenantSettingsDTO[]>(initialData);
+  const [organizationsWithoutSettings, setOrganizationsWithoutSettings] = useState<OrganizationWithoutSettings[]>([]);
   const [organizationNamesByTenant, setOrganizationNamesByTenant] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(!initialData.length);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +178,7 @@ export default function TenantSettingsList({
         const settingsData = response.data;
         setSettings(settingsData);
         setTotalCount(response.totalCount);
+        setOrganizationsWithoutSettings(response.organizationsWithoutSettings ?? []);
 
         const tenantIds = Array.from(
           new Set(settingsData.map((setting: TenantSettingsDTO) => setting.tenantId).filter(Boolean))
@@ -385,6 +389,36 @@ export default function TenantSettingsList({
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
           <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
+      {organizationsWithoutSettings.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">
+            {organizationsWithoutSettings.length === 1
+              ? '1 matching tenant has an organization but no settings row, so it is not in this table.'
+              : `${organizationsWithoutSettings.length} matching tenants have an organization but no settings row, so they are not in this table.`}
+          </p>
+          <ul className="mt-2 space-y-1">
+            {organizationsWithoutSettings.map((org) => (
+              <li key={org.tenantId}>
+                <span className="font-mono">{org.tenantId}</span>
+                {' — '}
+                {org.organizationName}
+                {' · '}
+                <Link
+                  href={
+                    isPlatformSuperAdmin
+                      ? `/admin/tenant-management/organizations/${org.id}`
+                      : `/admin/tenant-management/settings/new?tenantId=${encodeURIComponent(org.tenantId)}`
+                  }
+                  className="font-semibold text-amber-900 underline"
+                >
+                  {isPlatformSuperAdmin ? 'View organization' : 'Create settings'}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

@@ -3,9 +3,9 @@
 import { getCurrentAdminAccess, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO } from '@/types/accessCatalog';
+import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO, SubscriptionPlanCatalogDTO } from '@/types/accessCatalog';
 
-type CatalogRow = AccessRoleDTO | RetailerTypeDTO | RetailerSizeBandDTO | RecommendationCategoryDTO | SiteTypeCatalogDTO;
+type CatalogRow = AccessRoleDTO | RetailerTypeDTO | RetailerSizeBandDTO | RecommendationCategoryDTO | SiteTypeCatalogDTO | SubscriptionPlanCatalogDTO;
 
 function asList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -101,6 +101,10 @@ export async function fetchSiteTypes(tenantId?: string | null): Promise<SiteType
   return fetchCatalog<SiteTypeCatalogDTO>('site-types', tenantId);
 }
 
+export async function fetchSubscriptionPlans(tenantId?: string | null): Promise<SubscriptionPlanCatalogDTO[]> {
+  return fetchCatalog<SubscriptionPlanCatalogDTO>('subscription-plans', tenantId);
+}
+
 /** Active roles a caller may assign. Platform-super roles stay hidden from tenant admins. */
 export async function fetchAssignableAccessRoles(tenantId?: string | null): Promise<AccessRoleDTO[]> {
   const access = await getCurrentAdminAccess();
@@ -124,6 +128,10 @@ export async function saveSiteType(row: SiteTypeCatalogDTO, shared: boolean, ten
   return saveCatalog('site-types', row, shared, tenantId);
 }
 
+export async function saveSubscriptionPlan(row: SubscriptionPlanCatalogDTO, shared: boolean, tenantId?: string | null) {
+  return saveCatalog('subscription-plans', row, shared, tenantId);
+}
+
 export async function deleteAccessRole(row: AccessRoleDTO) {
   return deleteCatalog('access-roles', row);
 }
@@ -134,6 +142,10 @@ export async function deleteRetailerType(row: RetailerTypeDTO) {
 
 export async function deleteSiteType(row: SiteTypeCatalogDTO) {
   return deleteCatalog('site-types', row);
+}
+
+export async function deleteSubscriptionPlan(row: SubscriptionPlanCatalogDTO) {
+  return deleteCatalog('subscription-plans', row);
 }
 
 export async function fetchRetailerSizeBands(): Promise<RetailerSizeBandDTO[]> {

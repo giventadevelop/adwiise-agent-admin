@@ -19,7 +19,7 @@ export interface SatelliteDomainsGuidanceProps {
 
 const CONTEXT_INTRO: Record<SatelliteDomainsGuidanceContext, string> = {
   organizations:
-    'After creating an organization, complete tenant settings and register each custom domain as a satellite so sign-in works on that URL.',
+    'After the company organization exists, create the website Tenant ID and hostname under Onboarding → Add Request. Then register the custom domain as a satellite so sign-in works on that URL.',
   settings:
     'When onboarding a tenant, register their public hostname under Satellite Domains so Clerk login and tenant branding work on their custom URL.',
   'edit-settings':

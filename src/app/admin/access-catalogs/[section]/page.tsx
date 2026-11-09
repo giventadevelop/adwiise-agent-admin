@@ -10,11 +10,13 @@ import {
   fetchRetailerSizeBands,
   fetchRetailerTypes,
   fetchSiteTypes,
+  fetchSubscriptionPlans,
 } from '../ApiServerActions';
 
 const TITLES: Record<string, string> = {
   'access-roles': 'Access roles',
   'site-types': 'Site types',
+  'subscription-plans': 'Subscription plans',
   'retailer-types': 'Retailer packs',
   'retailer-size-bands': 'Size bands',
   'recommendation-categories': 'Recommendation categories',
@@ -33,10 +35,11 @@ export default async function AccessCatalogSectionPage({
   if (!userId) redirect('/sign-in');
 
   const access = await getCurrentAdminAccess();
-  const [roles, retailers, siteTypes, sizeBands, categories] = await Promise.all([
+  const [roles, retailers, siteTypes, plans, sizeBands, categories] = await Promise.all([
     fetchAccessRoles().catch(() => []),
     fetchRetailerTypes().catch(() => []),
     fetchSiteTypes().catch(() => []),
+    fetchSubscriptionPlans().catch(() => []),
     fetchRetailerSizeBands().catch(() => []),
     fetchRecommendationCategories().catch(() => []),
   ]);
@@ -55,6 +58,7 @@ export default async function AccessCatalogSectionPage({
         initialRoles={roles}
         initialRetailers={retailers}
         initialSiteTypes={siteTypes}
+        initialPlans={plans}
         initialSizeBands={sizeBands}
         initialCategories={categories}
         canEditGlobal={access.isPlatformSuperAdmin}

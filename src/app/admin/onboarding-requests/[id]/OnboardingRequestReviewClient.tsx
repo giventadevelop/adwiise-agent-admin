@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
 import {
@@ -14,7 +14,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  DOMAIN_OWNERSHIP_OPTIONS,
   ONBOARDING_STATUS_STYLES,
+  ONBOARDING_SITE_TYPE_OPTIONS,
   SATELLITE_KEY_PATTERN,
   TENANT_ID_PATTERN,
   normalizeOnboardingHostname,
@@ -22,10 +24,35 @@ import {
   suggestSatelliteKey,
   validateOnboardingSubmit,
 } from '@/lib/onboarding/onboardingShared';
-import { suggestTenantIdPrefixFromName } from '@/lib/tenantIdGeneration';
+import {
+  buildCursorEnvHandoffText,
+  buildManualStepsText,
+  buildOrganizationDetailsText,
+  domainOwnershipLabel,
+  siteTypeLabel,
+  suggestFolderFromHostname,
+} from '@/lib/onboarding/onboardingApprovedHandoff';
+import {
+  extractTenantIdSequence,
+  suggestTenantIdPrefixFromName,
+} from '@/lib/tenantIdGeneration';
 import type { OrganizationPortfolioDTO, TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
+import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
+import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
+import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import OnboardingRequestFields, { onboardingInputClass, type OnboardingFieldValues } from '../OnboardingRequestFields';
+import {
+  findPortfolioForSourceTenant,
+  mapTenantOrganizationToOnboardingFields,
+  readOnboardingSourceTenant,
+  rememberOnboardingSourceTenant,
+} from '../onboardingOrgPrefill';
+import {
+  readOnboardingSiteDraft,
+  type OnboardingSiteProvisionDraft,
+} from '../onboardingSiteProvisionDraft';
 import AdminBackButton from '@/components/admin/AdminBackButton';
+import CopyInstructionsButton from '@/components/admin/CopyInstructionsButton';
 import {
   approveOnboardingRequestServer,
   checkOnboardingAvailabilityServer,
@@ -34,6 +61,7 @@ import {
   updateOnboardingRequestServer,
   type OnboardingAvailability,
 } from '../ApiServerActions';
+import { patchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 
 interface ProvisioningValues {
   tenantPrefix: string;
@@ -141,13 +169,142 @@ export default function OnboardingRequestReviewClient({
   const [busy, setBusy] = useState<null | 'save' | 'suggest' | 'check' | 'approve' | 'reject'>(null);
   const [message, setMessage] = useState<{ kind: 'error' | 'success' | 'warning'; text: string } | null>(null);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [approveSuccessOpen, setApproveSuccessOpen] = useState(false);
+  const [approveSuccessText, setApproveSuccessText] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState<string | null>(null);
+  /** Existing org selected for prefilling (empty = brand-new organization). */
+  const [sourceOrgTenantId, setSourceOrgTenantId] = useState('');
+  const [siteDraft, setSiteDraft] = useState<OnboardingSiteProvisionDraft | null>(null);
+  const [provisionedOrg, setProvisionedOrg] = useState<TenantOrganizationDTO | null>(null);
+  const [provisionedOrgError, setProvisionedOrgError] = useState<string | null>(null);
 
   const editable = request.status === 'PENDING' || request.status === 'FAILED';
   const result = useMemo(() => parseResult(request.provisioningResult), [request.provisioningResult]);
   const dirty = useMemo(() => Object.keys(diffFields(savedFields, fields)).length > 0, [savedFields, fields]);
+  const requireContactDetails = !sourceOrgTenantId.trim();
+  const organizationIdFromResult = result?.tenantOrganizationId as number | undefined;
+
+  const applySourceTenantToProvisioning = useCallback(
+    (sourceTenantId: string, organizationName?: string) => {
+      const tid = sourceTenantId.trim();
+      if (!tid) return;
+      const portfolio = findPortfolioForSourceTenant(portfolios, tid, organizationName);
+      setSourceOrgTenantId(tid);
+      setProv((prev) => ({
+        ...prev,
+        adminSourceTenantId: tid,
+        cloneAdmins: true,
+        portfolioId: portfolio?.id != null ? String(portfolio.id) : prev.portfolioId,
+      }));
+    },
+    [portfolios]
+  );
+
+  useEffect(() => {
+    if (request.status !== 'APPROVED' || organizationIdFromResult == null) {
+      setProvisionedOrg(null);
+      setProvisionedOrgError(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadOrg() {
+      try {
+        const org = await fetchTenantOrganization(organizationIdFromResult!);
+        if (!cancelled) {
+          setProvisionedOrg(org);
+          setProvisionedOrgError(org ? null : 'Organization record was not found.');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProvisionedOrg(null);
+          setProvisionedOrgError(error instanceof Error ? error.message : 'Failed to load organization');
+        }
+      }
+    }
+    void loadOrg();
+    return () => {
+      cancelled = true;
+    };
+  }, [request.status, organizationIdFromResult]);
+
+  useEffect(() => {
+    if (!editable || !request.id) return;
+    let cancelled = false;
+
+    async function hydrateSourceOrg() {
+      const draft = readOnboardingSiteDraft(request.id!);
+      if (!cancelled && draft) {
+        setSiteDraft(draft);
+        setProv((prev) => ({
+          ...prev,
+          tenantPrefix: draft.tenantPrefix || prev.tenantPrefix,
+          tenantId: draft.tenantId || prev.tenantId,
+        }));
+      }
+
+      const remembered =
+        draft?.sourceTenantId?.trim() || readOnboardingSourceTenant(request.id!);
+      if (remembered) {
+        if (!cancelled) applySourceTenantToProvisioning(remembered, fields.organizationName);
+        return;
+      }
+      const orgName = fields.organizationName?.trim();
+      if (!orgName) return;
+      try {
+        const matches = await searchTenantOrganizationsForSelectServer(orgName);
+        if (cancelled) return;
+        const exact = matches.find(
+          (org) => org.organizationName?.trim().toLowerCase() === orgName.toLowerCase()
+        );
+        if (exact?.tenantId) {
+          rememberOnboardingSourceTenant(request.id!, exact.tenantId);
+          applySourceTenantToProvisioning(exact.tenantId, orgName);
+        }
+      } catch (error) {
+        console.error('[onboarding-requests] source org hydrate failed', error);
+      }
+    }
+
+    void hydrateSourceOrg();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally once on mount for this request id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request.id, editable]);
+
+  const onSelectExistingOrganization = useCallback(
+    (org: TenantOrganizationDTO) => {
+      setFields((prev) => mapTenantOrganizationToOnboardingFields(org, prev));
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.organizationName;
+        delete next.contactEmail;
+        delete next.contactFirstName;
+        delete next.contactLastName;
+        delete next.contactPhone;
+        return next;
+      });
+      if (org.tenantId && request.id) {
+        rememberOnboardingSourceTenant(request.id, org.tenantId);
+        applySourceTenantToProvisioning(org.tenantId, org.organizationName);
+      }
+      setProv((prev) => ({
+        ...prev,
+        displayName: org.organizationName?.trim() || prev.displayName,
+        contactEmail: org.contactEmail?.trim() || prev.contactEmail,
+        tenantPrefix: suggestTenantIdPrefixFromName(org.organizationName ?? prev.displayName),
+      }));
+    },
+    [applySourceTenantToProvisioning, request.id]
+  );
+
+  const onClearExistingOrganization = useCallback(() => {
+    setSourceOrgTenantId('');
+    setProv((prev) => ({ ...prev, adminSourceTenantId: '', portfolioId: '' }));
+  }, []);
 
   const onFieldChange = (name: keyof OnboardingFieldValues, value: string | boolean) => {
     if (fieldErrors[name]) {
@@ -161,7 +318,10 @@ export default function OnboardingRequestReviewClient({
   };
 
   const onFieldBlur = (name: keyof OnboardingFieldValues) => {
-    const { errors } = validateOnboardingSubmit({ ...fields });
+    const { errors } = validateOnboardingSubmit(
+      { ...fields },
+      { requireContactDetails }
+    );
     setFieldErrors((prev) => {
       const next = { ...prev };
       if (errors[name]) next[name] = errors[name];
@@ -183,7 +343,10 @@ export default function OnboardingRequestReviewClient({
   };
 
   const saveFields = async (): Promise<boolean> => {
-    const { errors } = validateOnboardingSubmit({ ...fields });
+    const { errors } = validateOnboardingSubmit(
+      { ...fields },
+      { requireContactDetails }
+    );
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setMessage({ kind: 'error', text: 'Fix the highlighted request fields first.' });
@@ -219,7 +382,10 @@ export default function OnboardingRequestReviewClient({
 
   const validateProvisioning = (): boolean => {
     const errs: Record<string, string> = {};
-    if (!TENANT_ID_PATTERN.test(prov.tenantId.trim())) errs.tenantId = 'Tenant ID is required (lowercase letters, numbers, underscores)';
+    if (!TENANT_ID_PATTERN.test(prov.tenantId.trim())) {
+      errs.tenantId =
+        'Use lowercase letters, numbers, and underscores only (e.g. bst_school_demo_1). Hyphens are not allowed.';
+    }
     if (!SATELLITE_KEY_PATTERN.test(prov.satelliteKey.trim())) errs.satelliteKey = 'Satellite key is required (lowercase letters, numbers, hyphens)';
     if (!normalizeOnboardingHostname(prov.hostname)) errs.hostname = 'Hostname is required';
     setProvErrors(errs);
@@ -271,21 +437,67 @@ export default function OnboardingRequestReviewClient({
         adminComments: prov.adminComments.trim() || undefined,
         portfolioId: prov.portfolioId ? Number(prov.portfolioId) : undefined,
       },
-      (fields.siteType || null) as TenantSiteType | null
+      (fields.siteType || null) as TenantSiteType | null,
+      {
+        sourceTenantId:
+          sourceOrgTenantId.trim() ||
+          prov.adminSourceTenantId.trim() ||
+          siteDraft?.sourceTenantId?.trim() ||
+          (request.id ? readOnboardingSourceTenant(request.id) : '') ||
+          '',
+        organizationName: fields.organizationName,
+      }
     );
     setBusy(null);
     setApproveOpen(false);
     if (!res.ok) {
       setMessage({ kind: 'error', text: res.error });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     setRequest(res.data.request);
-    setMessage(
+
+    // Apply subscription intent from onboarding /new draft (not on approve DTO).
+    const draftForPatch = siteDraft || (request.id ? readOnboardingSiteDraft(request.id) : null);
+    const createdOrgId = (parseResult(res.data.request.provisioningResult)?.tenantOrganizationId ??
+      null) as number | null;
+    if (createdOrgId && draftForPatch) {
+      const fee = Number.parseFloat(draftForPatch.monthlyFeeUsd || '0');
+      const hasSubscriptionIntent =
+        !!(
+          draftForPatch.subscriptionPlan ||
+          draftForPatch.subscriptionStatus ||
+          draftForPatch.subscriptionStartDate ||
+          draftForPatch.subscriptionEndDate ||
+          draftForPatch.stripeCustomerId ||
+          (Number.isFinite(fee) && fee > 0)
+        );
+      if (hasSubscriptionIntent) {
+        try {
+          await patchTenantOrganization(createdOrgId, {
+            subscriptionPlan: draftForPatch.subscriptionPlan || undefined,
+            subscriptionStatus: draftForPatch.subscriptionStatus || undefined,
+            subscriptionStartDate: draftForPatch.subscriptionStartDate || undefined,
+            subscriptionEndDate: draftForPatch.subscriptionEndDate || undefined,
+            monthlyFeeUsd: Number.isFinite(fee) ? fee : 0,
+            stripeCustomerId: draftForPatch.stripeCustomerId || undefined,
+          });
+        } catch (error) {
+          console.error('[onboarding-requests] subscription patch after approve failed', error);
+          res.data.warnings.push(
+            'Tenant was created, but subscription fields from the onboarding draft could not be saved. Update them on Tenant Settings.',
+          );
+        }
+      }
+    }
+
+    const successText =
       res.data.warnings.length > 0
-        ? { kind: 'warning', text: `Approved. ${res.data.warnings.join(' ')}` }
-        : { kind: 'success', text: `Approved. Tenant ${res.data.request.assignedTenantId} was created.` }
-    );
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+        ? `Approved. Tenant ${res.data.request.assignedTenantId || prov.tenantId} was created. ${res.data.warnings.join(' ')}`
+        : `Approved. Tenant ${res.data.request.assignedTenantId || prov.tenantId} was created.`;
+    setMessage({ kind: res.data.warnings.length > 0 ? 'warning' : 'success', text: successText });
+    setApproveSuccessText(successText);
+    setApproveSuccessOpen(true);
   };
 
   const confirmReject = async () => {
@@ -323,8 +535,22 @@ export default function OnboardingRequestReviewClient({
 
   const tenantIdForLinks = request.assignedTenantId ?? (result?.tenantId as string | undefined);
   const settingsId = result?.tenantSettingsId as number | undefined;
-  const organizationId = result?.tenantOrganizationId as number | undefined;
+  const organizationId = organizationIdFromResult;
   const clonedAdmins = Array.isArray(result?.clonedAdmins) ? (result?.clonedAdmins as { email?: string; userRole?: string }[]) : [];
+  const siteTypeDisplay = siteTypeLabel(request.siteType);
+  const domainOwnershipDisplay = domainOwnershipLabel(request.domainOwnership);
+  const domainOwnershipHint =
+    DOMAIN_OWNERSHIP_OPTIONS.find((o) => o.value === request.domainOwnership)?.label ||
+    request.domainOwnership ||
+    'Not set';
+  const siteTypeHint =
+    ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === request.siteType)?.hint || '';
+  const manualStepsText = buildManualStepsText(request, tenantIdForLinks);
+  const orgDetailsText = provisionedOrg ? buildOrganizationDetailsText(provisionedOrg) : '';
+  const cursorEnvText = buildCursorEnvHandoffText(request, tenantIdForLinks);
+  const wwwHost = request.requestedHostname || 'www.example.com';
+  const folderHint = suggestFolderFromHostname(wwwHost);
+  const orgSequence = provisionedOrg?.tenantId ? extractTenantIdSequence(provisionedOrg.tenantId) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8" style={{ paddingTop: '180px' }}>
@@ -420,15 +646,115 @@ export default function OnboardingRequestReviewClient({
                   <span className="font-semibold text-indigo-700">Satellite Domains</span>
                 </Link>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">Remaining manual steps</h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <h3 className="font-semibold text-blue-900">Remaining manual steps</h3>
+                  <CopyInstructionsButton
+                    text={manualStepsText}
+                    label="Copy instructions"
+                    title="Copy remaining manual steps for application deployment"
+                  />
+                </div>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-blue-900">
+                  <div>
+                    <dt className="font-semibold">Site type</dt>
+                    <dd>{siteTypeDisplay}{siteTypeHint ? ` — ${siteTypeHint}` : ''}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold">Domain ownership</dt>
+                    <dd>{domainOwnershipDisplay}</dd>
+                    <dd className="text-blue-800 mt-1 text-xs">
+                      {request.domainOwnership === 'PLATFORM_REGISTERS' && (
+                        <>Register the apex in Route 53, create a hosted zone, then attach Amplify custom domain.</>
+                      )}
+                      {request.domainOwnership === 'CUSTOMER_REGISTRAR' && (
+                        <>
+                          DNS-only handoff from the customer’s registrar (NS to Route 53, or CNAME/ALIAS to Amplify).
+                          Do not assume a hosted zone already exists unless the platform owns DNS.
+                        </>
+                      )}
+                      {request.domainOwnership === 'ALREADY_IN_PLATFORM' && (
+                        <>Confirm the existing Route 53 hosted zone and Amplify domain mapping before changing DNS.</>
+                      )}
+                      {!request.domainOwnership && <>{domainOwnershipHint}</>}
+                    </dd>
+                  </div>
+                </dl>
                 <ol className="list-decimal pl-5 space-y-1 text-sm text-blue-900">
-                  <li>DNS: point <span className="font-mono">{request.requestedHostname}</span> (and the bare domain) at the satellite Amplify app.</li>
+                  <li>DNS: point <span className="font-mono">{request.requestedHostname}</span> (and the bare domain <span className="font-mono">{stripWww(request.requestedHostname || '')}</span>) at the satellite Amplify app.</li>
                   <li>Amplify: add the custom domain, then set <span className="font-mono">NEXT_PUBLIC_TENANT_ID={tenantIdForLinks}</span> and the site env vars on the satellite app.</li>
                   <li>Clerk: add the hostname as a satellite domain on the production instance and verify its DNS records.</li>
                   <li>Email: verify the sending domain for <span className="font-mono">{request.noreplyEmail || 'the no-reply address'}</span> in SES.</li>
                   <li>Payments (if requested): set up Stripe keys in Tenant Settings.</li>
                 </ol>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <h3 className="font-semibold text-gray-900">Organization Details</h3>
+                  {orgDetailsText ? (
+                    <CopyInstructionsButton
+                      text={orgDetailsText}
+                      label="Copy org details"
+                      title="Copy organization database details"
+                    />
+                  ) : null}
+                </div>
+                {provisionedOrgError && (
+                  <p className="text-sm text-red-600">{provisionedOrgError}</p>
+                )}
+                {!provisionedOrg && !provisionedOrgError && organizationId != null && (
+                  <p className="text-sm text-gray-600">Loading organization record…</p>
+                )}
+                {organizationId == null && (
+                  <p className="text-sm text-gray-600">No organization ID in the provisioning result.</p>
+                )}
+                {provisionedOrg && (
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div className="sm:col-span-2">
+                      <dt className="text-gray-500">Organization Name</dt>
+                      <dd className="text-gray-900 font-medium">{provisionedOrg.organizationName || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Website Tenant ID</dt>
+                      <dd className="font-mono text-gray-900">{provisionedOrg.tenantId || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Tenant ID Sequence</dt>
+                      <dd className="font-mono text-gray-900">{orgSequence != null ? orgSequence : 'Not parsed'}</dd>
+                    </div>
+                  </dl>
+                )}
+              </div>
+
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-indigo-900">Frontend clone / Cursor rule handoff</h3>
+                    <p className="text-xs text-indigo-800 mt-1">
+                      Paste into Cursor with{' '}
+                      <span className="font-mono">Copy_FrontendProjectFrom_Template.mdc</span>. Env pattern
+                      reference: <span className="font-mono">F:\project_workspace\kcnj-prod\.env.local</span> (no secrets copied here).
+                    </p>
+                  </div>
+                  <CopyInstructionsButton
+                    text={cursorEnvText}
+                    label="Copy Cursor prompt"
+                    title="Copy Cursor rule prompt and satellite env checklist"
+                  />
+                </div>
+                <pre className="text-xs sm:text-sm text-indigo-950 bg-white/70 border border-indigo-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap font-mono">
+{`Copy F:\\project_workspace\\kcnj-temp to F:\\project_workspace\\${folderHint}.
+Include .env.local. Change the domain to ${wwwHost}.
+Optional: tenant id ${tenantIdForLinks || '<tenant_id>'}, local port 3003.
+Follow .cursor/rules/Copy_FrontendProjectFrom_Template.mdc
+
+NEXT_PUBLIC_APP_URL=https://${wwwHost}
+NEXT_PUBLIC_CLERK_IS_SATELLITE=true
+NEXT_PUBLIC_CLERK_DOMAIN=${wwwHost}
+NEXT_PUBLIC_TENANT_ID=${tenantIdForLinks || '<tenant_id>'}
+NEXT_PUBLIC_API_BASE_URL=<leave as template / set per environment>`}
+                </pre>
               </div>
             </div>
           )}
@@ -447,7 +773,19 @@ export default function OnboardingRequestReviewClient({
                 </button>
               )}
             </div>
-            <OnboardingRequestFields values={fields} errors={fieldErrors} disabled={!editable} onChange={onFieldChange} onBlurField={onFieldBlur} />
+            <OnboardingRequestFields
+              values={fields}
+              errors={fieldErrors}
+              disabled={!editable}
+              onChange={onFieldChange}
+              onBlurField={onFieldBlur}
+              onSelectExistingOrganization={onSelectExistingOrganization}
+              onClearExistingOrganization={onClearExistingOrganization}
+              requireContactDetails={false}
+              hideCrmFields
+              selectExistingOnly={editable}
+              tenantIdForLogoUpload={prov.tenantId || request.assignedTenantId || undefined}
+            />
           </div>
 
           {editable && (
@@ -473,7 +811,17 @@ export default function OnboardingRequestReviewClient({
                 </div>
                 <div>
                   <label htmlFor="tenantId" className="block text-sm font-medium text-gray-700">Tenant ID *{takenBadge(availability?.tenantIdTaken)}</label>
-                  <input id="tenantId" type="text" value={prov.tenantId} onChange={(e) => setProvField('tenantId', e.target.value.trim().toLowerCase())} placeholder="st_marys_church_12" className={onboardingInputClass(!!provErrors.tenantId)} />
+                  <input
+                    id="tenantId"
+                    type="text"
+                    value={prov.tenantId}
+                    onChange={(e) => setProvField('tenantId', e.target.value.trim().toLowerCase())}
+                    placeholder="bst_school_demo_1"
+                    className={onboardingInputClass(!!provErrors.tenantId)}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Example: <span className="font-mono">bst_school_demo_1</span>. Use underscores only — hyphens (-) are not allowed in the tenant ID.
+                  </p>
                   {provErrors.tenantId && <div className="text-red-500 text-sm mt-1">{provErrors.tenantId}</div>}
                 </div>
                 <div>
@@ -601,6 +949,28 @@ export default function OnboardingRequestReviewClient({
                 )}
               </div>
               <span className="font-semibold text-green-700">{busy === 'approve' ? 'Creating...' : 'Approve'}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={approveSuccessOpen} onOpenChange={setApproveSuccessOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approval successful</AlertDialogTitle>
+            <AlertDialogDescription>{approveSuccessText}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row gap-3 sm:gap-4">
+            <AlertDialogAction
+              onClick={() => setApproveSuccessOpen(false)}
+              className="flex-1 flex-shrink-0 h-14 rounded-xl bg-green-100 hover:bg-green-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span className="font-semibold text-green-700">Done</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

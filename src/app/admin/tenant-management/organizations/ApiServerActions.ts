@@ -1,5 +1,10 @@
 'use server';
-import { appendAdminTenantFilter, getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
+import {
+  appendAdminTenantFilter,
+  assertPlatformSuperAdmin,
+  getCurrentAdminAccess,
+} from '@/app/admin/adminAccessServer';
+import { isTenantIdAllowed } from '@/lib/adminTenantAccess';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
@@ -90,10 +95,29 @@ export async function fetchTenantOrganizations(
       params.append('organizationName.contains', filters.search);
     }
     // Partial tenant ID match for typeahead (distinct from tenantId.equals scoping)
-    if (filters.tenantIdContains?.trim()) {
-      params.append('tenantId.contains', filters.tenantIdContains.trim());
+    const tenantIdContains = filters.tenantIdContains?.trim();
+    const nameSearch = filters.search?.trim();
+    const access = await getCurrentAdminAccess();
+    // A contains search by an all-tenant admin must not also pin tenantId.equals from the
+    // session, or the second matching tenant disappears.
+    // An organization admin searching by name or tenant id searches every site in their
+    // allowlist, not only the site selected for this session.
+    const allowlistSearch = !access.canQueryAllTenants && !filters.tenantId && Boolean(tenantIdContains || nameSearch);
+    if (tenantIdContains && access.canQueryAllTenants) {
+      params.append('tenantId.contains', tenantIdContains);
+    } else if (allowlistSearch) {
+      if (tenantIdContains) params.append('tenantId.contains', tenantIdContains);
+      if (access.allowedTenantIds.length === 1) {
+        params.set('tenantId.equals', access.allowedTenantIds[0]);
+      } else if (access.allowedTenantIds.length > 1) {
+        params.set('tenantId.in', access.allowedTenantIds.join(','));
+      } else {
+        params.set('tenantId.equals', '__unauthorized__');
+      }
+    } else {
+      if (tenantIdContains) params.append('tenantId.contains', tenantIdContains);
+      await appendAdminTenantFilter(params, filters.tenantId);
     }
-    await appendAdminTenantFilter(params, filters.tenantId);
     if (filters.subscriptionStatus) {
       params.append('subscriptionStatus.equals', filters.subscriptionStatus);
     }
@@ -158,7 +182,12 @@ export async function fetchTenantOrganization(id: number): Promise<TenantOrganiz
       throw new Error(`Failed to fetch tenant organization: ${response.statusText}`);
     }
 
-    return await response.json();
+    const organization = (await response.json()) as TenantOrganizationDTO;
+    const access = await getCurrentAdminAccess();
+    if (!access.isPlatformSuperAdmin && !isTenantIdAllowed(access, organization.tenantId)) {
+      return null;
+    }
+    return organization;
   } catch (error) {
     console.error('Error fetching tenant organization:', error);
     throw new Error('Failed to fetch tenant organization');
@@ -169,6 +198,7 @@ export async function fetchTenantOrganization(id: number): Promise<TenantOrganiz
  * Create a new tenant organization
  */
 export async function createTenantOrganization(data: TenantOrganizationFormDTO): Promise<TenantOrganizationDTO> {
+  await assertPlatformSuperAdmin();
   try {
     const payload = withTenantId({
       ...normalizeTenantOrganizationPayload(data),
@@ -227,6 +257,7 @@ export async function updateTenantOrganization(
   id: number,
   data: Partial<TenantOrganizationFormDTO>
 ): Promise<TenantOrganizationDTO> {
+  await assertPlatformSuperAdmin();
   try {
     // First fetch the existing tenant organization to get the original createdAt
     const existingOrganization = await fetchTenantOrganization(id);
@@ -266,12 +297,36 @@ export async function updateTenantOrganization(
 /**
  * Partially update an existing tenant organization
  */
+const ORGANIZATION_SUBSCRIPTION_FIELDS = [
+  'subscriptionPlan',
+  'subscriptionStatus',
+  'subscriptionStartDate',
+  'subscriptionEndDate',
+  'monthlyFeeUsd',
+  'stripeCustomerId',
+] as const;
+
 export async function patchTenantOrganization(
   id: number,
   data: Partial<TenantOrganizationFormDTO>
 ): Promise<TenantOrganizationDTO> {
+  const access = await getCurrentAdminAccess();
+  if (!access.isPlatformSuperAdmin) {
+    const existing = await fetchTenantOrganization(id);
+    if (!existing?.tenantId || !isTenantIdAllowed(access, existing.tenantId)) {
+      throw new Error('That tenant is not in your organization.');
+    }
+    const limited: Partial<TenantOrganizationFormDTO> = {};
+    for (const field of ORGANIZATION_SUBSCRIPTION_FIELDS) {
+      if (field in data) limited[field] = data[field];
+    }
+    data = limited;
+  }
   try {
     const existingOrganization = await fetchTenantOrganization(id);
+    if (!existingOrganization) {
+      throw new Error('Organization not found');
+    }
     const tenantId = data.tenantId
       ? await tenantIdForUpdate(existingOrganization.tenantId, data.tenantId)
       : undefined;
@@ -309,6 +364,7 @@ export async function patchTenantOrganization(
  * Delete a tenant organization
  */
 export async function deleteTenantOrganization(id: number): Promise<void> {
+  await assertPlatformSuperAdmin();
   try {
     const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/tenant-organizations/${id}`, {
       method: 'DELETE',
@@ -324,10 +380,182 @@ export async function deleteTenantOrganization(id: number): Promise<void> {
   }
 }
 
+export type CascadeDeleteStepResult = {
+  resource: string;
+  id: number | string;
+  ok: boolean;
+  detail?: string;
+};
+
+export type CascadeDeleteTenantOrganizationResult = {
+  ok: boolean;
+  tenantId: string;
+  organizationId: number;
+  steps: CascadeDeleteStepResult[];
+  error?: string;
+};
+
+function parseIdList(data: unknown): { id?: number }[] {
+  if (Array.isArray(data)) return data as { id?: number }[];
+  if (data && typeof data === 'object') {
+    const obj = data as { content?: unknown[]; _embedded?: Record<string, unknown[]> };
+    if (Array.isArray(obj.content)) return obj.content as { id?: number }[];
+    if (obj._embedded) {
+      const first = Object.values(obj._embedded).find(Array.isArray);
+      if (Array.isArray(first)) return first as { id?: number }[];
+    }
+  }
+  return [];
+}
+
+async function listIdsByTenantEquals(apiPath: string, tenantId: string): Promise<number[]> {
+  const params = new URLSearchParams();
+  params.set('tenantId.equals', tenantId);
+  params.set('page', '0');
+  params.set('size', '200');
+  const response = await fetchWithJwtRetry(`${API_BASE_URL}${apiPath}?${params.toString()}`, {
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Failed to list ${apiPath} for tenant ${tenantId}: ${response.status} ${text}`);
+  }
+  return parseIdList(await response.json())
+    .map((row) => row.id)
+    .filter((id): id is number => typeof id === 'number');
+}
+
+async function deleteById(
+  apiPath: string,
+  id: number,
+  resourceLabel: string,
+  steps: CascadeDeleteStepResult[]
+): Promise<void> {
+  const response = await fetchWithJwtRetry(`${API_BASE_URL}${apiPath}/${id}`, {
+    method: 'DELETE',
+  });
+  if (response.ok || response.status === 204 || response.status === 404) {
+    steps.push({
+      resource: resourceLabel,
+      id,
+      ok: true,
+      detail: response.status === 404 ? 'already absent' : undefined,
+    });
+    return;
+  }
+  const text = await response.text().catch(() => '');
+  steps.push({ resource: resourceLabel, id, ok: false, detail: text || response.statusText });
+  throw new Error(`Failed to delete ${resourceLabel} #${id}: ${text || response.statusText}`);
+}
+
+/**
+ * Cascade-delete a tenant organization and related tenant-scoped rows so the
+ * tenant can be re-provisioned. Deletes (in order): satellite domains, tenant
+ * email addresses, tenant settings, then the organization itself.
+ * Does not delete user profiles, events, or onboarding request history.
+ */
+export async function cascadeDeleteTenantOrganizationServer(
+  organizationId: number,
+  expectedTenantId?: string
+): Promise<CascadeDeleteTenantOrganizationResult> {
+  const steps: CascadeDeleteStepResult[] = [];
+  await assertPlatformSuperAdmin();
+
+  const org = await fetchTenantOrganization(organizationId);
+  if (!org) {
+    return {
+      ok: false,
+      tenantId: expectedTenantId || '',
+      organizationId,
+      steps,
+      error: `Organization #${organizationId} was not found`,
+    };
+  }
+
+  const tenantId = org.tenantId?.trim();
+  if (!tenantId) {
+    return {
+      ok: false,
+      tenantId: '',
+      organizationId,
+      steps,
+      error: 'Organization has no tenantId',
+    };
+  }
+
+  if (expectedTenantId && expectedTenantId.trim() !== tenantId) {
+    return {
+      ok: false,
+      tenantId,
+      organizationId,
+      steps,
+      error: `Tenant ID mismatch: expected ${expectedTenantId.trim()}, found ${tenantId}`,
+    };
+  }
+
+  try {
+    const satelliteIds = await listIdsByTenantEquals('/api/satellite-domains', tenantId);
+    for (const id of satelliteIds) {
+      await deleteById('/api/satellite-domains', id, 'satellite-domain', steps);
+    }
+
+    const emailIds = await listIdsByTenantEquals('/api/tenant-email-addresses', tenantId);
+    for (const id of emailIds) {
+      await deleteById('/api/tenant-email-addresses', id, 'tenant-email-address', steps);
+    }
+
+    const settingsIds = await listIdsByTenantEquals('/api/tenant-settings', tenantId);
+    for (const id of settingsIds) {
+      await deleteById('/api/tenant-settings', id, 'tenant-settings', steps);
+    }
+
+    // Portfolio memberships / portfolios that use this tenant as primary
+    try {
+      const portfolioParams = new URLSearchParams();
+      portfolioParams.set('primaryTenantId.equals', tenantId);
+      portfolioParams.set('page', '0');
+      portfolioParams.set('size', '50');
+      const portfolioRes = await fetchWithJwtRetry(
+        `${API_BASE_URL}/api/organization-portfolios?${portfolioParams.toString()}`,
+        { cache: 'no-store' }
+      );
+      if (portfolioRes.ok) {
+        const portfolios = parseIdList(await portfolioRes.json());
+        for (const row of portfolios) {
+          if (typeof row.id === 'number') {
+            await deleteById('/api/organization-portfolios', row.id, 'organization-portfolio', steps);
+          }
+        }
+      }
+    } catch (portfolioError) {
+      steps.push({
+        resource: 'organization-portfolio',
+        id: tenantId,
+        ok: false,
+        detail: portfolioError instanceof Error ? portfolioError.message : String(portfolioError),
+      });
+    }
+
+    await deleteById('/api/tenant-organizations', organizationId, 'tenant-organization', steps);
+
+    return { ok: true, tenantId, organizationId, steps };
+  } catch (error) {
+    console.error('[cascadeDeleteTenantOrganization]', error);
+    return {
+      ok: false,
+      tenantId,
+      organizationId,
+      steps,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 /**
  * Toggle the active status of a tenant organization
  */
 export async function toggleTenantOrganizationStatus(id: number, isActive: boolean): Promise<TenantOrganizationDTO> {
+  await assertPlatformSuperAdmin();
   try {
     const payload = withTenantId({
       id,

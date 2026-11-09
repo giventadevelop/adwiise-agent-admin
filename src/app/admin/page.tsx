@@ -27,7 +27,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'team-groups': 'Containers for a sports club or band, such as First XI, Under-16, or Choir. Create the group here, then add people on Squad roster. Whether the group is sports or music comes from team types in Roster catalogs.',
   'team-members': 'People inside a squad: name, sports, skills, achievements, and portrait. Choose their squad group on this form. Sport and achievement choices come from Roster catalogs.',
   'roster-catalogs': 'Dropdown lists used by squads: sports, achievement categories, and team types. A shared row is offered to every tenant. Only a platform super admin should change shared rows.',
-  'access-catalogs': 'Shared catalogs: access roles, site types, retailer packs, size bands, and recommendation categories. Shared rows are edited by a platform super admin.',
+  'access-catalogs': 'Dropdown lists for site type, shop packs, access roles, subscription plans, and the other shared lists. Shared rows are edited by a platform super admin.',
   'access-roles': 'Roles such as ADMIN and any custom role you add. They decide who sees the admin menu and which locations a person can open. Change shared roles only as platform super admin.',
   'retailer-types': 'Shop packs such as gas station, liquor store, Dunkin, and Seven-Eleven. A pack belongs to a site type. Shops use RETAIL.',
   'site-types': 'Organization site types such as events, church, sports team, music band, personal profile, hybrid, and retail. A shop is RETAIL. The pack is chosen separately.',
@@ -41,7 +41,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'organization-portfolios': 'Group existing tenant sites under one primary tenant. An admin of that primary tenant can open every site in the group. Each site keeps its own domain and sign-in. Platform super admin only.',
   'satellite-domains': 'Extra public domains that sign in through this hub. Platform super admin only.',
   'onboarding-requests': 'New customer applications. Approve one to create a tenant. The site type chosen here decides which tools that tenant sees.',
-  'tenant-settings': 'Homepage sections, hero images, and feature flags for a tenant. Platform super admin only.',
+  'tenant-settings': 'Homepage sections, hero images, and feature flags for the tenant you selected. An organization admin edits the sites in their organization. A platform super admin can open every tenant.',
   'profile-site': 'A personal or hybrid profile site: writings, projects, services, and contact blocks.',
   retail:
     'Helps manage the morning brief and recommendations for retail shops and stores — gas stations, liquor stores, Dunkin’ Donuts, 7-Eleven, and similar locations. Also covers store list, uploads, integrations, and comparison.',
@@ -325,8 +325,8 @@ export default function AdminPage() {
       icon: 'keyRound',
       label: 'Access catalogs',
       hint: 'Roles plus site and shop types',
-      summary: 'Shared roles, site types, and shop packs',
-      searchTerms: ['roles', 'retailers', 'site types'],
+      summary: 'Dropdown lists for site type, shop packs, access roles, subscription plans, and the other shared lists',
+      searchTerms: ['roles', 'retailers', 'site types', 'subscription plans'],
       color: 'accessCatalog',
       key: 'access-catalogs'
     },
@@ -480,7 +480,6 @@ export default function AdminPage() {
       searchTerms: ['settings', 'hero', 'homepage'],
       color: 'red',
       key: 'tenant-settings',
-      platformOnly: true,
     },
     {
       href: '/admin/profile-site',

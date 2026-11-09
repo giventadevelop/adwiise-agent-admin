@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminNavigation from '@/components/AdminNavigation';
+import AdminListSearchCombobox, {
+  type AdminListSearchSuggestion,
+} from '@/components/admin/AdminListSearchCombobox';
 import { ONBOARDING_STATUS_STYLES } from '@/lib/onboarding/onboardingShared';
 import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 import type { OnboardingRequestStatus, TenantOnboardingRequestDTO } from '@/types';
@@ -24,7 +27,6 @@ function siteTypeLabel(value: string | null | undefined, options: { value: strin
 export default function OnboardingRequestsListClient() {
   const siteTypeOptions = useRetailerTypeOptions('server');
   const [status, setStatus] = useState<OnboardingRequestStatus | 'ALL'>('PENDING');
-  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [items, setItems] = useState<TenantOnboardingRequestDTO[]>([]);
@@ -50,6 +52,35 @@ export default function OnboardingRequestsListClient() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const fetchSuggestions = useCallback(async (query: string): Promise<AdminListSearchSuggestion[]> => {
+    const result = await fetchOnboardingRequestsServer({
+      page: 0,
+      size: 20,
+      status: 'ALL',
+      search: query,
+    });
+    if (!result.ok) return [];
+    const byKey = new Map<string, AdminListSearchSuggestion>();
+    for (const row of result.data.items) {
+      const id = String(row.id ?? row.requestCode ?? Math.random());
+      const commitValue =
+        row.requestCode ||
+        row.organizationName ||
+        row.requestedHostname ||
+        row.contactEmail ||
+        query;
+      byKey.set(id, {
+        id,
+        label: row.organizationName || row.requestCode || 'Request',
+        secondary: [row.requestCode, row.requestedHostname, row.contactEmail]
+          .filter(Boolean)
+          .join(' · '),
+        commitValue,
+      });
+    }
+    return Array.from(byKey.values()).slice(0, 20);
+  }, []);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
   const isPrevDisabled = page === 0 || loading;
@@ -104,25 +135,18 @@ export default function OnboardingRequestsListClient() {
                 </button>
               ))}
             </div>
-            <form
-              className="flex gap-2 md:ml-auto"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setSearch(searchInput.trim());
-                setPage(0);
-              }}
-            >
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+            <div className="md:ml-auto w-full md:w-auto md:min-w-[22rem]">
+              <AdminListSearchCombobox
+                committedValue={search}
+                onCommit={(value) => {
+                  setSearch(value);
+                  setPage(0);
+                }}
+                fetchSuggestions={fetchSuggestions}
                 placeholder="Name, email, domain or ONB- code"
-                className="border border-gray-400 rounded-xl px-4 py-2 text-sm w-64 focus:border-blue-500 focus:ring-blue-500"
+                inputId="onboarding-list-search"
               />
-              <button type="submit" className="px-4 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold text-sm">
-                Search
-              </button>
-            </form>
+            </div>
           </div>
 
           {error && (

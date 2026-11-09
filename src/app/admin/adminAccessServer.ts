@@ -98,34 +98,119 @@ export const fetchAdminAccessForClerkUser = cache(
   },
 );
 
+function parseRecordList(data: unknown): Record<string, unknown>[] {
+  if (Array.isArray(data)) return data.filter((row): row is Record<string, unknown> => !!row && typeof row === 'object');
+  if (data && typeof data === 'object') {
+    const obj = data as { content?: unknown; _embedded?: Record<string, unknown> };
+    if (Array.isArray(obj.content)) {
+      return obj.content.filter((row): row is Record<string, unknown> => !!row && typeof row === 'object');
+    }
+    const embedded = obj._embedded;
+    if (embedded) {
+      const firstArray = Object.values(embedded).find(Array.isArray);
+      if (firstArray) {
+        return firstArray.filter((row): row is Record<string, unknown> => !!row && typeof row === 'object');
+      }
+    }
+  }
+  return [];
+}
+
+function readId(row: Record<string, unknown>): number | null {
+  const value = row.id;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 /**
- * An ADMIN or SUPER_ADMIN of a portfolio's primary tenant may also open that portfolio's
- * other tenant ids. This does not grant the global all-tenants mode. If the lookup fails,
- * the caller's own admin tenants stay as they are.
+ * An organization admin may open every site in an active portfolio that already
+ * contains one of their admin tenants. This does not grant the global all-tenants
+ * mode. If the lookup fails, the caller's own admin tenants stay as they are.
  */
 async function expandPortfolioMemberTenants(access: AdminTenantAccess): Promise<AdminTenantAccess> {
   if (!access.isAdmin || access.canQueryAllTenants || access.allowedTenantIds.length === 0) {
     return access;
   }
   try {
-    const params = new URLSearchParams();
-    for (const tenantId of access.allowedTenantIds) {
-      params.append('primaryTenantId', tenantId);
+    const seed = access.allowedTenantIds.join(',');
+    const [memberRes, primaryRes] = await Promise.all([
+      fetchWithJwtRetry(
+        `${getBackendApiUrl()}/api/organization-portfolio-members?${new URLSearchParams({
+          'tenantId.in': seed,
+          size: '200',
+        }).toString()}`,
+        unscopedListOptions,
+      ),
+      fetchWithJwtRetry(
+        `${getBackendApiUrl()}/api/organization-portfolios?${new URLSearchParams({
+          'primaryTenantId.in': seed,
+          'isActive.equals': 'true',
+          size: '100',
+        }).toString()}`,
+        unscopedListOptions,
+      ),
+    ]);
+
+    const portfolioIds = new Set<number>();
+    if (memberRes.ok) {
+      for (const row of parseRecordList(await memberRes.json())) {
+        const portfolioId = row.portfolioId;
+        if (typeof portfolioId === 'number' && Number.isFinite(portfolioId)) portfolioIds.add(portfolioId);
+      }
+    } else {
+      console.error('[adminAccessServer] portfolio member lookup failed', memberRes.status);
     }
-    const res = await fetchWithJwtRetry(
-      `${getBackendApiUrl()}/api/organization-portfolios/member-tenant-ids?${params.toString()}`,
+    if (primaryRes.ok) {
+      for (const row of parseRecordList(await primaryRes.json())) {
+        const id = readId(row);
+        if (id != null) portfolioIds.add(id);
+      }
+    } else {
+      console.error('[adminAccessServer] portfolio primary lookup failed', primaryRes.status);
+    }
+    if (portfolioIds.size === 0) return access;
+
+    const activeRes = await fetchWithJwtRetry(
+      `${getBackendApiUrl()}/api/organization-portfolios?${new URLSearchParams({
+        'id.in': Array.from(portfolioIds).join(','),
+        'isActive.equals': 'true',
+        size: '100',
+      }).toString()}`,
       unscopedListOptions,
     );
-    if (!res.ok) {
-      console.error('[adminAccessServer] portfolio member lookup failed', res.status);
+    if (!activeRes.ok) {
+      console.error('[adminAccessServer] active portfolio lookup failed', activeRes.status);
       return access;
     }
-    const body = (await res.json()) as unknown;
-    const extra = Array.isArray(body) ? body.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
-    if (extra.length === 0) return access;
+    const activeIds: number[] = [];
+    const extraTenantIds: string[] = [];
+    for (const row of parseRecordList(await activeRes.json())) {
+      const id = readId(row);
+      if (id != null) activeIds.push(id);
+      const primaryTenantId = row.primaryTenantId;
+      if (typeof primaryTenantId === 'string' && primaryTenantId.trim()) extraTenantIds.push(primaryTenantId.trim());
+    }
+    if (activeIds.length === 0) return access;
+
+    const siblingsRes = await fetchWithJwtRetry(
+      `${getBackendApiUrl()}/api/organization-portfolio-members?${new URLSearchParams({
+        'portfolioId.in': activeIds.join(','),
+        size: '500',
+      }).toString()}`,
+      unscopedListOptions,
+    );
+    if (!siblingsRes.ok) {
+      console.error('[adminAccessServer] portfolio sibling lookup failed', siblingsRes.status);
+      return access;
+    }
+    for (const row of parseRecordList(await siblingsRes.json())) {
+      const tenantId = row.tenantId;
+      if (typeof tenantId === 'string' && tenantId.trim()) extraTenantIds.push(tenantId.trim());
+    }
+    if (extraTenantIds.length === 0) return access;
+
     const seen = new Set<string>();
     const allowedTenantIds: string[] = [];
-    for (const raw of [...access.allowedTenantIds, ...extra]) {
+    for (const raw of [...access.allowedTenantIds, ...extraTenantIds]) {
       const tenantId = raw.trim();
       if (!tenantId || seen.has(tenantId)) continue;
       seen.add(tenantId);

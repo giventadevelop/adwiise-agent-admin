@@ -1,13 +1,11 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { fetchTenantOrganization, updateTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
-import { applySiteTypePresetsForTenant } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import TenantOrganizationForm from '@/app/admin/tenant-management/components/TenantOrganizationForm';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
 import { TenantOrganizationDTO, TenantOrganizationFormDTO } from '@/app/admin/tenant-management/types';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
-import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
@@ -24,8 +22,6 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
   if (isNaN(organizationId)) {
     notFound();
   }
-
-  const access = await getCurrentAdminAccess();
 
   // Fetch organization data
   let organization: TenantOrganizationDTO | null = null;
@@ -46,9 +42,6 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
 
     try {
       await updateTenantOrganization(organizationId, data);
-      if (data.siteType && data.siteType !== organization?.siteType) {
-        await applySiteTypePresetsForTenant(data.tenantId, data.siteType);
-      }
       redirect(`/admin/tenant-management/organizations/${organizationId}`);
     } catch (error) {
       console.error('Error updating organization:', error);
@@ -178,23 +171,24 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
         <div className="mt-4">
           <AdminTenantIdBanner
             tenantId={organization?.tenantId}
-            contextLine="Editing organization identity and contact details for this tenant."
+            contextLine="Company CRM — contact and address. Tenant ID / hostname / branding are managed via Onboarding."
           />
         </div>
-        <p className="mt-2 text-sm text-gray-500">Update organization information and settings</p>
+        <p className="mt-2 text-sm text-gray-500">
+          Update company contact and address. Site Tenant ID, domain, and branding stay on Onboarding / Tenant Settings.
+        </p>
       </div>
 
       {/* Form */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Organization Information</h2>
+          <h2 className="text-lg font-medium text-gray-900">Company information</h2>
         </div>
         <div className="px-6 py-6">
           <TenantOrganizationForm
             mode="edit"
             onSubmit={handleSubmit}
             initialData={organization ?? undefined}
-            canEditTenantId={access.isPlatformSuperAdmin}
           />
         </div>
       </div>

@@ -38,27 +38,29 @@ interface TenantOrganizationSearchSelectProps {
   required?: boolean;
 }
 
+const EMPTY_ORGS: TenantOrganizationDTO[] = [];
+
 export default function TenantOrganizationSearchSelect({
   value = '',
   onChange,
-  initialOrganizations = [],
+  initialOrganizations,
   error,
   required = true,
 }: TenantOrganizationSearchSelectProps) {
+  // Default prop `= []` is a new array every render — that re-fired loadRecent forever.
+  const initialOrgs = initialOrganizations ?? EMPTY_ORGS;
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [cachedOrganizations, setCachedOrganizations] = useState<TenantOrganizationDTO[]>(
-    initialOrganizations,
-  );
-  const [displayOrganizations, setDisplayOrganizations] = useState<TenantOrganizationDTO[]>(
-    initialOrganizations,
-  );
+  const [cachedOrganizations, setCachedOrganizations] = useState<TenantOrganizationDTO[]>(initialOrgs);
+  const [displayOrganizations, setDisplayOrganizations] = useState<TenantOrganizationDTO[]>(initialOrgs);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedOrg, setSelectedOrg] = useState<TenantOrganizationDTO | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   const syncSelectedFromValue = useCallback(
     (organizations: TenantOrganizationDTO[], tenantId: string) => {
@@ -75,14 +77,15 @@ export default function TenantOrganizationSearchSelect({
     [],
   );
 
+  // Load once on mount (or when a non-empty initial list is provided by key change).
   useEffect(() => {
     let cancelled = false;
 
     async function loadRecent() {
-      if (initialOrganizations.length > 0) {
-        setCachedOrganizations(initialOrganizations);
-        setDisplayOrganizations(initialOrganizations);
-        syncSelectedFromValue(initialOrganizations, value);
+      if (initialOrgs.length > 0) {
+        setCachedOrganizations(initialOrgs);
+        setDisplayOrganizations(initialOrgs);
+        syncSelectedFromValue(initialOrgs, valueRef.current);
         return;
       }
 
@@ -93,7 +96,7 @@ export default function TenantOrganizationSearchSelect({
         if (cancelled) return;
         setCachedOrganizations(recent);
         setDisplayOrganizations(recent);
-        syncSelectedFromValue(recent, value);
+        syncSelectedFromValue(recent, valueRef.current);
         if (recent.length === 0) {
           setLoadError('No organizations found. Create one under Tenant Organizations first.');
         }
@@ -110,7 +113,8 @@ export default function TenantOrganizationSearchSelect({
     return () => {
       cancelled = true;
     };
-  }, [initialOrganizations, syncSelectedFromValue, value]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-once; initialOrgs identity must not re-trigger
+  }, [syncSelectedFromValue]);
 
   useEffect(() => {
     syncSelectedFromValue(cachedOrganizations, value);

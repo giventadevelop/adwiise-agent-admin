@@ -5,9 +5,9 @@ import type { UserProfileDTO } from '@/types';
  * Per-user admin tenant authorization (hub + satellites).
  *
  * - SUPER_ADMIN on the all-tenants hub may query every tenant (empty filter = all).
- * - ADMIN (and SUPER_ADMIN on a single-tenant satellite) may only use tenant IDs
- *   from their own admin `user_profile` rows, plus every member tenant of a portfolio
- *   whose primary tenant is one of those rows. Member-site admins are not expanded.
+ * - ADMIN (and SUPER_ADMIN on a single-tenant satellite) may use tenant IDs from
+ *   their own admin `user_profile` rows, plus every member of an active portfolio
+ *   that already contains one of those rows. They do not see other organizations.
  */
 
 export type AdminTenantAccess = {
@@ -133,5 +133,11 @@ export const PLATFORM_ONLY_ADMIN_PATH_PREFIXES = [
 
 export function isPlatformOnlyAdminPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return PLATFORM_ONLY_ADMIN_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  const path = pathname.split('?')[0] || '';
+  // Organization admins edit settings for a site in their portfolio. Organizations,
+  // portfolios, satellite domains, and onboarding stay platform-super-admin only.
+  if (path === '/admin/tenant-management/settings' || path.startsWith('/admin/tenant-management/settings/')) {
+    return false;
+  }
+  return PLATFORM_ONLY_ADMIN_PATH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }

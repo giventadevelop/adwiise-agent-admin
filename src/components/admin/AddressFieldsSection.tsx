@@ -8,6 +8,8 @@ interface AddressFieldsSectionProps<T extends AddressFieldValues> {
   errors?: FieldErrors<T>;
   stateProvinceMaxLength?: number;
   cityMaxLength?: number;
+  /** When true, require address line 1, city, state/province, ZIP, and country. */
+  requireCoreAddress?: boolean;
 }
 
 const inputClass =
@@ -18,6 +20,7 @@ export default function AddressFieldsSection<T extends AddressFieldValues>({
   errors,
   stateProvinceMaxLength = 255,
   cityMaxLength = 255,
+  requireCoreAddress = false,
 }: AddressFieldsSectionProps<T>) {
   const fieldError = (name: Path<T>) => {
     const err = errors?.[name];
@@ -27,13 +30,25 @@ export default function AddressFieldsSection<T extends AddressFieldValues>({
     return undefined;
   };
 
+  const requiredRule = (message: string) =>
+    requireCoreAddress
+      ? {
+          required: message,
+          validate: (value: unknown) =>
+            typeof value === 'string' && value.trim().length > 0 ? true : message,
+        }
+      : {};
+
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 1</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Address Line 1{requireCoreAddress ? ' *' : ''}
+        </label>
         <input
           type="text"
           {...register('addressLine1' as Path<T>, {
+            ...requiredRule('Address line 1 is required'),
             maxLength: { value: 255, message: 'Address line 1 must be 255 characters or less' },
           })}
           className={inputClass}
@@ -61,10 +76,13 @@ export default function AddressFieldsSection<T extends AddressFieldValues>({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            City{requireCoreAddress ? ' *' : ''}
+          </label>
           <input
             type="text"
             {...register('city' as Path<T>, {
+              ...requiredRule('City is required'),
               maxLength: {
                 value: cityMaxLength,
                 message: `City must be ${cityMaxLength} characters or less`,
@@ -79,10 +97,13 @@ export default function AddressFieldsSection<T extends AddressFieldValues>({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">State / Province</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            State / Province{requireCoreAddress ? ' *' : ''}
+          </label>
           <input
             type="text"
             {...register('stateProvince' as Path<T>, {
+              ...requiredRule('State / Province is required'),
               maxLength: {
                 value: stateProvinceMaxLength,
                 message: `State / Province must be ${stateProvinceMaxLength} characters or less`,
@@ -99,10 +120,13 @@ export default function AddressFieldsSection<T extends AddressFieldValues>({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ZIP / Postal Code</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            ZIP / Postal Code{requireCoreAddress ? ' *' : ''}
+          </label>
           <input
             type="text"
             {...register('zipCode' as Path<T>, {
+              ...requiredRule('ZIP / Postal code is required'),
               maxLength: { value: 20, message: 'ZIP code must be 20 characters or less' },
             })}
             className={inputClass}
@@ -114,10 +138,13 @@ export default function AddressFieldsSection<T extends AddressFieldValues>({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Country{requireCoreAddress ? ' *' : ''}
+          </label>
           <input
             type="text"
             {...register('country' as Path<T>, {
+              ...requiredRule('Country is required'),
               maxLength: { value: 100, message: 'Country must be 100 characters or less' },
             })}
             className={inputClass}

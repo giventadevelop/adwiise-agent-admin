@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { FaCog, FaCode, FaImage } from 'react-icons/fa';
 import { TenantSettingsDTO, TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import TenantDefaultHeroView from '@/app/admin/tenant-management/components/TenantDefaultHeroView';
+import TenantSubscriptionPanel from '@/app/admin/tenant-management/components/TenantSubscriptionPanel';
 import { tenantSettingsTabQuery, type TenantSettingsTab } from '@/lib/tenantSettingsTabs';
 
 interface TenantSettingsViewClientProps {
@@ -154,6 +155,11 @@ export default function TenantSettingsViewClient({ settings, settingsId, organiz
                   <span className="text-gray-500">No dedicated repository</span>
                 )}
               </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <TenantSubscriptionPanel
+                organization={organization || settings?.tenantOrganization}
+              />
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Organization</dt>

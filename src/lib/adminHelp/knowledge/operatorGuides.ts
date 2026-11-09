@@ -30,7 +30,7 @@ export const OPERATOR_GUIDE_CHUNKS: AdminHelpChunk[] = [
       'A satellite domain is a tenant’s custom public URL that runs the same app as the primary hub domain.',
       'Each satellite is linked to a Tenant ID so the site loads the correct organization, settings, events, and branding.',
       'Login and sign-up require a satellite domain record. If the hostname is not registered under Admin → Satellite Domains, sign-in on that custom URL will not work correctly.',
-      'Recommended order: create tenant organization → create tenant settings with matching tenantId → register Satellite Domains (Satellite Key, Domain URL with scheme, Hostname, Tenant ID, Enabled) → configure DNS → configure Clerk satellite domain on the primary.',
+      'Recommended order: create company Organization (CRM) → Onboarding → Add Request (Tenant ID, hostname, branding, portfolio) → approve onboarding → register Satellite Domains (Satellite Key, Domain URL with scheme, Hostname, Tenant ID, Enabled) → configure DNS → configure Clerk satellite domain on the primary.',
       'tenantId must match Tenant Settings and Organization. hostname detects satellite vs primary at runtime.',
       'Platform SUPER_ADMIN only.',
     ].join(' '),

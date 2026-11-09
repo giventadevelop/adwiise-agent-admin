@@ -77,7 +77,9 @@ function hasInlineTenantFilter(pathname: string | null): boolean {
     pathname.includes('/tournaments') ||
     pathname.includes('/media/list') ||
     pathname.includes('/official-documents') ||
-    pathname.includes('/official-document-categories')
+    pathname.includes('/official-document-categories') ||
+    // Own organization combobox — avoid a second typeahead + server-action refresh loop
+    pathname.includes('/onboarding-requests')
   );
 }
 
@@ -118,6 +120,14 @@ export function AdminTenantLayoutClient({
   const { isLoaded, userId } = useAuth();
   const showTopTenantBar = showTenantSelector && !hasInlineTenantFilter(pathname);
 
+  // Layout server component rebuilds a new array every RSC refresh; stabilize by value.
+  const allowedTenantIdsKey = [...allowedTenantIds].sort().join('\0');
+  const stableAllowedTenantIds = useMemo(
+    () => [...allowedTenantIds],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by sorted join
+    [allowedTenantIdsKey],
+  );
+
   useEffect(() => {
     if (isLoaded && !userId) {
       window.location.replace('/');
@@ -127,7 +137,7 @@ export function AdminTenantLayoutClient({
   const tenantId = tenantFromSearchParams(
     searchParams ?? new URLSearchParams(),
     canQueryAllTenants,
-    allowedTenantIds,
+    stableAllowedTenantIds,
     defaultTenantId,
   );
 
@@ -149,11 +159,11 @@ export function AdminTenantLayoutClient({
       tenantId,
       isPlatformSuperAdmin,
       canQueryAllTenants,
-      allowedTenantIds,
+      allowedTenantIds: stableAllowedTenantIds,
       defaultTenantId,
       limitNavToRetail,
     }),
-    [tenantId, isPlatformSuperAdmin, canQueryAllTenants, allowedTenantIds, defaultTenantId, limitNavToRetail],
+    [tenantId, isPlatformSuperAdmin, canQueryAllTenants, stableAllowedTenantIds, defaultTenantId, limitNavToRetail],
   );
 
   return (

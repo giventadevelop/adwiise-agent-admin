@@ -109,7 +109,7 @@ const adminSubmenuItems = [
   { name: 'Media Management', href: '/admin/media' },
   { name: 'Executive Committee', href: '/admin/executive-committee' },
   { name: 'Event Sponsors', href: '/admin/event-sponsors' },
-  { name: 'Satellite Domains', href: '/admin/satellite-domains' }
+  { name: 'Satellite Domains', href: '/admin/satellite-domains', platformOnly: true }
 ];
 
 /** Prefer deployed branding PNG; repo often omits it — fallback avoids broken header image. */
@@ -461,10 +461,15 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
     loading: settingsLoading,
   } = useTenantSettings();
   const [isAdmin, setIsAdmin] = useState(!!isTenantAdmin);
+  const [isPlatformSuperAdmin, setIsPlatformSuperAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [openMobileDropdowns, setOpenMobileDropdowns] = useState<Record<string, boolean>>({});
   const [headerLogoSrc, setHeaderLogoSrc] = useState(HEADER_LOGO_PREFERRED);
+
+  const visibleAdminSubmenuItems = adminSubmenuItems.filter(
+    (item) => !('platformOnly' in item && item.platformOnly) || isPlatformSuperAdmin
+  );
 
   // CRITICAL: When returning from primary domain sign-out, call Clerk signOut()
   // on the satellite to clear its own session cookie. Just clearing localStorage
@@ -535,12 +540,14 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
     // If auth is not loaded yet, use server-verified flag (from SSR)
     if (!isLoaded) {
       setIsAdmin(!!isTenantAdmin);
+      setIsPlatformSuperAdmin(false);
       return;
     }
 
     // Clear admin only when there is no Clerk userId.
     if (!userId) {
       setIsAdmin(false);
+      setIsPlatformSuperAdmin(false);
       return;
     }
 
@@ -552,7 +559,7 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
 
     if (isTenantAdmin === true) {
       setIsAdmin(true);
-      return;
+      // Keep checking profile below for SUPER_ADMIN (satellite domains menu).
     }
 
     // CRITICAL: When user logs in (userId changes from null to value), re-check admin status
@@ -616,17 +623,21 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
         }
 
         const isAdminUser = profile ? isAdminRole(profile.userRole) : false;
+        const isSuperAdminUser = profile?.userRole === 'SUPER_ADMIN';
         if (profile) {
           console.log('[Header] Admin status check result:', {
             userId,
             isAdminUser,
+            isSuperAdminUser,
             userRole: profile.userRole,
             tenantId: profile.tenantId,
             isTenantAdminProp: isTenantAdmin
           });
           setIsAdmin(isAdminUser);
+          setIsPlatformSuperAdmin(isSuperAdminUser);
         } else if (typeof isTenantAdmin === 'boolean') {
           setIsAdmin(isTenantAdmin);
+          setIsPlatformSuperAdmin(false);
         } else {
           const publicRole = user.publicMetadata?.role as string;
           const orgRole = user.organizationMemberships?.[0]?.role;
@@ -636,6 +647,7 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
             orgRole === 'admin' ||
             orgRole === 'org:admin'
           );
+          setIsPlatformSuperAdmin(false);
         }
       } catch (error) {
         console.error('[Header] Error checking admin status:', error);
@@ -645,6 +657,7 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
         } else {
           setIsAdmin(false);
         }
+        setIsPlatformSuperAdmin(false);
       }
     };
 
@@ -1032,7 +1045,7 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
                         {/* Admin Submenu */}
                         <div className="header-dropdown absolute top-full right-0 mt-2 w-64 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 z-50 max-h-[70vh] overflow-y-auto">
                           <div className="py-2">
-                            {adminSubmenuItems.map(subItem => {
+                            {visibleAdminSubmenuItems.map(subItem => {
                               const hasDropdown = subItem.dropdown && Array.isArray(subItem.dropdown);
                               const isMembershipActive = hasDropdown && subItem.dropdown.some(
                                 (subSubItem: any) => pathname?.startsWith(subSubItem.href)
@@ -1400,7 +1413,7 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
                         Admin Panel
                       </div>
                       <div className="space-y-0.5">
-                        {adminSubmenuItems.map(subItem => {
+                        {visibleAdminSubmenuItems.map(subItem => {
                           const hasDropdown = subItem.dropdown && Array.isArray(subItem.dropdown);
                           const isDropdownOpen = openMobileDropdowns[`admin-${subItem.name}`] || false;
 

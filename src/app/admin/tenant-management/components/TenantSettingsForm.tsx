@@ -16,6 +16,7 @@ import {
 } from '@/lib/hero/defaultHeroImages';
 import TenantDefaultHeroManager from '@/app/admin/tenant-management/components/TenantDefaultHeroManager';
 import TenantOrganizationSearchSelect from '@/app/admin/tenant-management/components/TenantOrganizationSearchSelect';
+import TenantSubscriptionPanel from '@/app/admin/tenant-management/components/TenantSubscriptionPanel';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import { buildSiteFooterEmailHtmlFromTenant } from '@/lib/newsletter/siteFooterEmailHtml';
 import { tenantSettingsTabQuery, type TenantSettingsTab } from '@/lib/tenantSettingsTabs';
@@ -848,6 +849,17 @@ export default function TenantSettingsForm({
         {activeTab === 'general' && (
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-gray-900">General Settings</h3>
+
+            {mode === 'edit' && (
+              <TenantSubscriptionPanel
+                editable
+                organization={
+                  initialData?.tenantOrganization ||
+                  availableOrganizations.find((org) => org.tenantId === initialData?.tenantId) ||
+                  null
+                }
+              />
+            )}
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
               Organization description, address, and website URL are managed under{' '}

@@ -1,5 +1,6 @@
 'use server';
 import { appendAdminTenantFilter, getCurrentAdminAccess, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import { isTenantIdAllowed } from '@/lib/adminTenantAccess';
 
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
@@ -63,10 +64,18 @@ async function resolveTenantOrganizationByTenantId(
 /**
  * Fetch paginated list of tenant settings
  */
+export type OrganizationWithoutSettings = {
+  id: number;
+  tenantId: string;
+  organizationName: string;
+};
+
 export async function fetchTenantSettings(
   pagination: PaginationParams,
   filters: TenantSettingsFilters = {}
-): Promise<PaginatedResponse<TenantSettingsDTO>> {
+): Promise<PaginatedResponse<TenantSettingsDTO> & {
+  organizationsWithoutSettings?: OrganizationWithoutSettings[];
+}> {
   try {
     const params = new URLSearchParams();
 
@@ -74,11 +83,17 @@ export async function fetchTenantSettings(
     params.append('page', pagination.page.toString());
     params.append('size', pagination.pageSize.toString());
 
-    await appendAdminTenantFilter(params, filters.tenantId);
-
     const tenantIdContains = filters.tenantIdContains?.trim() || filters.search?.trim();
-    if (tenantIdContains) {
+    const access = await getCurrentAdminAccess();
+    // A contains search from a platform admin must not also pin tenantId.equals from the
+    // admin bar — that AND hides every other tenant id that matches the text.
+    if (tenantIdContains && access.canQueryAllTenants) {
       params.append('tenantId.contains', tenantIdContains);
+    } else {
+      await appendAdminTenantFilter(params, filters.tenantId);
+      if (tenantIdContains) {
+        params.append('tenantId.contains', tenantIdContains);
+      }
     }
     if (filters.idEquals != null && !Number.isNaN(filters.idEquals)) {
       params.append('id.equals', String(filters.idEquals));
@@ -164,14 +179,55 @@ export async function fetchTenantSettings(
     }
 
     const data = await response.json();
+    const rows = Array.isArray(data) ? data : [];
     const totalCount = parseInt(response.headers.get('x-total-count') || '0');
 
+    let organizationsWithoutSettings: Array<{
+      id: number;
+      tenantId: string;
+      organizationName: string;
+    }> = [];
+    if (tenantIdContains && access.canQueryAllTenants) {
+      const [orgResult, settingsIdResponse] = await Promise.all([
+        fetchTenantOrganizations(
+          { page: 0, pageSize: 50 },
+          { tenantIdContains }
+        ).catch(() => null),
+        fetchWithJwtRetry(
+          `${API_BASE_URL}/api/tenant-settings?page=0&size=200&tenantId.contains=${encodeURIComponent(tenantIdContains)}`,
+          { cache: 'no-store' }
+        ).catch(() => null),
+      ]);
+      const settingsTenantIds = new Set<string>();
+      if (settingsIdResponse?.ok) {
+        const settingsBody = await settingsIdResponse.json().catch(() => []);
+        const settingsRows = Array.isArray(settingsBody) ? settingsBody : [];
+        for (const row of settingsRows) {
+          if (typeof row?.tenantId === 'string' && row.tenantId.trim()) {
+            settingsTenantIds.add(row.tenantId.trim());
+          }
+        }
+      } else {
+        for (const row of rows) {
+          if (row?.tenantId) settingsTenantIds.add(row.tenantId);
+        }
+      }
+      organizationsWithoutSettings = (orgResult?.data ?? [])
+        .filter((org) => org.id != null && org.tenantId && !settingsTenantIds.has(org.tenantId))
+        .map((org) => ({
+          id: org.id as number,
+          tenantId: org.tenantId,
+          organizationName: org.organizationName?.trim() || org.tenantId,
+        }));
+    }
+
     return {
-      data: Array.isArray(data) ? data : [],
+      data: rows,
       totalCount,
       page: pagination.page,
       pageSize: pagination.pageSize,
-      totalPages: Math.ceil(totalCount / pagination.pageSize)
+      totalPages: Math.ceil(totalCount / pagination.pageSize),
+      organizationsWithoutSettings,
     };
   } catch (error) {
     console.error('Error fetching tenant settings:', error);
@@ -197,7 +253,12 @@ export async function fetchTenantSetting(id: number): Promise<TenantSettingsDTO 
       throw new Error(`Failed to fetch tenant setting: ${response.statusText}`);
     }
 
-    return await response.json();
+    const setting = (await response.json()) as TenantSettingsDTO;
+    const access = await getCurrentAdminAccess();
+    if (!isTenantIdAllowed(access, setting.tenantId)) {
+      return null;
+    }
+    return setting;
   } catch (error) {
     console.error('Error fetching tenant setting:', error);
     throw new Error('Failed to fetch tenant setting');
@@ -209,6 +270,8 @@ export async function fetchTenantSetting(id: number): Promise<TenantSettingsDTO 
  */
 export async function fetchTenantSettingsByTenantId(tenantId: string): Promise<TenantSettingsDTO | null> {
   try {
+    const access = await getCurrentAdminAccess();
+    if (!isTenantIdAllowed(access, tenantId)) return null;
     const params = new URLSearchParams();
     params.append('tenantId.equals', tenantId);
 
@@ -303,6 +366,10 @@ async function repositoryUrlForSave(
 
 export async function createTenantSetting(data: TenantSettingsFormDTO): Promise<TenantSettingsDTO> {
   try {
+    const access = await getCurrentAdminAccess();
+    if (!isTenantIdAllowed(access, data.tenantId)) {
+      throw new Error('That tenant is not in your organization.');
+    }
     const heroDefaults =
       data.defaultHeroImageUrlsJson || data.defaultHeroImageUrls?.length
         ? {}
@@ -509,6 +576,10 @@ export async function patchTenantSetting(
  */
 export async function deleteTenantSetting(id: number): Promise<void> {
   try {
+    const existing = await fetchTenantSetting(id);
+    if (!existing) {
+      throw new Error('Tenant setting not found');
+    }
     const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/tenant-settings/${id}`, {
       method: 'DELETE',
     });

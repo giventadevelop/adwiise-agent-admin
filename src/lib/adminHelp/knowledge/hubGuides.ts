@@ -141,8 +141,8 @@ const HUB_GUIDE_ROWS: Array<{
   {
     key: 'access-catalogs',
     title: 'Access catalogs',
-    body: 'Shared catalogs: access roles, site types, retailer packs, size bands, and recommendation categories. Shared rows are edited by a platform super admin.',
-    keywords: ['roles', 'retailers', 'site types', 'catalogs'],
+    body: 'Dropdown lists for site type, shop packs, access roles, subscription plans, and the other shared lists. Shared rows are edited by a platform super admin.',
+    keywords: ['roles', 'retailers', 'site types', 'subscription plans', 'catalogs'],
     pathPrefixes: ['/admin/access-catalogs'],
   },
   {

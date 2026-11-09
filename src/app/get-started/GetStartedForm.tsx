@@ -37,8 +37,8 @@ interface FormState {
 const INITIAL_STATE: FormState = {
   organizationName: '',
   requestedHostname: '',
-  siteType: 'EVENT_ORG',
-  domainOwnership: 'CUSTOMER_REGISTRAR',
+  siteType: '',
+  domainOwnership: '',
   description: '',
   contactFirstName: '',
   contactLastName: '',
@@ -245,23 +245,29 @@ export default function GetStartedForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="siteType" className="block text-sm font-medium text-gray-700">Type of website</label>
-              <select id="siteType" name="siteType" value={formData.siteType} onChange={handleChange} className={inputClass(false)}>
+              <label htmlFor="siteType" className="block text-sm font-medium text-gray-700">Type of website *</label>
+              <select id="siteType" name="siteType" value={formData.siteType} onChange={handleChange} className={inputClass(!!errors.siteType)}>
+                <option value="">Select site type</option>
                 {siteTypeOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {siteTypeOptions.find((o) => o.value === formData.siteType)?.hint}
-              </p>
+              {formData.siteType ? (
+                <p className="text-xs text-gray-500 mt-1">
+                  {siteTypeOptions.find((o) => o.value === formData.siteType)?.hint}
+                </p>
+              ) : null}
+              {errors.siteType && <div className="text-red-500 text-sm mt-1">{errors.siteType}</div>}
             </div>
             <div>
-              <label htmlFor="domainOwnership" className="block text-sm font-medium text-gray-700">Domain</label>
-              <select id="domainOwnership" name="domainOwnership" value={formData.domainOwnership} onChange={handleChange} className={inputClass(false)}>
+              <label htmlFor="domainOwnership" className="block text-sm font-medium text-gray-700">Domain ownership *</label>
+              <select id="domainOwnership" name="domainOwnership" value={formData.domainOwnership} onChange={handleChange} className={inputClass(!!errors.domainOwnership)}>
+                <option value="">Select domain ownership</option>
                 {DOMAIN_OWNERSHIP_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
+              {errors.domainOwnership && <div className="text-red-500 text-sm mt-1">{errors.domainOwnership}</div>}
             </div>
           </div>
 

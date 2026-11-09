@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { fetchTenantSetting } from '@/app/admin/tenant-management/settings/ApiServerActions';
+import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import { fetchRecentTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import TenantSettingsEditClient from './TenantSettingsEditClient';
 import Link from 'next/link';
@@ -41,6 +42,17 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
     settings = await fetchTenantSetting(settingsId);
     if (!settings) {
       notFound();
+    }
+
+    if (settings.tenantId) {
+      const orgs = await fetchTenantOrganizations(
+        { page: 0, pageSize: 5 },
+        { tenantId: settings.tenantId }
+      ).catch(() => null);
+      const match = orgs?.data.find((org) => org.tenantId === settings?.tenantId);
+      if (match) {
+        settings = { ...settings, tenantOrganization: match };
+      }
     }
 
     organizations = await fetchRecentTenantOrganizationsForSelectServer();

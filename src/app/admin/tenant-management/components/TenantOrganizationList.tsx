@@ -2,11 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FaPlus, FaSearch, FaSort } from 'react-icons/fa';
+import { FaBan, FaSearch, FaSort, FaTrashAlt } from 'react-icons/fa';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { TenantOrganizationDTO, TenantOrganizationFilters } from '@/app/admin/tenant-management/types';
 import TenantOrganizationDetailsTooltip from '@/app/admin/tenant-management/components/TenantOrganizationDetailsTooltip';
 import AdminTableActionButtons from '@/components/admin/AdminTableActionButtons';
 import { useAdminHoverTooltip } from '@/lib/admin/useAdminHoverTooltip';
+import {
+  deleteTenantOrganization,
+  toggleTenantOrganizationStatus,
+} from '@/app/admin/tenant-management/organizations/ApiServerActions';
 
 interface TenantOrganizationListProps {
   initialData?: TenantOrganizationDTO[];
@@ -39,6 +53,8 @@ export default function TenantOrganizationList({
 
   // Selection state for bulk operations
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<TenantOrganizationDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     item: tooltipOrg,
@@ -120,43 +136,33 @@ export default function TenantOrganizationList({
     );
   };
 
-  // Handle status toggle
+  // Handle status toggle (SUPER_ADMIN only via server action)
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/proxy/tenant-organizations/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/merge-patch+json',
-        },
-        body: JSON.stringify({ isActive: !currentStatus })
-      });
-
-      if (response.ok) {
-        loadData(); // Refresh the list
-        onRefresh?.();
-      }
+      await toggleTenantOrganizationStatus(id, !currentStatus);
+      loadData();
+      onRefresh?.();
     } catch (err) {
       console.error('Failed to toggle status:', err);
+      setError(err instanceof Error ? err.message : 'Failed to toggle status');
     }
   };
 
-  // Handle delete
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this organization?')) {
-      return;
-    }
-
+  const confirmDelete = async () => {
+    if (!pendingDelete?.id || deleting) return;
+    setDeleting(true);
+    setError(null);
     try {
-      const response = await fetch(`/api/proxy/tenant-organizations/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        loadData(); // Refresh the list
-        onRefresh?.();
-      }
+      await deleteTenantOrganization(pendingDelete.id);
+      setPendingDelete(null);
+      loadData();
+      onRefresh?.();
     } catch (err) {
       console.error('Failed to delete organization:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete organization');
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -322,7 +328,7 @@ export default function TenantOrganizationList({
                     <AdminTableActionButtons
                       viewHref={`/admin/tenant-management/organizations/${org.id}`}
                       editHref={`/admin/tenant-management/organizations/${org.id}/edit`}
-                      onDelete={() => handleDelete(org.id!)}
+                      onDelete={() => setPendingDelete(org)}
                       viewTitle="View Organization"
                       editTitle="Edit Organization"
                       deleteTitle="Delete Organization"
@@ -454,6 +460,60 @@ export default function TenantOrganizationList({
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={pendingDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete organization?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes{' '}
+              <span className="font-semibold">{pendingDelete?.organizationName || 'this organization'}</span>
+              {pendingDelete?.tenantId ? (
+                <>
+                  {' '}(<span className="font-mono">{pendingDelete.tenantId}</span>)
+                </>
+              ) : null}
+              . The organization row is deleted and cannot be restored from this screen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row gap-3 sm:gap-4">
+            <AlertDialogCancel
+              disabled={deleting}
+              className="flex-1 flex-shrink-0 h-14 rounded-xl bg-teal-100 hover:bg-teal-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-200 flex items-center justify-center">
+                <FaBan className="w-6 h-6 text-teal-800" aria-hidden="true" />
+              </div>
+              <span className="font-semibold text-teal-800">Cancel</span>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+              className="flex-1 flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
+                {deleting ? (
+                  <svg className="animate-spin w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <FaTrashAlt className="w-6 h-6 text-red-600" aria-hidden="true" />
+                )}
+              </div>
+              <span className="font-semibold text-red-700">{deleting ? 'Deleting...' : 'Delete organization'}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

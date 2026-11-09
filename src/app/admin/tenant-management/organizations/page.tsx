@@ -16,7 +16,7 @@ export default async function TenantOrganizationsPage() {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 sm:p-4 md:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
-            <div>
+            <div className="w-full">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                   Tenant Organizations
@@ -24,8 +24,41 @@ export default async function TenantOrganizationsPage() {
                 <SatelliteDomainsGuidance showHelp showBanner={false} />
               </div>
               <p className="text-gray-600 dark:text-gray-400 mt-1 text-xs sm:text-sm">
-                Manage tenant organizations and their configurations.
+                Manage company organization records (contact and address). Website Tenant IDs and
+                hostnames are provisioned from Onboarding.
               </p>
+
+              {/* Primary path: create Tenant ID + hostname via onboarding */}
+              <div
+                className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-4"
+                role="note"
+                aria-label="Create Tenant ID via onboarding"
+              >
+                <p className="font-semibold text-emerald-950 dark:text-emerald-50 mb-1 text-sm">
+                  Create a website Tenant ID for an organization
+                </p>
+                <p className="text-sm text-emerald-800 dark:text-emerald-200 mb-3">
+                  After the company Organization exists here, go to Onboarding to create the site
+                  Tenant ID, associate the hostname/domain, branding, and portfolio membership.
+                  Do not expect those fields on Create Organization.
+                </p>
+                <Link
+                  href="/admin/onboarding-requests/new"
+                  className="inline-flex flex-shrink-0 h-14 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900 dark:hover:bg-emerald-800 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+                  title="Add onboarding request — create Tenant ID"
+                  aria-label="Add onboarding request — create Tenant ID"
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-200 dark:bg-emerald-700 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-emerald-700 dark:text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-100">
+                    Onboarding → Add Request (new Tenant ID)
+                  </span>
+                </Link>
+              </div>
+
               <div className="mt-4">
                 <SatelliteDomainsGuidance showHelp={false} showBanner context="organizations" />
               </div>

@@ -552,7 +552,7 @@ export async function fetchWithJwtRetry(apiUrl: string, options: any = {}, debug
   //   (or omit for wildcard list/get-by-id). Matches isAllTenantsAdmin() docs in env.ts.
   const tenantFromEnv = getTenantIdOptional();
   const hasCallerTenant = !!(baseHeaders['X-Tenant-ID'] || baseHeaders['x-tenant-id']);
-  if (tenantFromEnv && !hasCallerTenant && !isAllTenantsAdmin()) {
+  if (tenantFromEnv && !hasCallerTenant && !isAllTenantsAdmin() && !options.omitEnvTenantId) {
     baseHeaders['X-Tenant-ID'] = tenantFromEnv;
   }
 

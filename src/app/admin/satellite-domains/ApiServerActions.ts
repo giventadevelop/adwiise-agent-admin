@@ -1,5 +1,9 @@
 'use server';
-import { appendAdminTenantFilter, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import {
+  appendAdminTenantFilter,
+  assertPlatformSuperAdmin,
+  resolveAdminMutationTenantId,
+} from '@/app/admin/adminAccessServer';
 
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { revalidateSatelliteConfigCache } from '@/lib/satelliteConfigRuntime';
@@ -40,6 +44,7 @@ export async function fetchSatelliteDomainsServer(
     enabled?: boolean;
   }
 ) {
+  await assertPlatformSuperAdmin();
   const params = new URLSearchParams();
   params.append('page', page.toString());
   params.append('size', size.toString());
@@ -105,6 +110,7 @@ export async function createSatelliteDomainServer(
   domain: Omit<SatelliteDomainDTO, 'id' | 'createdAt' | 'updatedAt'>,
   tenantId?: string
 ): Promise<SatelliteDomainDTO> {
+  await assertPlatformSuperAdmin();
   const currentTime = new Date().toISOString();
   const tid = await resolveAdminMutationTenantId(tenantId);
   const payload = {
@@ -136,6 +142,7 @@ export async function updateSatelliteDomainServer(
   id: number,
   domain: Partial<SatelliteDomainDTO>
 ): Promise<SatelliteDomainDTO> {
+  await assertPlatformSuperAdmin();
   const payload = withTenantId({ ...domain, id });
 
   const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/satellite-domains/${id}`, {
@@ -157,6 +164,7 @@ export async function updateSatelliteDomainServer(
  * Delete a satellite domain by ID.
  */
 export async function deleteSatelliteDomainServer(id: number): Promise<boolean> {
+  await assertPlatformSuperAdmin();
   const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/satellite-domains/${id}`, {
     method: 'DELETE',
   });

@@ -6,23 +6,26 @@ import SuccessDialog from '@/components/SuccessDialog';
 import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 import { CatalogCheck, CatalogHubCard } from '@/app/admin/catalogChrome';
 import { CatalogTable } from '@/app/admin/CatalogTable';
-import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO } from '@/types/accessCatalog';
+import type { AccessRoleDTO, RecommendationCategoryDTO, RetailerSizeBandDTO, RetailerTypeDTO, SiteTypeCatalogDTO, SubscriptionPlanCatalogDTO } from '@/types/accessCatalog';
 import {
   deleteAccessRole,
   deleteRecommendationCategory,
   deleteRetailerSizeBand,
   deleteRetailerType,
   deleteSiteType,
+  deleteSubscriptionPlan,
   fetchAccessRoles,
   fetchRecommendationCategories,
   fetchRetailerSizeBands,
   fetchRetailerTypes,
   fetchSiteTypes,
+  fetchSubscriptionPlans,
   saveAccessRole,
   saveRecommendationCategory,
   saveRetailerSizeBand,
   saveRetailerType,
   saveSiteType,
+  saveSubscriptionPlan,
 } from './ApiServerActions';
 
 const inputClass =
@@ -94,6 +97,12 @@ const saveTones = {
     iconBox: 'bg-violet-200',
     icon: 'text-violet-600',
     label: 'text-violet-700',
+  },
+  rose: {
+    button: 'bg-rose-100 hover:bg-rose-200',
+    iconBox: 'bg-rose-200',
+    icon: 'text-rose-600',
+    label: 'text-rose-700',
   },
 } as const;
 
@@ -1002,9 +1011,169 @@ function SiteTypeSection({
   );
 }
 
+const BUILT_IN_PLANS = new Set(['BASIC', 'PROFESSIONAL', 'ENTERPRISE']);
+
+function SubscriptionPlanSection({
+  rows,
+  canEditGlobal,
+  fullPage = false,
+  onChange,
+}: {
+  rows: SubscriptionPlanCatalogDTO[];
+  canEditGlobal: boolean;
+  fullPage?: boolean;
+  onChange: (rows: SubscriptionPlanCatalogDTO[]) => void;
+}) {
+  const tenantId = useAdminTenantId();
+  const [draft, setDraft] = useState<SubscriptionPlanCatalogDTO>({
+    code: '',
+    label: '',
+    hint: '',
+    sortOrder: rows.length,
+    isActive: true,
+  });
+  const [shared, setShared] = useState(false);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
+  const locked = draft.tenantId == null && BUILT_IN_PLANS.has(draft.code);
+
+  const reload = async () => onChange(await fetchSubscriptionPlans(tenantId));
+  const persist = async (row: SubscriptionPlanCatalogDTO, asShared: boolean, announce = false) => {
+    setSaving(true);
+    setError('');
+    try {
+      await saveSubscriptionPlan(row, asShared, tenantId);
+      await reload();
+      setDraft({ code: '', label: '', hint: '', sortOrder: 0, isActive: true });
+      setShared(false);
+      if (announce) setSaved(row.id != null ? 'The subscription plan was updated.' : 'The subscription plan was added.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!fullPage) {
+    return (
+      <CatalogHubCard
+        id="subscription-plans"
+        title="Subscription plans"
+        hint="Plan names on the onboarding form and on each tenant's subscription panel. The saved value is the code."
+        count={rows.length}
+        href="/admin/access-catalogs/subscription-plans"
+        manageLabel="Manage subscription plans"
+        tone="rose"
+        icon={
+          <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        }
+      />
+    );
+  }
+
+  return (
+    <section id="subscription-plans" className="scroll-mt-44 overflow-hidden rounded-xl border-2 border-rose-700 bg-rose-200 text-rose-950 shadow-lg">
+      <div className="flex items-center gap-3 bg-rose-700 px-6 py-4 text-white">
+        <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-rose-800 text-white">
+          <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-semibold">Subscription plans</h2>
+      </div>
+      <div className="p-6">
+        <p className="mb-4 rounded-lg border-2 border-rose-700 bg-rose-200 px-4 py-3 text-base text-rose-950">
+          These names fill the Subscription Plan list. The organization stores the code. Shared rows are edited by a platform super admin. Basic, Professional, and Enterprise stay in the shared list.
+        </p>
+        <CatalogTable
+          rows={rows}
+          itemLabel="subscription plans"
+          searchText={(row) => `${row.code} ${row.label} ${row.hint || ''} ${row.tenantId ? 'this tenant' : 'shared'}`}
+        >
+          {(pageRows) => (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-base">
+                <thead>
+                  <tr className="text-left font-semibold">
+                    <th className="py-2 pr-4">Code</th>
+                    <th className="py-2 pr-4">Label</th>
+                    <th className="py-2 pr-4">Scope</th>
+                    <th className="py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pageRows.map((row) => (
+                    <tr key={row.id ?? row.code}>
+                      <td className="py-2 pr-4 font-mono text-sm">{row.code}</td>
+                      <td className="py-2 pr-4">{row.label}</td>
+                      <td className="py-2 pr-4">{row.tenantId ? 'This tenant' : 'Shared'}</td>
+                      <td className="py-2 text-right">
+                        {editable(row, canEditGlobal) ? (
+                          <CatalogActions
+                            onEdit={() => { setDraft(row); setShared(!row.tenantId); }}
+                            onDeactivate={() => persist({ ...row, isActive: false }, !row.tenantId)}
+                            onRemove={async () => {
+                              setSaving(true);
+                              setError('');
+                              try {
+                                await deleteSubscriptionPlan(row);
+                                await reload();
+                              } catch (e) {
+                                setError(e instanceof Error ? e.message : 'Remove failed');
+                              } finally {
+                                setSaving(false);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="font-medium">Shared</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CatalogTable>
+        <form
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            persist(draft, shared, true);
+          }}
+        >
+          <label className="block text-base font-medium">
+            Code
+            <input className={inputClass} value={draft.code} disabled={locked || draft.id != null} onChange={(e) => setDraft({ ...draft, code: e.target.value })} required />
+          </label>
+          <label className="block text-base font-medium">
+            Label
+            <input className={inputClass} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} required />
+          </label>
+          <label className="block text-base font-medium">
+            Hint
+            <input className={inputClass} value={draft.hint || ''} onChange={(e) => setDraft({ ...draft, hint: e.target.value })} />
+          </label>
+          <CatalogCheck checked={shared} disabled={!canEditGlobal || draft.id != null} onChange={setShared} label="Shared with every tenant" />
+          <div>
+            <SaveButton saving={saving} editing={draft.id != null} addLabel="Add plan" updateLabel="Update plan" tone="rose" />
+          </div>
+        </form>
+      </div>
+      <SavedNotice message={saved} onClose={() => setSaved(null)} />
+      <ErrorDialog isOpen={error.length > 0} onClose={() => setError('')} title="Could not save" message={error} />
+    </section>
+  );
+}
+
 export type AccessCatalogSection =
   | 'access-roles'
   | 'site-types'
+  | 'subscription-plans'
   | 'retailer-types'
   | 'retailer-size-bands'
   | 'recommendation-categories';
@@ -1013,6 +1182,7 @@ export default function AccessCatalogsClient({
   initialRoles,
   initialRetailers,
   initialSiteTypes,
+  initialPlans,
   initialSizeBands,
   initialCategories,
   canEditGlobal,
@@ -1021,6 +1191,7 @@ export default function AccessCatalogsClient({
   initialRoles: AccessRoleDTO[];
   initialRetailers: RetailerTypeDTO[];
   initialSiteTypes: SiteTypeCatalogDTO[];
+  initialPlans: SubscriptionPlanCatalogDTO[];
   initialSizeBands: RetailerSizeBandDTO[];
   initialCategories: RecommendationCategoryDTO[];
   canEditGlobal: boolean;
@@ -1029,6 +1200,7 @@ export default function AccessCatalogsClient({
   const [roles, setRoles] = useState(initialRoles);
   const [retailers, setRetailers] = useState(initialRetailers);
   const [siteTypes, setSiteTypes] = useState(initialSiteTypes);
+  const [plans, setPlans] = useState(initialPlans);
   const [sizeBands, setSizeBands] = useState(initialSizeBands);
   const [categories, setCategories] = useState(initialCategories);
 
@@ -1044,6 +1216,9 @@ export default function AccessCatalogsClient({
       )}
       {(!only || only === 'site-types') && (
         <SiteTypeSection rows={siteTypes} canEditGlobal={canEditGlobal} fullPage={only === 'site-types'} onChange={setSiteTypes} />
+      )}
+      {(!only || only === 'subscription-plans') && (
+        <SubscriptionPlanSection rows={plans} canEditGlobal={canEditGlobal} fullPage={only === 'subscription-plans'} onChange={setPlans} />
       )}
       {(!only || only === 'retailer-types') && (
         <RetailerSection rows={retailers} siteTypes={siteTypes} canEditGlobal={canEditGlobal} fullPage={only === 'retailer-types'} onChange={setRetailers} />

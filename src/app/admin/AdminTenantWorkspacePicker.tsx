@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   loadAdminWorkspaceTenants,
@@ -99,10 +100,8 @@ export default function AdminTenantWorkspacePicker({
       try {
         const data = await loadAdminWorkspaceTenants();
         if (cancelled) return;
-        const mapped = data.canQueryAllTenants
-          ? data.tenants
-          : data.tenants.filter((t) => t.mappedToUser);
-        setTenants(mapped);
+        const visible = data.tenants;
+        setTenants(visible);
         setCanQueryAllTenants(data.canQueryAllTenants);
         setSessionTenantId(data.sessionTenantId);
         setSessionAllTenants(data.sessionAllTenants);
@@ -119,9 +118,9 @@ export default function AdminTenantWorkspacePicker({
               onSelectionChangeRef.current?.(true);
               applyUrlTenant(null);
             }
-          } else if (mapped.length === 1) {
+          } else if (visible.length === 1) {
             didAutoSelectRef.current = true;
-            const only = mapped[0].tenantId;
+            const only = visible[0].tenantId;
             const result = await selectAdminSessionTenant(only);
             if (cancelled) return;
             if (result.ok) {
@@ -249,7 +248,7 @@ export default function AdminTenantWorkspacePicker({
   if (loading) {
     return (
       <div className="mb-8 rounded-xl border-2 border-indigo-200 bg-indigo-50 px-4 py-6 text-center text-indigo-800">
-        Loading the organizations mapped to your account…
+        Loading the sites you can administer…
       </div>
     );
   }
@@ -261,8 +260,9 @@ export default function AdminTenantWorkspacePicker({
           Choose an organization for this session
         </h2>
         <p className="mt-1 text-sm text-gray-600 max-w-2xl mx-auto">
-          These are the tenant IDs mapped to your login. You can administer more than one organization;
-          pick the tenant you want to work on now. You can switch at any time from this page.
+          {canQueryAllTenants
+            ? 'Every tenant site is listed here. Search by name, tenant ID, or domain, then pick the site you want to work on.'
+            : 'These are the sites in your organization. Search and pick one. The tools below, including settings, apply only to the site you select.'}
         </p>
       </div>
 
@@ -292,6 +292,22 @@ export default function AdminTenantWorkspacePicker({
               ) : null}
             </span>
           </div>
+          {!sessionAllTenants && sessionTenantId ? (
+            <Link
+              href="/admin/tenant-management/settings"
+              className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+              title="Edit settings for this tenant"
+              aria-label="Edit settings for this tenant"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <span className="font-semibold text-blue-700">Edit settings</span>
+            </Link>
+          ) : null}
           {!sessionAllTenants && canQueryAllTenants ? (
             <button
               type="button"
@@ -469,7 +485,7 @@ export default function AdminTenantWorkspacePicker({
               {tenant.domain ? (
                 <span className="mt-0.5 text-center opacity-80">{tenant.domain}</span>
               ) : null}
-              <span className="mt-1 font-medium">{tenant.role}</span>
+              <span className="mt-1 font-medium">{tenant.mappedToUser ? tenant.role : 'Organization site'}</span>
               {saving === tenant.tenantId ? <span className="mt-1">Selecting…</span> : null}
             </button>
           );
@@ -533,7 +549,7 @@ export default function AdminTenantWorkspacePicker({
             ? 'No organizations match your search.'
             : canQueryAllTenants
               ? 'No tenant IDs are mapped to this login. Use All tenants, or ask for ADMIN on a tenant.'
-              : 'No tenant IDs are mapped to this login. Ask a platform admin to grant you ADMIN on a tenant.'}
+              : 'No sites are available for your organization. Ask a platform admin to grant you ADMIN on a tenant.'}
         </div>
       )}
     </section>

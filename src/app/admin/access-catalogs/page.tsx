@@ -3,17 +3,18 @@ import { redirect } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import { getCurrentAdminAccess } from '../adminAccessServer';
 import AccessCatalogsClient from './AccessCatalogsClient';
-import { fetchAccessRoles, fetchRecommendationCategories, fetchRetailerSizeBands, fetchRetailerTypes, fetchSiteTypes } from './ApiServerActions';
+import { fetchAccessRoles, fetchRecommendationCategories, fetchRetailerSizeBands, fetchRetailerTypes, fetchSiteTypes, fetchSubscriptionPlans } from './ApiServerActions';
 
 export default async function AccessCatalogsPage() {
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
   const access = await getCurrentAdminAccess();
-  const [roles, retailers, siteTypes, sizeBands, categories] = await Promise.all([
+  const [roles, retailers, siteTypes, plans, sizeBands, categories] = await Promise.all([
     fetchAccessRoles().catch(() => []),
     fetchRetailerTypes().catch(() => []),
     fetchSiteTypes().catch(() => []),
+    fetchSubscriptionPlans().catch(() => []),
     fetchRetailerSizeBands().catch(() => []),
     fetchRecommendationCategories().catch(() => []),
   ]);
@@ -26,7 +27,7 @@ export default async function AccessCatalogsPage() {
         <div className="rounded-xl border-2 border-sky-400 bg-sky-50 p-4">
           <h2 className="mb-1 text-lg font-semibold text-sky-900">What these catalogs control</h2>
           <p className="text-sky-950">
-            Add an access role, a site type, a retailer pack, a size band, or a recommendation category. Site type and retailer pack are separate catalogs. Shared rows are edited by a platform super admin. Each catalog has a manage page for search, paging, and add, edit, and remove. Billing prices stay on Billing Plans.
+            Add an access role, a site type, a subscription plan, a retailer pack, a size band, or a recommendation category. Site type, subscription plan, and retailer pack are separate catalogs. Shared rows are edited by a platform super admin. Each catalog has a manage page for search, paging, and add, edit, and remove. Billing prices stay on Billing Plans.
           </p>
         </div>
       </div>
@@ -34,6 +35,7 @@ export default async function AccessCatalogsPage() {
         initialRoles={roles}
         initialRetailers={retailers}
         initialSiteTypes={siteTypes}
+        initialPlans={plans}
         initialSizeBands={sizeBands}
         initialCategories={categories}
         canEditGlobal={access.isPlatformSuperAdmin}

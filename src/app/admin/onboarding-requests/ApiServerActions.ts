@@ -8,7 +8,7 @@ import {
   patchTenantSetting,
 } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import { previewNextTenantIdServer } from '@/app/admin/tenant-management/organizations/tenantIdServerActions';
-import { listOrganizationPortfolioMembers } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
+import { ensurePortfolioMembershipForApprovedTenant } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { getApiBaseUrl } from '@/lib/env';
 import { revalidateSatelliteConfigCache } from '@/lib/satelliteConfigRuntime';
@@ -47,7 +47,53 @@ async function currentReviewer(): Promise<{ reviewedByClerkUserId?: string; revi
 
 async function readError(response: Response, fallback: string): Promise<string> {
   const text = await response.text().catch(() => '');
+  if (!response.ok) {
+    console.error('[onboarding-requests] backend error', {
+      status: response.status,
+      body: text?.slice(0, 2000) || '(empty)',
+    });
+  }
   return describeOnboardingBackendError(text, fallback);
+}
+
+function baseOnboardingListParams(options: {
+  page?: number;
+  size?: number;
+  status?: OnboardingRequestStatus | 'ALL';
+}): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set('page', String(options.page ?? 0));
+  params.set('size', String(options.size ?? 20));
+  params.append('sort', 'createdAt,desc');
+  params.append('sort', 'id,desc');
+  if (options.status && options.status !== 'ALL') {
+    params.set('status.equals', options.status);
+  }
+  return params;
+}
+
+async function fetchOnboardingListOnce(
+  params: URLSearchParams
+): Promise<{ items: TenantOnboardingRequestDTO[]; totalCount: number } | null> {
+  const response = await fetchWithJwtRetry(`${apiUrl()}?${params.toString()}`, { cache: 'no-store' });
+  if (!response.ok) return null;
+  const data = await response.json();
+  const items = Array.isArray(data) ? (data as TenantOnboardingRequestDTO[]) : [];
+  const totalCount = parseInt(response.headers.get('x-total-count') || String(items.length), 10);
+  return { items, totalCount };
+}
+
+function mergeOnboardingById(
+  ...lists: TenantOnboardingRequestDTO[][]
+): TenantOnboardingRequestDTO[] {
+  const byKey = new Map<string, TenantOnboardingRequestDTO>();
+  for (const list of lists) {
+    for (const row of list) {
+      const key = row.id != null ? `id:${row.id}` : `code:${row.requestCode ?? ''}`;
+      if (!byKey.has(key)) byKey.set(key, row);
+    }
+  }
+  return Array.from(byKey.values());
 }
 
 export async function fetchOnboardingRequestsServer(options: {
@@ -57,31 +103,55 @@ export async function fetchOnboardingRequestsServer(options: {
   search?: string;
 }): Promise<OnboardingActionResult<{ items: TenantOnboardingRequestDTO[]; totalCount: number }>> {
   await assertPlatformSuperAdmin();
-  const params = new URLSearchParams();
-  params.set('page', String(options.page ?? 0));
-  params.set('size', String(options.size ?? 20));
-  params.append('sort', 'createdAt,desc');
-  params.append('sort', 'id,desc');
-  if (options.status && options.status !== 'ALL') {
-    params.set('status.equals', options.status);
-  }
   const search = options.search?.trim();
-  if (search) {
-    if (/^onb-/i.test(search)) params.set('requestCode.contains', search.toUpperCase());
-    else if (search.includes('@')) params.set('contactEmail.contains', search.toLowerCase());
-    else if (search.includes('.')) params.set('requestedHostname.contains', search.toLowerCase());
-    else params.set('organizationName.contains', search);
-  }
+  const size = options.size ?? 20;
 
   try {
-    const response = await fetchWithJwtRetry(`${apiUrl()}?${params.toString()}`, { cache: 'no-store' });
-    if (!response.ok) {
-      return { ok: false, error: await readError(response, 'Failed to load onboarding requests') };
+    // Multi-field typeahead: parallel contains queries, then merge/dedupe.
+    if (search) {
+      const criteria: { key: string; value: string }[] = [];
+      if (/^onb-/i.test(search)) {
+        criteria.push({ key: 'requestCode.contains', value: search.toUpperCase() });
+      } else if (search.includes('@')) {
+        criteria.push({ key: 'contactEmail.contains', value: search.toLowerCase() });
+      } else if (search.includes('.')) {
+        criteria.push({ key: 'requestedHostname.contains', value: search.toLowerCase() });
+        criteria.push({ key: 'organizationName.contains', value: search });
+      } else {
+        criteria.push({ key: 'organizationName.contains', value: search });
+        criteria.push({ key: 'contactEmail.contains', value: search.toLowerCase() });
+        criteria.push({ key: 'requestedHostname.contains', value: search.toLowerCase() });
+        criteria.push({ key: 'requestCode.contains', value: search.toUpperCase() });
+      }
+
+      const results = await Promise.all(
+        criteria.map(async (c) => {
+          const params = baseOnboardingListParams({ ...options, page: 0, size });
+          params.set(c.key, c.value);
+          return fetchOnboardingListOnce(params);
+        })
+      );
+      if (results.every((r) => r == null)) {
+        return { ok: false, error: 'Failed to load onboarding requests' };
+      }
+      const merged = mergeOnboardingById(...results.map((r) => r?.items ?? []));
+      const page = options.page ?? 0;
+      const start = page * size;
+      return {
+        ok: true,
+        data: {
+          items: merged.slice(start, start + size),
+          totalCount: merged.length,
+        },
+      };
     }
-    const data = await response.json();
-    const items = Array.isArray(data) ? (data as TenantOnboardingRequestDTO[]) : [];
-    const totalCount = parseInt(response.headers.get('x-total-count') || String(items.length), 10);
-    return { ok: true, data: { items, totalCount } };
+
+    const params = baseOnboardingListParams(options);
+    const once = await fetchOnboardingListOnce(params);
+    if (!once) {
+      return { ok: false, error: 'Failed to load onboarding requests' };
+    }
+    return { ok: true, data: once };
   } catch (error) {
     console.error('[onboarding-requests] list failed', error);
     return { ok: false, error: 'Failed to load onboarding requests' };
@@ -118,7 +188,19 @@ export async function createManualOnboardingRequestServer(
   input: Record<string, unknown>
 ): Promise<OnboardingActionResult<TenantOnboardingRequestDTO>> {
   await assertPlatformSuperAdmin();
-  const { payload, errors } = validateOnboardingSubmit(input);
+  // Admin new-request flow selects an existing Organization; CRM contact/address
+  // are copied from that org into the payload and are not re-collected here.
+  const { payload, errors } = validateOnboardingSubmit(input, {
+    requireContactDetails: false,
+    skipCrmFieldValidation: true,
+  });
+  if (!payload.contactEmail?.trim()) {
+    return {
+      ok: false,
+      error:
+        'Selected organization has no contact email. Update it under Organizations, then try again.',
+    };
+  }
   const firstError = Object.values(errors)[0];
   if (firstError) return { ok: false, error: firstError };
 
@@ -239,7 +321,8 @@ function defaultHeroPatch(tenantId: string): Record<string, unknown> | null {
 export async function approveOnboardingRequestServer(
   id: number,
   approve: TenantOnboardingApproveDTO,
-  siteType?: TenantSiteType | null
+  siteType?: TenantSiteType | null,
+  portfolioContext?: { sourceTenantId?: string; organizationName?: string }
 ): Promise<OnboardingActionResult<{ request: TenantOnboardingRequestDTO; warnings: string[] }>> {
   await assertPlatformSuperAdmin();
   let request: TenantOnboardingRequestDTO;
@@ -269,29 +352,40 @@ export async function approveOnboardingRequestServer(
   }
 
   const heroPatch = defaultHeroPatch(tenantId);
-  if (heroPatch) {
-    try {
-      const settings = await fetchTenantSettingsByTenantId(tenantId);
-      if (settings?.id && !settings.defaultHeroImageUrlsJson) {
-        await patchTenantSetting(settings.id, { ...heroPatch, tenantId });
+  const logoFromRequest = request.logoUrl?.trim();
+  try {
+    const settings = await fetchTenantSettingsByTenantId(tenantId);
+    if (settings?.id) {
+      const settingsPatch: Parameters<typeof patchTenantSetting>[1] = { tenantId };
+      if (heroPatch && !settings.defaultHeroImageUrlsJson) {
+        Object.assign(settingsPatch, heroPatch);
       }
-    } catch (error) {
-      console.error('[onboarding-requests] hero defaults failed', error);
-      warnings.push('Default hero images were not applied; set them in Tenant Settings.');
+      // Tenant logo (tenant_settings.logoImageUrl) drives satellite auth branding — not org CRM logoUrl.
+      if (logoFromRequest && !settings.logoImageUrl?.trim()) {
+        settingsPatch.logoImageUrl = logoFromRequest;
+      }
+      if (Object.keys(settingsPatch).length > 1) {
+        await patchTenantSetting(settings.id, settingsPatch);
+      }
+    } else if (heroPatch || logoFromRequest) {
+      warnings.push('Tenant settings were not found to apply hero/logo; set them in Tenant Settings.');
     }
+  } catch (error) {
+    console.error('[onboarding-requests] post-approve settings patch failed', error);
+    warnings.push('Default hero/logo were not applied; set them in Tenant Settings.');
   }
 
-  if (approve.portfolioId) {
-    try {
-      const members = await listOrganizationPortfolioMembers(approve.portfolioId);
-      const linked = members.some((member) => member.tenantId === tenantId);
-      if (!linked) {
-        warnings.push('The site was created, but it was not added to the portfolio. Add it from Organization portfolios.');
-      }
-    } catch (error) {
-      console.error('[onboarding-requests] portfolio membership check failed', error);
-      warnings.push('The site was created. Confirm the portfolio membership on Organization portfolios.');
-    }
+  try {
+    const attached = await ensurePortfolioMembershipForApprovedTenant({
+      sourceTenantId: portfolioContext?.sourceTenantId || '',
+      organizationName: portfolioContext?.organizationName || request.organizationName || '',
+      newTenantId: tenantId,
+      overridePortfolioId: approve.portfolioId,
+    });
+    if (attached.warning) warnings.push(attached.warning);
+  } catch (error) {
+    console.error('[onboarding-requests] portfolio membership failed', error);
+    warnings.push('The site was created. Confirm the portfolio membership on Organization portfolios.');
   }
 
   revalidateSatelliteConfigCache();
