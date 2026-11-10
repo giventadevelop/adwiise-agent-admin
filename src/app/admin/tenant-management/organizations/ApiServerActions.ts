@@ -360,23 +360,44 @@ export async function patchTenantOrganization(
   }
 }
 
+function explainOrganizationDeleteFailure(status: number, body: string): string {
+  let detail = body.trim();
+  try {
+    const parsed = JSON.parse(body) as { detail?: string; title?: string; message?: string };
+    detail = (parsed.detail || parsed.message || parsed.title || detail).trim();
+  } catch {
+    // Response was plain text.
+  }
+  const combined = `${body} ${detail}`.toLowerCase();
+  if (
+    combined.includes('organization_portfolio') ||
+    combined.includes('fk_organization_portfolio') ||
+    combined.includes('primary_tenant')
+  ) {
+    return 'This tenant ID is the access tenant for an organization portfolio. The portfolio is the organization group, and this tenant ID is the one whose admins can open the other sites. Choose another tenant ID in that portfolio for that access, or remove the portfolio, then delete this organization.';
+  }
+  if (detail && detail.length > 0 && detail.length < 500 && !detail.startsWith('{') && !detail.startsWith('[')) {
+    return detail;
+  }
+  if (status === 400 || status === 409) {
+    return 'This organization could not be deleted because other records still reference this tenant ID.';
+  }
+  return 'Failed to delete tenant organization';
+}
+
 /**
  * Delete a tenant organization
  */
 export async function deleteTenantOrganization(id: number): Promise<void> {
   await assertPlatformSuperAdmin();
-  try {
-    const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/tenant-organizations/${id}`, {
-      method: 'DELETE',
-    });
+  const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/tenant-organizations/${id}`, {
+    method: 'DELETE',
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete tenant organization: ${errorText}`);
-    }
-  } catch (error) {
-    console.error('Error deleting tenant organization:', error);
-    throw new Error('Failed to delete tenant organization');
+  if (!response.ok && response.status !== 204) {
+    const errorText = await response.text().catch(() => '');
+    console.error('Error deleting tenant organization:', response.status, errorText);
+    throw new Error(explainOrganizationDeleteFailure(response.status, errorText));
   }
 }
 
@@ -507,33 +528,6 @@ export async function cascadeDeleteTenantOrganizationServer(
     const settingsIds = await listIdsByTenantEquals('/api/tenant-settings', tenantId);
     for (const id of settingsIds) {
       await deleteById('/api/tenant-settings', id, 'tenant-settings', steps);
-    }
-
-    // Portfolio memberships / portfolios that use this tenant as primary
-    try {
-      const portfolioParams = new URLSearchParams();
-      portfolioParams.set('primaryTenantId.equals', tenantId);
-      portfolioParams.set('page', '0');
-      portfolioParams.set('size', '50');
-      const portfolioRes = await fetchWithJwtRetry(
-        `${API_BASE_URL}/api/organization-portfolios?${portfolioParams.toString()}`,
-        { cache: 'no-store' }
-      );
-      if (portfolioRes.ok) {
-        const portfolios = parseIdList(await portfolioRes.json());
-        for (const row of portfolios) {
-          if (typeof row.id === 'number') {
-            await deleteById('/api/organization-portfolios', row.id, 'organization-portfolio', steps);
-          }
-        }
-      }
-    } catch (portfolioError) {
-      steps.push({
-        resource: 'organization-portfolio',
-        id: tenantId,
-        ok: false,
-        detail: portfolioError instanceof Error ? portfolioError.message : String(portfolioError),
-      });
     }
 
     await deleteById('/api/tenant-organizations', organizationId, 'tenant-organization', steps);

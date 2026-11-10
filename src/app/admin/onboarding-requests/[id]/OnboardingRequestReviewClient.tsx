@@ -36,17 +36,18 @@ import {
   suggestTenantIdPrefixFromName,
 } from '@/lib/tenantIdGeneration';
 import { useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
-import type { OrganizationPortfolioDTO, TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
+import type { TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import OnboardingRequestFields, { onboardingInputClass, type OnboardingFieldValues } from '../OnboardingRequestFields';
 import {
-  findPortfolioForSourceTenant,
   mapTenantOrganizationToOnboardingFields,
   readOnboardingSourceTenant,
   rememberOnboardingSourceTenant,
 } from '../onboardingOrgPrefill';
+import TenantOrganizationSearchSelect from '@/app/admin/tenant-management/components/TenantOrganizationSearchSelect';
+import { resolveClientOrganizationId } from '@/app/admin/tenant-management/organizations/websiteActions';
 import {
   readOnboardingSiteDraft,
   type OnboardingSiteProvisionDraft,
@@ -79,7 +80,7 @@ interface ProvisioningValues {
   cloneAdmins: boolean;
   notifySubmitter: boolean;
   adminComments: string;
-  portfolioId: string;
+  ownerTenantId: string;
 }
 
 function toFieldValues(r: TenantOnboardingRequestDTO): OnboardingFieldValues {
@@ -124,7 +125,7 @@ function initialProvisioning(r: TenantOnboardingRequestDTO): ProvisioningValues 
     cloneAdmins: true,
     notifySubmitter: true,
     adminComments: r.adminComments ?? '',
-    portfolioId: '',
+    ownerTenantId: '',
   };
 }
 
@@ -161,10 +162,8 @@ function diffFields(original: OnboardingFieldValues, current: OnboardingFieldVal
 
 export default function OnboardingRequestReviewClient({
   initialRequest,
-  portfolios = [],
 }: {
   initialRequest: TenantOnboardingRequestDTO;
-  portfolios?: OrganizationPortfolioDTO[];
 }) {
   const ownershipOptions = useDomainOwnershipOptions('server');
   const [request, setRequest] = useState(initialRequest);
@@ -195,19 +194,18 @@ export default function OnboardingRequestReviewClient({
   const organizationIdFromResult = result?.tenantOrganizationId as number | undefined;
 
   const applySourceTenantToProvisioning = useCallback(
-    (sourceTenantId: string, organizationName?: string) => {
+    (sourceTenantId: string) => {
       const tid = sourceTenantId.trim();
       if (!tid) return;
-      const portfolio = findPortfolioForSourceTenant(portfolios, tid, organizationName);
       setSourceOrgTenantId(tid);
       setProv((prev) => ({
         ...prev,
         adminSourceTenantId: tid,
         cloneAdmins: true,
-        portfolioId: portfolio?.id != null ? String(portfolio.id) : prev.portfolioId,
+        ownerTenantId: tid,
       }));
     },
-    [portfolios]
+    []
   );
 
   useEffect(() => {
@@ -311,7 +309,7 @@ export default function OnboardingRequestReviewClient({
 
   const onClearExistingOrganization = useCallback(() => {
     setSourceOrgTenantId('');
-    setProv((prev) => ({ ...prev, adminSourceTenantId: '', portfolioId: '' }));
+    setProv((prev) => ({ ...prev, adminSourceTenantId: '', ownerTenantId: '' }));
   }, []);
 
   const onFieldChange = (name: keyof OnboardingFieldValues, value: string | boolean) => {
@@ -443,18 +441,11 @@ export default function OnboardingRequestReviewClient({
         cloneAdmins: prov.cloneAdmins,
         notifySubmitter: prov.notifySubmitter,
         adminComments: prov.adminComments.trim() || undefined,
-        portfolioId: prov.portfolioId ? Number(prov.portfolioId) : undefined,
+        parentOrganizationId: prov.ownerTenantId.trim()
+          ? await resolveClientOrganizationId(prov.ownerTenantId.trim())
+          : undefined,
       },
-      (fields.siteType || null) as TenantSiteType | null,
-      {
-        sourceTenantId:
-          sourceOrgTenantId.trim() ||
-          prov.adminSourceTenantId.trim() ||
-          siteDraft?.sourceTenantId?.trim() ||
-          (request.id ? readOnboardingSourceTenant(request.id) : '') ||
-          '',
-        organizationName: fields.organizationName,
-      }
+      (fields.siteType || null) as TenantSiteType | null
     );
     setBusy(null);
     setApproveOpen(false);
@@ -874,16 +865,12 @@ NEXT_PUBLIC_API_BASE_URL=<leave as template / set per environment>`}
                   <input id="adminSourceTenantId" type="text" value={prov.adminSourceTenantId} onChange={(e) => setProvField('adminSourceTenantId', e.target.value.trim())} placeholder="Platform default" disabled={!prov.cloneAdmins} className={onboardingInputClass()} />
                 </div>
                 <div className="md:col-span-2">
-                  <label htmlFor="portfolioId" className="block text-sm font-medium text-gray-700">Add to portfolio</label>
-                  <select id="portfolioId" value={prov.portfolioId} onChange={(e) => setProvField('portfolioId', e.target.value)} className={onboardingInputClass()}>
-                    <option value="">None</option>
-                    {portfolios.filter((portfolio) => portfolio.id && portfolio.isActive !== false).map((portfolio) => (
-                      <option key={portfolio.id} value={String(portfolio.id)}>
-                        {portfolio.portfolioName} ({portfolio.primaryTenantId})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-gray-500 mt-1">Optional. The new site keeps its own tenant ID, domain, and satellite. It joins the group as a member.</p>
+                  <label htmlFor="ownerTenantId" className="block text-sm font-medium text-gray-700">Add under organization</label>
+                  <TenantOrganizationSearchSelect
+                    value={prov.ownerTenantId}
+                    onChange={(tenantId) => setProvField('ownerTenantId', tenantId)}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Optional. Leave empty when this website is its own client. The new site keeps its own tenant ID, domain, and satellite.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label htmlFor="adminComments" className="block text-sm font-medium text-gray-700">Reviewer comments (internal)</label>

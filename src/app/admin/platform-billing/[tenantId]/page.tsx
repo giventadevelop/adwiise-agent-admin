@@ -4,6 +4,8 @@ import { fetchAdminAccessForClerkUser } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { fetchPlatformBillingPlans, prepareTenantBillingDesk } from '@/app/admin/platform-billing/ApiServerActions';
+import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import AdminRecordMissing from '@/components/admin/AdminRecordMissing';
 import type { RetailLocationDTO } from '@/types/retail';
 import BillingDesk from '@/app/admin/billing/BillingDesk';
 
@@ -21,6 +23,17 @@ export default async function TenantPlatformBillingPage({
   const access = await fetchAdminAccessForClerkUser(userId, user?.emailAddresses?.[0]?.emailAddress);
   if (!access.isPlatformSuperAdmin) redirect('/admin/billing');
   const tenantId = decodeURIComponent(resolved.tenantId);
+  const organizations = await fetchTenantOrganizations({ page: 0, pageSize: 1 }, { tenantId }).catch(() => null);
+  if (organizations && organizations.totalCount === 0) {
+    return (
+      <AdminRecordMissing
+        title="This tenant is no longer available"
+        message={`Tenant ${tenantId} was deleted, or this billing link is out of date. Open the organization list to continue.`}
+        backHref="/admin/tenant-management/organizations"
+        backLabel="Back to Organizations"
+      />
+    );
+  }
   const paramsQuery = new URLSearchParams({ 'tenantId.equals': tenantId, size: '500' });
   const locationResponse = await fetchWithJwtRetry(
     `${getApiBaseUrl()}/api/retail-locations?${paramsQuery.toString()}`,

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
 import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import AdminRecordMissing, { isMissingRecordError } from '@/components/admin/AdminRecordMissing';
 import { fetchTenantSettingsByTenantId } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import Link from 'next/link';
 import { FaArrowLeft, FaEdit, FaCog, FaToggleOn, FaToggleOff } from 'react-icons/fa';
@@ -12,7 +12,7 @@ import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import CascadeDeleteOrganizationButton from '@/app/admin/tenant-management/organizations/CascadeDeleteOrganizationButton';
-import { listPortfolioSitesForTenant } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
+import OrganizationWebsitesPanel from '@/app/admin/tenant-management/organizations/OrganizationWebsitesPanel';
 
 interface PageProps {
   params: { id: string };
@@ -25,19 +25,32 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
   const organizationId = parseInt(id);
 
   if (isNaN(organizationId)) {
-    notFound();
+    return (
+      <AdminRecordMissing
+        title="This organization is no longer available"
+        message="The link does not match an organization. It may have been deleted. Go back to the organization list and open one that is still there."
+        backHref="/admin/tenant-management/organizations"
+        backLabel="Back to Organizations"
+      />
+    );
   }
 
   // Fetch organization data
   let organization: TenantOrganizationDTO | null = null;
   let settings: TenantSettingsDTO | null = null;
-  let portfolioSites: Awaited<ReturnType<typeof listPortfolioSitesForTenant>> | null = null;
   let error = null;
 
   try {
     organization = await fetchTenantOrganization(organizationId);
     if (!organization) {
-      notFound();
+      return (
+        <AdminRecordMissing
+          title="This organization is no longer available"
+          message={`Organization #${organizationId} was deleted, or this page was left open after it was removed. Its tenant id and settings are no longer on this page.`}
+          backHref="/admin/tenant-management/organizations"
+          backLabel="Back to Organizations"
+        />
+      );
     }
 
     // Fetch associated settings
@@ -48,14 +61,19 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
       // Settings are optional, so we continue without them
     }
 
-    try {
-      portfolioSites = await listPortfolioSitesForTenant(organization.tenantId);
-    } catch (portfolioError) {
-      console.warn('Portfolio sites not loaded:', portfolioError);
-    }
   } catch (err) {
+    if (isMissingRecordError(err)) {
+      return (
+        <AdminRecordMissing
+          title="This organization is no longer available"
+          message={`Organization #${organizationId} was deleted, or this page was left open after it was removed. Its tenant id and settings are no longer on this page.`}
+          backHref="/admin/tenant-management/organizations"
+          backLabel="Back to Organizations"
+        />
+      );
+    }
     console.error('Error fetching organization:', err);
-    error = err instanceof Error ? err.message : 'Failed to load organization';
+    error = 'The organization could not be loaded. Refresh the page, or go back to the list.';
   }
 
   if (error) {
@@ -91,6 +109,17 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (!organization) {
+    return (
+      <AdminRecordMissing
+        title="This organization is no longer available"
+        message={`Organization #${organizationId} was deleted, or this page was left open after it was removed. Its tenant id, settings, and portfolio membership are no longer on this page.`}
+        backHref="/admin/tenant-management/organizations"
+        backLabel="Back to Organizations"
+      />
     );
   }
 
@@ -390,62 +419,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
             </div>
           </div>
 
-          {portfolioSites?.available !== false && (
-          <div className="mt-6 bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Websites for this organization</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Each row is a tenant id in this organization&apos;s portfolio. Subscription and site settings stay on that tenant.
-                </p>
-              </div>
-              {portfolioSites?.portfolio?.id ? (
-                <Link
-                  href="/admin/tenant-management/portfolios"
-                  className="flex-shrink-0 h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center px-6 font-semibold text-indigo-700"
-                >
-                  Edit portfolio
-                </Link>
-              ) : null}
-            </div>
-            <div className="px-6 py-4">
-              {!portfolioSites?.portfolio ? (
-                <p className="text-sm text-gray-600">
-                  No portfolio yet. Approving an onboarding request for this organization creates one and lists its sites here.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-700">
-                    Portfolio: <span className="font-semibold">{portfolioSites.portfolio.portfolioName}</span>
-                  </p>
-                  <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                    {portfolioSites.sites.map((site) => (
-                      <li key={site.tenantId} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div>
-                          <p className="font-mono text-sm text-gray-900">{site.tenantId}</p>
-                          <p className="text-sm text-gray-600">
-                            {site.organizationName || 'Tenant'}
-                            {site.isPrimary ? ' · Home site' : ''}
-                          </p>
-                        </div>
-                        {site.settingsId != null ? (
-                          <Link
-                            href={`/admin/tenant-management/settings/${site.settingsId}`}
-                            className="text-sm font-semibold text-blue-700 hover:text-blue-900"
-                          >
-                            Tenant settings
-                          </Link>
-                        ) : (
-                          <span className="text-sm text-gray-500">No settings row</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-          )}
+          <OrganizationWebsitesPanel organizationId={organizationId} />
 
           {/* Branding Section */}
           <div className="mt-6 bg-white shadow rounded-lg">

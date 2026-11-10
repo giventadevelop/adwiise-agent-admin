@@ -4,18 +4,21 @@ export function isComplimentarySubscriptionPlan(code?: string | null): boolean {
   return normalized === 'free' || normalized === 'demo';
 }
 
-export function portfolioChargeNote(portfolioId: number): string {
-  return `portfolio-flat:${portfolioId}`;
+export function organizationChargeNote(organizationId: number): string {
+  return `organization-flat:${organizationId}`;
 }
 
-export function coveredByPortfolioNote(portfolioId: number): string {
-  return `covered-by-portfolio:${portfolioId}`;
+export function coveredByOrganizationNote(organizationId: number): string {
+  return `covered-by-organization:${organizationId}`;
 }
 
 export function isCoveredByPortfolio(notes?: string | null): boolean {
   return (notes || '')
     .split('\n')
-    .some((line) => line.trim().startsWith('covered-by-portfolio:'));
+    .some((line) => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('covered-by-organization:') || trimmed.startsWith('covered-by-portfolio:');
+    });
 }
 
 export function withNoteLine(notes: string | null | undefined, line: string): string {

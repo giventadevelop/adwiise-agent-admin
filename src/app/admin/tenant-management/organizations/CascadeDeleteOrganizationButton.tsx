@@ -122,8 +122,7 @@ export default function CascadeDeleteOrganizationButton({
                   <li>Satellite domains</li>
                   <li>Tenant email addresses</li>
                   <li>Tenant settings</li>
-                  <li>Organization portfolios where this tenant is primary</li>
-                  <li>The tenant organization row</li>
+                  <li>The tenant organization row. Websites that belong to it become their own organizations.</li>
                 </ul>
                 <p className="text-red-700 font-medium">
                   This cannot be undone. User profiles, events, and onboarding request history are

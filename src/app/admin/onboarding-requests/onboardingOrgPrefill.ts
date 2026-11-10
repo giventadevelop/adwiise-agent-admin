@@ -1,5 +1,4 @@
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
-import type { OrganizationPortfolioDTO } from '@/types';
 import type { OnboardingFieldValues } from './OnboardingRequestFields';
 
 const SOURCE_TENANT_STORAGE_PREFIX = 'onboarding-source-tenant:';
@@ -29,29 +28,6 @@ export function mapTenantOrganizationToOnboardingFields(
     logoUrl: org.logoUrl?.trim() || previous.logoUrl,
     // New site needs its own hostname — never reuse the existing org domain.
   };
-}
-
-/** Prefer a portfolio whose primary tenant matches the source, else any portfolio name match. */
-export function findPortfolioForSourceTenant(
-  portfolios: OrganizationPortfolioDTO[],
-  sourceTenantId: string,
-  organizationName?: string
-): OrganizationPortfolioDTO | undefined {
-  const tid = sourceTenantId.trim();
-  if (!tid) return undefined;
-  const byPrimary = portfolios.find(
-    (p) => p.isActive !== false && p.id != null && p.primaryTenantId === tid
-  );
-  if (byPrimary) return byPrimary;
-
-  const name = organizationName?.trim().toLowerCase();
-  if (!name) return undefined;
-  return portfolios.find(
-    (p) =>
-      p.isActive !== false &&
-      p.id != null &&
-      p.portfolioName?.trim().toLowerCase() === name
-  );
 }
 
 export function rememberOnboardingSourceTenant(requestId: number, sourceTenantId: string): void {

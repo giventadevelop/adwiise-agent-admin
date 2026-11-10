@@ -1,8 +1,7 @@
 import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
 import { fetchTenantSetting } from '@/app/admin/tenant-management/settings/ApiServerActions';
-import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
-import { fetchWithJwtRetry } from '@/lib/proxyHandler';
+import AdminRecordMissing, { isMissingRecordError } from '@/components/admin/AdminRecordMissing';
+import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import Link from 'next/link';
 import { TenantSettingsDTO, TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import TenantSettingsViewClient from './TenantSettingsViewClient';
@@ -27,50 +26,64 @@ export default async function TenantSettingsViewPage({ params, searchParams }: P
   const initialTab = parseTenantSettingsTab(resolvedSearchParams?.tab);
   const settingsId = parseInt(id);
 
+  const missingSettings = (
+    <AdminRecordMissing
+      title="These tenant settings are no longer available"
+      message={`Settings #${id} were deleted with their tenant. Open the settings list to continue.`}
+      backHref="/admin/tenant-management/settings"
+      backLabel="Back to Settings"
+    />
+  );
+
   if (isNaN(settingsId)) {
-    notFound();
+    return missingSettings;
   }
 
   // Fetch settings data
   let settings: TenantSettingsDTO | null = null;
   let organization: TenantOrganizationDTO | null = null;
   let error = null;
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   try {
     settings = await fetchTenantSetting(settingsId);
     if (!settings) {
-      notFound();
+      return missingSettings;
     }
 
-    // Resolve full organization data for reliable organization name display.
-    if (settings.tenantOrganization?.id) {
-      organization = await fetchTenantOrganization(settings.tenantOrganization.id);
-    } else if (settings.tenantOrganization) {
-      organization = settings.tenantOrganization;
-    }
-
-    // Fallback: if organization name is still missing, fetch by tenantId directly.
-    if ((!organization?.organizationName || organization.organizationName.trim().length === 0) && settings.tenantId && API_BASE_URL) {
-      const params = new URLSearchParams();
-      params.append('tenantId.equals', settings.tenantId);
-      params.append('size', '1');
-
-      const orgResponse = await fetchWithJwtRetry(
-        `${API_BASE_URL}/api/tenant-organizations?${params.toString()}`,
-        { cache: 'no-store' }
+    const tenantId = settings.tenantId?.trim();
+    if (!tenantId) {
+      return (
+        <AdminRecordMissing
+          title="This tenant is no longer available"
+          message={`Settings #${id} are not linked to a tenant id. The tenant was deleted, so these settings cannot be opened.`}
+          backHref="/admin/tenant-management/settings"
+          backLabel="Back to Settings"
+        />
       );
-
-      if (orgResponse.ok) {
-        const orgData = await orgResponse.json();
-        if (Array.isArray(orgData) && orgData.length > 0) {
-          organization = orgData[0];
-        }
-      }
     }
+
+    const organizations = await fetchTenantOrganizations(
+      { page: 0, pageSize: 1 },
+      { tenantId }
+    );
+    const matchedOrganization = organizations.data.find((org) => org.tenantId === tenantId) ?? null;
+    if (!matchedOrganization) {
+      return (
+        <AdminRecordMissing
+          title="This tenant is no longer available"
+          message={`Tenant ${tenantId} was deleted, so its settings are no longer on this page.`}
+          backHref="/admin/tenant-management/settings"
+          backLabel="Back to Settings"
+        />
+      );
+    }
+    organization = matchedOrganization;
   } catch (err) {
+    if (isMissingRecordError(err)) {
+      return missingSettings;
+    }
     console.error('Error fetching settings:', err);
-    error = err instanceof Error ? err.message : 'Failed to load settings';
+    error = 'These tenant settings could not be loaded. Refresh the page, or go back to the list.';
   }
 
   if (error) {
@@ -107,6 +120,10 @@ export default async function TenantSettingsViewPage({ params, searchParams }: P
         </div>
       </div>
     );
+  }
+
+  if (!settings) {
+    return missingSettings;
   }
 
   return (

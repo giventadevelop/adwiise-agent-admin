@@ -8,7 +8,6 @@ import {
   patchTenantSetting,
 } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import { previewNextTenantIdServer } from '@/app/admin/tenant-management/organizations/tenantIdServerActions';
-import { ensurePortfolioMembershipForApprovedTenant } from '@/app/admin/tenant-management/portfolios/ApiServerActions';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { getApiBaseUrl } from '@/lib/env';
 import { revalidateSatelliteConfigCache } from '@/lib/satelliteConfigRuntime';
@@ -181,6 +180,9 @@ export async function fetchOnboardingRequestServer(id: number): Promise<Onboardi
   await assertPlatformSuperAdmin();
   try {
     const response = await fetchWithJwtRetry(apiUrl(`/${id}`), { cache: 'no-store' });
+    if (response.status === 404) {
+      return { ok: false, error: 'This onboarding request is no longer available. It may have been deleted.' };
+    }
     if (!response.ok) {
       return { ok: false, error: await readError(response, 'Onboarding request not found') };
     }
@@ -329,8 +331,7 @@ function defaultHeroPatch(tenantId: string): Record<string, unknown> | null {
 export async function approveOnboardingRequestServer(
   id: number,
   approve: TenantOnboardingApproveDTO,
-  siteType?: TenantSiteType | null,
-  portfolioContext?: { sourceTenantId?: string; organizationName?: string }
+  siteType?: TenantSiteType | null
 ): Promise<OnboardingActionResult<{ request: TenantOnboardingRequestDTO; warnings: string[] }>> {
   await assertPlatformSuperAdmin();
   let request: TenantOnboardingRequestDTO;
@@ -381,19 +382,6 @@ export async function approveOnboardingRequestServer(
   } catch (error) {
     console.error('[onboarding-requests] post-approve settings patch failed', error);
     warnings.push('Default hero/logo were not applied; set them in Tenant Settings.');
-  }
-
-  try {
-    const attached = await ensurePortfolioMembershipForApprovedTenant({
-      sourceTenantId: portfolioContext?.sourceTenantId || '',
-      organizationName: portfolioContext?.organizationName || request.organizationName || '',
-      newTenantId: tenantId,
-      overridePortfolioId: approve.portfolioId,
-    });
-    if (attached.warning) warnings.push(attached.warning);
-  } catch (error) {
-    console.error('[onboarding-requests] portfolio membership failed', error);
-    warnings.push('The site was created. Confirm the portfolio membership on Organization portfolios.');
   }
 
   revalidateSatelliteConfigCache();

@@ -1,5 +1,7 @@
+import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import { fetchRecentTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import NewTenantSettingsClient from '@/app/admin/tenant-management/settings/new/NewTenantSettingsClient';
+import AdminRecordMissing from '@/components/admin/AdminRecordMissing';
 import Link from 'next/link';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
@@ -15,9 +17,26 @@ export default async function NewTenantSettingsPage({ searchParams }: PageProps)
       ? await (searchParams as Promise<{ tenantId?: string }>)
       : (searchParams as { tenantId?: string });
 
-  const organizations = await fetchRecentTenantOrganizationsForSelectServer();
   const access = await getCurrentAdminAccess();
   const initialTenantId = resolvedSearchParams.tenantId?.trim();
+  if (initialTenantId) {
+    const existing = await fetchTenantOrganizations(
+      { page: 0, pageSize: 1 },
+      { tenantId: initialTenantId }
+    ).catch(() => null);
+    if (existing && !existing.data.some((org) => org.tenantId === initialTenantId)) {
+      return (
+        <AdminRecordMissing
+          title="This tenant is no longer available"
+          message={`Tenant ${initialTenantId} was deleted, so settings cannot be created for it.`}
+          backHref="/admin/tenant-management/settings"
+          backLabel="Back to Settings"
+        />
+      );
+    }
+  }
+
+  const organizations = await fetchRecentTenantOrganizationsForSelectServer();
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>

@@ -284,12 +284,11 @@ const ROUTE_ENTRIES: Array<{ prefix: string; info: AdminHelpRouteInfo }> = [
     info: {
       featureKey: 'tenant-organizations',
       label: 'Tenant Management',
-      summary: 'Platform tools for organizations, portfolios, and settings.',
+      summary: 'Platform tools for organizations and settings.',
       commonTasks: ['Manage organizations', 'Open settings'],
       relatedRoutes: [
         '/admin/tenant-management/organizations',
         '/admin/tenant-management/settings',
-        '/admin/tenant-management/portfolios',
       ],
       suggestedChips: ['What can I do under Tenant Management?'],
       platformOnly: true,

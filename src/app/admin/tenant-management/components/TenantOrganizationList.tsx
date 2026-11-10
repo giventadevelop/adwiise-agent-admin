@@ -55,6 +55,7 @@ export default function TenantOrganizationList({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [pendingDelete, setPendingDelete] = useState<TenantOrganizationDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteDialogError, setDeleteDialogError] = useState<string | null>(null);
 
   const {
     item: tooltipOrg,
@@ -148,10 +149,21 @@ export default function TenantOrganizationList({
     }
   };
 
+  const beginDelete = (org: TenantOrganizationDTO) => {
+    setPendingDelete(org);
+    setDeleteDialogError(null);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setPendingDelete(null);
+    setDeleteDialogError(null);
+  };
+
   const confirmDelete = async () => {
     if (!pendingDelete?.id || deleting) return;
     setDeleting(true);
-    setError(null);
+    setDeleteDialogError(null);
     try {
       await deleteTenantOrganization(pendingDelete.id);
       setPendingDelete(null);
@@ -159,8 +171,7 @@ export default function TenantOrganizationList({
       onRefresh?.();
     } catch (err) {
       console.error('Failed to delete organization:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete organization');
-      setPendingDelete(null);
+      setDeleteDialogError(err instanceof Error ? err.message : 'Failed to delete organization');
     } finally {
       setDeleting(false);
     }
@@ -328,7 +339,7 @@ export default function TenantOrganizationList({
                     <AdminTableActionButtons
                       viewHref={`/admin/tenant-management/organizations/${org.id}`}
                       editHref={`/admin/tenant-management/organizations/${org.id}/edit`}
-                      onDelete={() => setPendingDelete(org)}
+                      onDelete={() => beginDelete(org)}
                       viewTitle="View Organization"
                       editTitle="Edit Organization"
                       deleteTitle="Delete Organization"
@@ -464,21 +475,33 @@ export default function TenantOrganizationList({
       <AlertDialog
         open={pendingDelete != null}
         onOpenChange={(open) => {
-          if (!open && !deleting) setPendingDelete(null);
+          if (!open) closeDeleteDialog();
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete organization?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes{' '}
-              <span className="font-semibold">{pendingDelete?.organizationName || 'this organization'}</span>
-              {pendingDelete?.tenantId ? (
-                <>
-                  {' '}(<span className="font-mono">{pendingDelete.tenantId}</span>)
-                </>
-              ) : null}
-              . The organization row is deleted and cannot be restored from this screen.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    This removes{' '}
+                    <span className="font-semibold text-foreground">
+                      {pendingDelete?.organizationName || 'this organization'}
+                    </span>
+                    {pendingDelete?.tenantId ? (
+                      <>
+                        {' '}
+                        (<span className="font-mono">{pendingDelete.tenantId}</span>)
+                      </>
+                    ) : null}
+                    . Websites that belong to it become their own organizations. The row cannot be restored from this screen.
+                  </p>
+                {deleteDialogError ? (
+                  <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                    {deleteDialogError}
+                  </p>
+                ) : null}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-row gap-3 sm:gap-4">
@@ -491,26 +514,26 @@ export default function TenantOrganizationList({
               </div>
               <span className="font-semibold text-teal-800">Cancel</span>
             </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={deleting}
-              onClick={(event) => {
-                event.preventDefault();
-                void confirmDelete();
-              }}
-              className="flex-1 flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
-                {deleting ? (
-                  <svg className="animate-spin w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                ) : (
-                  <FaTrashAlt className="w-6 h-6 text-red-600" aria-hidden="true" />
-                )}
-              </div>
-              <span className="font-semibold text-red-700">{deleting ? 'Deleting...' : 'Delete organization'}</span>
-            </AlertDialogAction>
+              <AlertDialogAction
+                disabled={deleting}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void confirmDelete();
+                }}
+                className="flex-1 flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
+                  {deleting ? (
+                    <svg className="animate-spin w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <FaTrashAlt className="w-6 h-6 text-red-600" aria-hidden="true" />
+                  )}
+                </div>
+                <span className="font-semibold text-red-700">{deleting ? 'Deleting...' : 'Delete organization'}</span>
+              </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

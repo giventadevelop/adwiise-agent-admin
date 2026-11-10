@@ -40,6 +40,8 @@ export interface TenantOrganizationDTO {
   retailerSizeBandCode?: string;
   /** Optional theme/template variant within a siteType */
   siteTemplateVersion?: string;
+  /** Client organization that owns this website. Empty when this row is the client. */
+  parentOrganizationId?: number | null;
   createdAt: string; // ISO date-time
   updatedAt: string; // ISO date-time
 }

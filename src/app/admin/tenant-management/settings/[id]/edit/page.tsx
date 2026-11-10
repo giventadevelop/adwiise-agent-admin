@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
 import { fetchTenantSetting } from '@/app/admin/tenant-management/settings/ApiServerActions';
+import AdminRecordMissing, { isMissingRecordError } from '@/components/admin/AdminRecordMissing';
 import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import { fetchRecentTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import TenantSettingsEditClient from './TenantSettingsEditClient';
@@ -29,8 +29,17 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
   const access = await getCurrentAdminAccess();
   const settingsId = parseInt(id);
 
+  const missingSettings = (
+    <AdminRecordMissing
+      title="These tenant settings are no longer available"
+      message={`Settings #${id} were deleted with their tenant. Open the settings list to continue.`}
+      backHref="/admin/tenant-management/settings"
+      backLabel="Back to Settings"
+    />
+  );
+
   if (isNaN(settingsId)) {
-    notFound();
+    return missingSettings;
   }
 
   // Fetch settings data
@@ -41,24 +50,45 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
   try {
     settings = await fetchTenantSetting(settingsId);
     if (!settings) {
-      notFound();
+      return missingSettings;
     }
 
-    if (settings.tenantId) {
-      const orgs = await fetchTenantOrganizations(
-        { page: 0, pageSize: 5 },
-        { tenantId: settings.tenantId }
-      ).catch(() => null);
-      const match = orgs?.data.find((org) => org.tenantId === settings?.tenantId);
-      if (match) {
-        settings = { ...settings, tenantOrganization: match };
-      }
+    const tenantId = settings.tenantId?.trim();
+    if (!tenantId) {
+      return (
+        <AdminRecordMissing
+          title="This tenant is no longer available"
+          message={`Settings #${id} are not linked to a tenant id. The tenant was deleted, so these settings cannot be edited.`}
+          backHref="/admin/tenant-management/settings"
+          backLabel="Back to Settings"
+        />
+      );
     }
+
+    const orgs = await fetchTenantOrganizations(
+      { page: 0, pageSize: 1 },
+      { tenantId }
+    );
+    const match = orgs.data.find((org) => org.tenantId === tenantId);
+    if (!match) {
+      return (
+        <AdminRecordMissing
+          title="This tenant is no longer available"
+          message={`Tenant ${tenantId} was deleted, so its settings are no longer on this page.`}
+          backHref="/admin/tenant-management/settings"
+          backLabel="Back to Settings"
+        />
+      );
+    }
+    settings = { ...settings, tenantOrganization: match };
 
     organizations = await fetchRecentTenantOrganizationsForSelectServer();
   } catch (err) {
+    if (isMissingRecordError(err)) {
+      return missingSettings;
+    }
     console.error('Error fetching settings:', err);
-    error = err instanceof Error ? err.message : 'Failed to load settings';
+    error = 'These tenant settings could not be loaded. Refresh the page, or go back to the list.';
   }
 
 
@@ -97,6 +127,10 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
         </div>
       </div>
     );
+  }
+
+  if (!settings) {
+    return missingSettings;
   }
 
   return (

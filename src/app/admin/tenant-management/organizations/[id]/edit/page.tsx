@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { fetchTenantOrganization, updateTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import AdminRecordMissing, { isMissingRecordError } from '@/components/admin/AdminRecordMissing';
 import TenantOrganizationForm from '@/app/admin/tenant-management/components/TenantOrganizationForm';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
@@ -19,8 +20,17 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
   const { id } = resolvedParams;
   const organizationId = parseInt(id);
 
+  const missingOrganization = (
+    <AdminRecordMissing
+      title="This organization is no longer available"
+      message={`Organization #${id} was deleted, or this edit link is out of date. Open the organization list to continue.`}
+      backHref="/admin/tenant-management/organizations"
+      backLabel="Back to Organizations"
+    />
+  );
+
   if (isNaN(organizationId)) {
-    notFound();
+    return missingOrganization;
   }
 
   // Fetch organization data
@@ -30,11 +40,14 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
   try {
     organization = await fetchTenantOrganization(organizationId);
     if (!organization) {
-      notFound();
+      return missingOrganization;
     }
   } catch (err) {
+    if (isMissingRecordError(err)) {
+      return missingOrganization;
+    }
     console.error('Error fetching organization:', err);
-    error = err instanceof Error ? err.message : 'Failed to load organization';
+    error = 'The organization could not be loaded. Refresh the page, or go back to the list.';
   }
 
   async function handleSubmit(data: TenantOrganizationFormDTO) {
@@ -83,6 +96,10 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
         </div>
       </div>
     );
+  }
+
+  if (!organization) {
+    return missingOrganization;
   }
 
   return (

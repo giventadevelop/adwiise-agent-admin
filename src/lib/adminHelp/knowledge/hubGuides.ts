@@ -175,14 +175,6 @@ const HUB_GUIDE_ROWS: Array<{
     pathPrefixes: ['/admin/tenant-management/organizations'],
   },
   {
-    key: 'organization-portfolios',
-    title: 'Organization Portfolios',
-    body: 'Group existing tenant sites under one primary tenant. An admin of that primary tenant can open every site in the group. Platform super admin only.',
-    keywords: ['portfolio', 'group tenants'],
-    platformOnly: true,
-    pathPrefixes: ['/admin/tenant-management/portfolios'],
-  },
-  {
     key: 'satellite-domains',
     title: 'Satellite Domains',
     body: 'Extra public domains that sign in through this hub. Platform super admin only.',

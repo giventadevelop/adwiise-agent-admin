@@ -684,6 +684,8 @@ export interface TenantOrganizationDTO {
   retailerTypeCode?: string;
   /** Optional theme/template variant within a siteType */
   siteTemplateVersion?: string;
+  /** Client organization that owns this website. Empty when this row is the client. */
+  parentOrganizationId?: number | null;
   createdAt: string; // date-time
   updatedAt: string; // date-time
 }
@@ -1392,28 +1394,10 @@ export interface TenantOnboardingApproveDTO {
   reviewedByClerkUserId?: string;
   reviewedByEmail?: string;
   notifySubmitter?: boolean;
-  portfolioId?: number;
+  /** Client organization that will own the new website. Empty leaves the new row as its own client. */
+  parentOrganizationId?: number;
 }
 
-/** A group of existing tenant sites. Each member keeps its own tenant id and satellite domain. */
-export interface OrganizationPortfolioDTO {
-  id?: number;
-  portfolioName: string;
-  description?: string | null;
-  primaryTenantId: string;
-  isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface OrganizationPortfolioMemberDTO {
-  id?: number;
-  portfolioId?: number;
-  tenantId: string;
-  isPrimary?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 /** Payload for POST `/api/tenant-onboarding-requests/{id}/reject` (backend TenantOnboardingRejectDTO). */
 export interface TenantOnboardingRejectDTO {
