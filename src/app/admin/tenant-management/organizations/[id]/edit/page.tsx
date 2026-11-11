@@ -9,6 +9,7 @@ import { TenantOrganizationDTO, TenantOrganizationFormDTO } from '@/app/admin/te
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
+import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
 
 interface PageProps {
   params: { id: string };
@@ -209,6 +210,8 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
           />
         </div>
       </div>
+
+      <OrganizationTenantIdList organizationId={organizationId} />
     </div>
   );
 }

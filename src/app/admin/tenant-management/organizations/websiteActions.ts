@@ -307,3 +307,60 @@ export async function saveOrganizationFlatFee(input: {
   }
   return { billingId: null, monthlyUsd: amount, chargeEnabled: true, status: 'PAYMENT_DUE' };
 }
+
+export type TenantMovePreview = {
+  settingsId: number;
+  tenantId: string;
+  organizationId: number;
+  organizationName: string;
+};
+
+export async function lookupTenantForMove(tenantId: string): Promise<TenantMovePreview> {
+  await assertPlatformSuperAdmin();
+  const trimmed = tenantId.trim();
+  if (!trimmed) throw new Error('Enter a tenant ID.');
+  const params = new URLSearchParams();
+  params.set('tenantId.equals', trimmed);
+  const response = await fetchWithJwtRetry(`${getBackendApiUrl()}/api/tenant-settings?${params.toString()}`, unscoped);
+  if (!response.ok) {
+    throw new Error(await readError(response, 'Could not look up that tenant ID'));
+  }
+  const data = (await response.json()) as Array<{ id?: number; tenantId?: string; tenantOrganization?: { id?: number } }>;
+  const row = Array.isArray(data) ? data[0] : null;
+  const organizationId = row?.tenantOrganization?.id;
+  if (!row?.id || !row.tenantId || organizationId == null) {
+    throw new Error(`No tenant settings row was found for ${trimmed}.`);
+  }
+  const organization = await fetchTenantOrganization(organizationId);
+  return {
+    settingsId: row.id,
+    tenantId: row.tenantId,
+    organizationId,
+    organizationName: organization?.organizationName || `Organization #${organizationId}`,
+  };
+}
+
+export async function reassignTenantToOrganization(tenantId: string, destinationOrganizationId: number): Promise<void> {
+  await assertPlatformSuperAdmin();
+  const current = await lookupTenantForMove(tenantId);
+  if (current.organizationId === destinationOrganizationId) {
+    throw new Error('That tenant ID is already on this organization.');
+  }
+  const response = await fetchWithJwtRetry(
+    `${getBackendApiUrl()}/api/tenant-settings/${current.settingsId}/organization`,
+    {
+      ...unscoped,
+      method: 'PUT',
+      body: JSON.stringify({ organizationId: destinationOrganizationId }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(await readError(response, 'Could not move the tenant ID'));
+  }
+  await uncoverTenant(current.tenantId, current.organizationId).catch((error) => {
+    console.error('[organization-billing] previous cover note was not removed', error);
+  });
+  await coverTenantWhenOrganizationIsCharged(destinationOrganizationId, current.tenantId).catch((error) => {
+    console.error('[organization-billing] moved tenant was not marked covered', error);
+  });
+}

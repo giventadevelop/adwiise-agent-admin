@@ -56,8 +56,8 @@ export default function TenantPaymentGateways({ tenantId }: { tenantId?: string 
     );
   }
 
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function onSubmit(event?: React.SyntheticEvent) {
+    event?.preventDefault();
     setSaving(true);
     setMessage('');
     try {
@@ -108,7 +108,15 @@ export default function TenantPaymentGateways({ tenantId }: { tenantId?: string 
       ) : (
         <p className="text-sm text-gray-600">No gateway is connected for this tenant yet.</p>
       )}
-      <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' || (event.target as HTMLElement).tagName === 'TEXTAREA') return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (!saving && draft.providerName) void onSubmit(event);
+        }}
+      >
         <label className="block text-sm font-medium text-gray-700">
           Gateway
           <select
@@ -206,14 +214,15 @@ export default function TenantPaymentGateways({ tenantId }: { tenantId?: string 
         {message ? <p className="text-sm text-gray-700 md:col-span-2">{message}</p> : null}
         <div className="md:col-span-2">
           <button
-            type="submit"
+            type="button"
             disabled={saving || !draft.providerName}
+            onClick={(event) => void onSubmit(event)}
             className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save gateway'}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

@@ -11,8 +11,8 @@ export interface TenantOrganizationDTO {
   /** @deprecated Organizations no longer store a tenant id. Present only on older responses. */
   tenantId?: string;
   organizationName: string;
-  /** Website hostname; required on create and unique across all tenant organizations. */
-  domain?: string;
+  /** Website hostname. Null when the organization does not have one. Unique when set. */
+  domain?: string | null;
   primaryColor?: string;
   secondaryColor?: string;
   logoUrl?: string;
@@ -95,6 +95,8 @@ export interface TenantSettingsDTO {
   emailFooterHtmlUrl?: string; // S3 URL for email footer HTML file
   emailHeaderImageUrl?: string; // S3 URL for email header image
   logoImageUrl?: string; // S3 URL for tenant logo image
+  primaryColor?: string;
+  secondaryColor?: string;
   /** Ordered tenant default hero image URLs (parsed from JSON when returned by API). */
   defaultHeroImageUrls?: string[];
   /** JSON array string of default hero URLs (backend column). */

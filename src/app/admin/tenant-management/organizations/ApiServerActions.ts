@@ -37,7 +37,7 @@ const OPTIONAL_STRING_FIELDS = [
   'websiteUrl',
 ] as const;
 
-/** Empty optional strings → null; domain is required and normalized (never null). */
+/** Empty optional strings, including a blank domain, are stored as null. */
 function normalizeTenantOrganizationPayload<T extends Partial<TenantOrganizationFormDTO>>(data: T): T {
   const normalized = { ...data };
   for (const field of OPTIONAL_STRING_FIELDS) {
@@ -48,7 +48,8 @@ function normalizeTenantOrganizationPayload<T extends Partial<TenantOrganization
     }
   }
   if (typeof normalized.domain === 'string') {
-    normalized.domain = normalizeTenantDomain(normalized.domain);
+    const domain = normalizeTenantDomain(normalized.domain);
+    (normalized as { domain?: string | null }).domain = domain === '' ? null : domain;
   }
   if (typeof normalized.websiteUrl === 'string') {
     const trimmed = normalized.websiteUrl.trim();

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fictitious BST School Demo organizations and the six pending onboarding requests created through the admin UI on November 11, 2026.">
+    <title>BST School Demo onboarding test data</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f7f9fc;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #0d3b66;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+            font-size: 2.2em;
+        }
+        h2 {
+            color: #0d3b66;
+            margin-top: 36px;
+            margin-bottom: 16px;
+            font-size: 1.6em;
+            border-left: 4px solid #0066cc;
+            padding-left: 15px;
+        }
+        h3 { color: #333; margin: 18px 0 10px; font-size: 1.25em; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin: 0 0 16px 24px; }
+        li { margin-bottom: 8px; }
+        a { color: #0052a3; }
+        a:focus, button:focus { outline: 3px solid #0066cc; outline-offset: 2px; }
+        code, .code-highlight {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .meta { color: #333; margin-bottom: 20px; }
+        .toc {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 20px 0 28px;
+        }
+        .toc h2 { margin-top: 0; border: none; padding-left: 0; font-size: 1.2em; }
+        .toc ol { margin-bottom: 0; }
+        .section-intro {
+            background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 16px 0;
+        }
+        .section-intro code { background-color: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; }
+        .section-container {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border-left: 4px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+        }
+        .section-container.parameters {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border-left-color: #ff9800;
+        }
+        .section-container.output {
+            background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%);
+            border-left-color: #28a745;
+        }
+        .section-container.usage {
+            background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%);
+            border-left-color: #9c27b0;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: #fff;
+            padding: 12px 20px;
+            margin: -20px -20px 16px -20px;
+            border-radius: 8px 8px 0 0;
+            font-size: 1.15em;
+            font-weight: bold;
+        }
+        .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+        .info, .warning, .success {
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin: 14px 0;
+        }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .info code, .warning code, .success code,
+        .section-container code, .section-intro code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            border: 1px solid #b8d4e3;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0 4px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td { border: 1px solid #c5d4e8; padding: 10px 12px; text-align: left; vertical-align: top; }
+        th {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.4px;
+        }
+        tr:nth-child(even) { background-color: #f4f8fc; }
+        tr:hover { background-color: #e3f2fd; }
+        td code { background-color: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; }
+        .wrap { overflow-x: auto; }
+        .copy-row { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 14px; }
+        .copy-row pre {
+            flex: 1;
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            border: 1px solid #b8d4e3;
+            border-radius: 5px;
+            padding: 12px;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .copy-button {
+            background-color: #0066cc;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .copy-button:hover { background-color: #0052a3; }
+        .copy-button.copied { background-color: #28a745; }
+        .swatch {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid #0d3b66;
+            vertical-align: -2px;
+            margin-right: 4px;
+        }
+        .swatch-one-primary { background: #1E40AF; }
+        .swatch-one-secondary { background: #F59E0B; }
+        .swatch-two-primary { background: #0F766E; }
+        .swatch-two-secondary { background: #F97316; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.6em; }
+            .copy-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>BST School Demo onboarding test data</h1>
+        <p class="meta">Created through the admin UI at <code>http://localhost:3001</code> on November 11, 2026. All six requests were left <strong>PENDING</strong>. Nothing was inserted by API or SQL.</p>
+
+        <nav class="toc" aria-label="Table of contents">
+            <h2>Contents</h2>
+            <ol>
+                <li><a href="#status">What exists right now</a></li>
+                <li><a href="#organizations">Organizations</a></li>
+                <li><a href="#requests">Pending onboarding requests</a></li>
+                <li><a href="#approve">Prefixes to use when you approve</a></li>
+                <li><a href="#email">Why each request has its own email</a></li>
+                <li><a href="#storage">Where each value is stored</a></li>
+            </ol>
+        </nav>
+
+        <div class="section-intro">
+            <p>Two company organizations were saved immediately. Six onboarding requests were then saved from Add Request and left on the pending list so they can be approved or denied from <a href="http://localhost:3001/admin/onboarding-requests">Onboarding requests</a>. Approving a request is what creates the website tenant ID. This pass did not click Approve or Deny.</p>
+        </div>
+
+        <div class="success">
+            <strong>Confirmed on the pending list:</strong> the list at <code>http://localhost:3001/admin/onboarding-requests</code> shows <strong>1 to 6 of 6 requests</strong>, every row <code>PENDING</code>, filter tab Pending.
+        </div>
+
+        <h2 id="status">What exists right now</h2>
+        <div class="section-container output">
+            <div class="section-header output">Records created</div>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Record</th>
+                            <th>Database</th>
+                            <th>Id</th>
+                            <th>Admin page</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>BST School Demo One</td>
+                            <td><code>tenant_organization</code></td>
+                            <td><code>19</code></td>
+                            <td><a href="http://localhost:3001/admin/tenant-management/organizations/19">Organization 19</a></td>
+                        </tr>
+                        <tr>
+                            <td>BST School Demo Two</td>
+                            <td><code>tenant_organization</code></td>
+                            <td><code>20</code></td>
+                            <td><a href="http://localhost:3001/admin/tenant-management/organizations/20">Organization 20</a></td>
+                        </tr>
+                        <tr>
+                            <td>Six onboarding requests</td>
+                            <td><code>tenant_onboarding_request</code> status <code>PENDING</code></td>
+                            <td><code>2</code> through <code>7</code></td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests">Pending list</a></td>
+                        </tr>
+                        <tr>
+                            <td>Website tenant IDs</td>
+                            <td><code>tenant_settings.tenant_id</code></td>
+                            <td>None yet</td>
+                            <td>Created only when a request is approved</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h2 id="organizations">Organizations</h2>
+        <p>Both organizations are Active. Neither has a tenant ID. Contact emails were restored after the requests were saved, so the organization records again use Maya Chen and Luis Ortega.</p>
+
+        <div class="section-container">
+            <div class="section-header">BST School Demo One</div>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr><th>Field</th><th>Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Database ID</td><td><code>19</code></td></tr>
+                        <tr><td>Organization name</td><td>BST School Demo One</td></tr>
+                        <tr><td>Domain</td><td><code>bst-school-demo-one.test</code></td></tr>
+                        <tr><td>Contact person</td><td>Maya Chen</td></tr>
+                        <tr><td>Contact email</td><td><code>maya.chen@bst-school-demo-one.test</code></td></tr>
+                        <tr><td>Contact phone</td><td><code>555-010-1001</code> (the browser may display this as <code>+15550101001</code>)</td></tr>
+                        <tr><td>Address</td><td>100 Demo Lane, Austin, TX 78701, United States</td></tr>
+                        <tr><td>Monthly charge</td><td>Enabled, <code>49.00</code> USD</td></tr>
+                        <tr><td>Status</td><td>Active</td></tr>
+                        <tr><td>Description</td><td>Fictitious test data for BST School Demo One. Monthly organization charge 49.00 is enabled.</td></tr>
+                        <tr><td>Tenant IDs</td><td>None</td></tr>
+                        <tr><td>Edit page</td><td><a href="http://localhost:3001/admin/tenant-management/organizations/19/edit">/admin/tenant-management/organizations/19/edit</a></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-container parameters">
+            <div class="section-header parameters">BST School Demo Two</div>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr><th>Field</th><th>Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Database ID</td><td><code>20</code></td></tr>
+                        <tr><td>Organization name</td><td>BST School Demo Two</td></tr>
+                        <tr><td>Domain</td><td><code>bst-school-demo-two.test</code></td></tr>
+                        <tr><td>Contact person</td><td>Luis Ortega</td></tr>
+                        <tr><td>Contact email</td><td><code>luis.ortega@bst-school-demo-two.test</code></td></tr>
+                        <tr><td>Contact phone</td><td><code>555-010-2002</code></td></tr>
+                        <tr><td>Address</td><td>200 Demo Lane, Austin, TX 78702, United States</td></tr>
+                        <tr><td>Monthly charge</td><td>Not enabled, <code>0.00</code> USD</td></tr>
+                        <tr><td>Status</td><td>Active</td></tr>
+                        <tr><td>Website URL</td><td>Not provided</td></tr>
+                        <tr><td>Description</td><td>Fictitious test data for BST School Demo Two. Monthly organization charge 0.00 is not enabled.</td></tr>
+                        <tr><td>Tenant IDs</td><td>None. Created and updated 11/11/2026.</td></tr>
+                        <tr><td>Edit page</td><td><a href="http://localhost:3001/admin/tenant-management/organizations/20/edit">/admin/tenant-management/organizations/20/edit</a></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h2 id="requests">Pending onboarding requests</h2>
+        <p>Source on every row is <strong>Entered by admin</strong> (list badge <code>manual</code>, stored source <code>ADMIN_MANUAL</code>). Domain ownership on every row is <strong>I already own this domain (at my own registrar)</strong>. Registrar details were left empty. The name prefix, sequence preview, subscription plan, and monthly fee are kept in the browser tab that saved the request. They are also written into each description so they survive after that tab closes.</p>
+
+        <div class="warning">
+            <strong>Sequence preview is 13, and it is not stored as a tenant yet.</strong>
+            While these requests were filled, the form showed sequence <code>13</code> and generated tenant IDs <code>bst_school_demo_one_13</code> and <code>bst_school_demo_two_13</code>. The same prefix on three unsaved-or-pending requests previews the same next number until one of them is approved. Approving in order assigns the next free sequence, then the one after that, then the one after that. If 13 is still the next free number for that prefix, the three Demo One approvals become <code>bst_school_demo_one_13</code>, <code>bst_school_demo_one_14</code>, and <code>bst_school_demo_one_15</code>. The same pattern applies to <code>bst_school_demo_two</code>.
+        </div>
+
+        <div class="section-container usage">
+            <div class="section-header usage">BST School Demo One — three requests</div>
+            <p>Colors <span class="swatch swatch-one-primary"></span><code>#1E40AF</code> and <span class="swatch swatch-one-secondary"></span><code>#F59E0B</code>. Subscription intent on the form: Basic / Active. Prefix <code>bst_school_demo_one</code>.</p>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Request code</th>
+                            <th>Domain</th>
+                            <th>Site type</th>
+                            <th>Contact email on the request</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/2">2</a></td>
+                            <td><code>ONB-20261111-PPJ2G</code></td>
+                            <td><code>www.bst-demo-one-main.test</code></td>
+                            <td>Events organization</td>
+                            <td><code>maya.chen@bst-school-demo-one.test</code></td>
+                            <td>Nov 11, 2026, 2:18 PM</td>
+                        </tr>
+                        <tr>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/3">3</a></td>
+                            <td><code>ONB-20261111-JPQ74</code></td>
+                            <td><code>www.bst-demo-one-athletics.test</code></td>
+                            <td>Sports team</td>
+                            <td><code>athletics@bst-school-demo-one.test</code></td>
+                            <td>Nov 11, 2026, 2:32 PM</td>
+                        </tr>
+                        <tr>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/4">4</a></td>
+                            <td><code>ONB-20261111-5YB47</code></td>
+                            <td><code>www.bst-demo-one-arts.test</code></td>
+                            <td>Music band</td>
+                            <td><code>arts@bst-school-demo-one.test</code></td>
+                            <td>Nov 11, 2026, 2:39 PM</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <h3>Descriptions saved on the requests</h3>
+            <p><strong>Request 2, main events site</strong></p>
+            <div class="copy-row">
+                <pre id="desc-2">Intended tenant prefix bst_school_demo_one. Main events site for BST School Demo One (Events organization). Colors #1E40AF and #F59E0B. Subscription intent: Basic / Active. Customer registrar. Fictitious test data.</pre>
+                <button class="copy-button" type="button" onclick="copyText(this, 'desc-2')">Copy</button>
+            </div>
+            <p><strong>Request 3, athletics site</strong></p>
+            <div class="copy-row">
+                <pre id="desc-3">Intended tenant prefix bst_school_demo_one. Athletics site for BST School Demo One (Sports team). Colors #1E40AF and #F59E0B. Subscription intent: Basic / Active. Customer registrar. Fictitious test data.</pre>
+                <button class="copy-button" type="button" onclick="copyText(this, 'desc-3')">Copy</button>
+            </div>
+            <p><strong>Request 4, arts site</strong></p>
+            <div class="copy-row">
+                <pre id="desc-4">Intended tenant prefix bst_school_demo_one. Arts site for BST School Demo One (Music band). Colors #1E40AF and #F59E0B. Subscription intent: Basic / Active. Customer registrar. Fictitious test data.</pre>
+                <button class="copy-button" type="button" onclick="copyText(this, 'desc-4')">Copy</button>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <div class="section-header">BST School Demo Two — three requests</div>
+            <p>Colors <span class="swatch swatch-two-primary"></span><code>#0F766E</code> and <span class="swatch swatch-two-secondary"></span><code>#F97316</code>. Subscription Plan and Subscription Status were left on Select Plan / Select Status. Monthly fee on the form was <code>0</code>. Prefix <code>bst_school_demo_two</code>.</p>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Request code</th>
+                            <th>Domain</th>
+                            <th>Site type</th>
+                            <th>Contact email on the request</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/5">5</a></td>
+                            <td><code>ONB-20261111-NK9X7</code></td>
+                            <td><code>www.bst-demo-two-main.test</code></td>
+                            <td>Events organization</td>
+                            <td><code>luis.ortega@bst-school-demo-two.test</code></td>
+                            <td>Nov 11, 2026, 2:44 PM</td>
+                        </tr>
+                        <tr>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/6">6</a></td>
+                            <td><code>ONB-20261111-CDT25</code></td>
+                            <td><code>www.bst-demo-two-library.test</code></td>
+                            <td>Hybrid</td>
+                            <td><code>library@bst-school-demo-two.test</code></td>
+                            <td>Nov 11, 2026, 2:50 PM</td>
+                        </tr>
+                        <tr>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/7">7</a></td>
+                            <td><code>ONB-20261111-QVPQ4</code></td>
+                            <td><code>www.bst-demo-two-parents.test</code></td>
+                            <td>Personal profile</td>
+                            <td><code>parents@bst-school-demo-two.test</code></td>
+                            <td>Nov 11, 2026, 2:56 PM</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <h3>Descriptions saved on the requests</h3>
+            <p><strong>Request 5, main events site</strong></p>
+            <div class="copy-row">
+                <pre id="desc-5">Intended tenant prefix bst_school_demo_two. Main events site for BST School Demo Two (Events organization). Colors #0F766E and #F97316. Subscription intent: left empty. Customer registrar. Fictitious test data.</pre>
+                <button class="copy-button" type="button" onclick="copyText(this, 'desc-5')">Copy</button>
+            </div>
+            <p><strong>Request 6, library site</strong></p>
+            <div class="copy-row">
+                <pre id="desc-6">Intended tenant prefix bst_school_demo_two. Library site for BST School Demo Two (Hybrid). Colors #0F766E and #F97316. Subscription intent: left empty. Customer registrar. Fictitious test data.</pre>
+                <button class="copy-button" type="button" onclick="copyText(this, 'desc-6')">Copy</button>
+            </div>
+            <p><strong>Request 7, parents site</strong></p>
+            <div class="copy-row">
+                <pre id="desc-7">Intended tenant prefix bst_school_demo_two. Parents site for BST School Demo Two (Personal profile). Colors #0F766E and #F97316. Subscription intent: left empty. Customer registrar. Fictitious test data.</pre>
+                <button class="copy-button" type="button" onclick="copyText(this, 'desc-7')">Copy</button>
+            </div>
+        </div>
+
+        <h2 id="approve">Prefixes to use when you approve</h2>
+        <div class="section-container parameters">
+            <div class="section-header parameters">Approve in this order</div>
+            <p>Open a request from the pending list and approve it with the prefix named in its description. Leave the sequence on the auto-generated next number. The first approval of a prefix takes that next number. The second approval of the same prefix takes the following number.</p>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Approve order</th>
+                            <th>Request</th>
+                            <th>Prefix to use</th>
+                            <th>Preview shown on the form</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/2">2</a> main events</td>
+                            <td><code>bst_school_demo_one</code></td>
+                            <td><code>bst_school_demo_one_13</code></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/3">3</a> athletics</td>
+                            <td><code>bst_school_demo_one</code></td>
+                            <td>Next free sequence after the first approval</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/4">4</a> arts</td>
+                            <td><code>bst_school_demo_one</code></td>
+                            <td>The sequence after that</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/5">5</a> main events</td>
+                            <td><code>bst_school_demo_two</code></td>
+                            <td><code>bst_school_demo_two_13</code></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/6">6</a> library</td>
+                            <td><code>bst_school_demo_two</code></td>
+                            <td>Next free sequence after the first Demo Two approval</td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td><a href="http://localhost:3001/admin/onboarding-requests/7">7</a> parents</td>
+                            <td><code>bst_school_demo_two</code></td>
+                            <td>The sequence after that</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="info">
+                The number 13 is the next unused sequence the form calculated on November 11, 2026. Sequences already used by other tenants are skipped. If another tenant with the same prefix is created before you approve these, the next number will be higher than 13. Read the generated tenant ID on the approve screen before you confirm.
+            </div>
+        </div>
+
+        <h2 id="email">Why each request has its own email</h2>
+        <div class="section-container">
+            <div class="section-header">One pending request per contact email</div>
+            <p>The server rejects a second <code>PENDING</code> request that uses an email already waiting for review (<code>error.emailpending</code>: “A request from this email is already waiting for review.”). The Add Request form has no separate email field. It copies the selected organization’s contact email at the moment the organization is selected.</p>
+            <p>To save three requests per school, the organization contact email was changed in the organization form, the organization was selected again so the new request copied that email, and the request was saved. After the third request for each school, the organization contact was put back:</p>
+            <ul>
+                <li>BST School Demo One is <code>maya.chen@bst-school-demo-one.test</code>, contact person Maya Chen.</li>
+                <li>BST School Demo Two is <code>luis.ortega@bst-school-demo-two.test</code>, contact person Luis Ortega, phone <code>555-010-2002</code>.</li>
+            </ul>
+            <p>The emails stored on the requests themselves stay as they were at save time. They are listed in the tables above. Approving or denying a request frees that email for another pending request.</p>
+        </div>
+
+        <h2 id="storage">Where each value is stored</h2>
+        <div class="section-container output">
+            <div class="section-header output">Storage map</div>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr><th>Value</th><th>Where it lives</th><th>When it is written</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Organization name, contact, address, domain, monthly charge, active flag</td>
+                            <td><code>tenant_organization</code>. Demo One is id <code>19</code>. Demo Two is id <code>20</code>.</td>
+                            <td>As soon as Create Organization or Update Organization is saved.</td>
+                        </tr>
+                        <tr>
+                            <td>Requested domain, colors, site type, domain ownership, description, contact email, status</td>
+                            <td><code>tenant_onboarding_request</code>. Status is <code>PENDING</code>. Ids <code>2</code>, <code>3</code>, <code>4</code>, <code>5</code>, <code>6</code>, <code>7</code>.</td>
+                            <td>When Save request succeeds. Source is <code>ADMIN_MANUAL</code>.</td>
+                        </tr>
+                        <tr>
+                            <td>Website tenant ID</td>
+                            <td><code>tenant_settings.tenant_id</code>, linked by <code>tenant_organization_id</code>.</td>
+                            <td>Only when you click Approve. These six IDs do not exist yet.</td>
+                        </tr>
+                        <tr>
+                            <td>Name prefix, sequence preview, generated tenant ID, subscription plan, subscription status, monthly fee</td>
+                            <td>Browser <code>sessionStorage</code> key <code>onboarding-site-draft:{requestId}</code> in the tab that saved the request. Example: <code>onboarding-site-draft:7</code>.</td>
+                            <td>In that browser tab only. It is not a database column. The description on the request repeats the prefix, colors, and subscription intent so the plan is still visible after the tab closes.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>Review without approving:</strong> the pending list is <a href="http://localhost:3001/admin/onboarding-requests">http://localhost:3001/admin/onboarding-requests</a>. Each request page is <code>/admin/onboarding-requests/{id}</code> for ids 2 through 7. Leave the status on PENDING until you choose Approve or Deny.
+        </div>
+    </main>
+    <script>
+        function copyText(button, elementId) {
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            var text = el.textContent.trim();
+            function markCopied() {
+                button.classList.add('copied');
+                button.textContent = 'Copied';
+                setTimeout(function () {
+                    button.classList.remove('copied');
+                    button.textContent = 'Copy';
+                }, 2000);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(markCopied).catch(function () {
+                    fallbackCopy(text, markCopied);
+                });
+            } else {
+                fallbackCopy(text, markCopied);
+            }
+        }
+        function fallbackCopy(text, done) {
+            var area = document.createElement('textarea');
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            try { document.execCommand('copy'); } catch (err) { /* ignore */ }
+            document.body.removeChild(area);
+            done();
+        }
+    </script>
+</body>
+</html>

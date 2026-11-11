@@ -8,6 +8,7 @@ import type { TenantOrganizationDTO, TenantOrganizationFormDTO } from '@/app/adm
 import { getTenantDomainFormatError, normalizeTenantDomain } from '@/lib/tenantDomainValidation';
 import { getWebsiteUrlFormatError, normalizeWebsiteUrl } from '@/lib/websiteUrlValidation';
 import { isTenantOrganizationDomainAvailableServer } from '@/app/admin/tenant-management/organizations/domainServerActions';
+import { isOrganizationNameAvailableServer } from '@/app/admin/tenant-management/organizations/nameServerActions';
 import AddressFieldsSection from '@/components/admin/AddressFieldsSection';
 import DescriptionTextareaField from '@/components/admin/DescriptionTextareaField';
 import EventFormHelpTooltip from '@/components/EventFormHelpTooltip';
@@ -29,11 +30,17 @@ export default function TenantOrganizationForm({
 }: TenantOrganizationFormProps) {
   const router = useRouter();
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null);
+  const initialMonthlyFee = Number(initialData?.monthlyFeeUsd ?? 0);
+  const [displayMonthlyFee, setDisplayMonthlyFee] = useState(
+    Number.isFinite(initialMonthlyFee) ? initialMonthlyFee.toFixed(2) : '0.00',
+  );
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setError,
+    clearErrors,
     setValue,
     watch,
   } = useForm<TenantOrganizationFormDTO>({
@@ -108,6 +115,41 @@ export default function TenantOrganizationForm({
     [initialData?.id, mode],
   );
 
+  const validateOrganizationName = useCallback(
+    async (rawName: string): Promise<string | null> => {
+      const trimmed = rawName.trim();
+      if (!trimmed) {
+        return 'Organization name is required';
+      }
+      try {
+        const result = await isOrganizationNameAvailableServer(
+          trimmed,
+          mode === 'edit' ? initialData?.id : undefined,
+        );
+        if (!result.available) {
+          return result.message || 'An organization with this name already exists.';
+        }
+        return null;
+      } catch {
+        return 'Could not verify the organization name. Try again.';
+      }
+    },
+    [initialData?.id, mode],
+  );
+
+  const handleOrganizationNameBlur = async (rawName: string) => {
+    const trimmed = rawName.trim();
+    if (trimmed !== rawName) {
+      setValue('organizationName', trimmed, { shouldValidate: true });
+    }
+    const nameError = await validateOrganizationName(trimmed);
+    if (nameError) {
+      setError('organizationName', { type: 'validate', message: nameError });
+      return;
+    }
+    clearErrors('organizationName');
+  };
+
   const handleWebsiteUrlBlur = (rawUrl: string) => {
     const trimmed = rawUrl.trim();
     if (!trimmed) return;
@@ -129,6 +171,14 @@ export default function TenantOrganizationForm({
         secondaryColor: data.secondaryColor || '#10B981',
       };
 
+      const trimmedName = (submitData.organizationName || '').trim();
+      const nameError = await validateOrganizationName(trimmedName);
+      if (nameError) {
+        setError('organizationName', { type: 'validate', message: nameError });
+        setFormSubmitError(nameError);
+        return;
+      }
+
       const normalizedDomain = normalizeTenantDomain(submitData.domain || '');
       if (normalizedDomain) {
         const domainError = await validateDomainAvailability(normalizedDomain);
@@ -140,6 +190,7 @@ export default function TenantOrganizationForm({
 
       const formData = {
         ...submitData,
+        organizationName: trimmedName,
         domain: normalizedDomain,
         websiteUrl: submitData.websiteUrl?.trim()
           ? normalizeWebsiteUrl(submitData.websiteUrl)
@@ -199,7 +250,47 @@ export default function TenantOrganizationForm({
           <input type="hidden" {...register('subscriptionStatus')} />
           <input type="hidden" {...register('subscriptionStartDate')} />
           <input type="hidden" {...register('subscriptionEndDate')} />
-          <input type="hidden" {...register('monthlyFeeUsd')} />
+          <div className="mb-6">
+            <label htmlFor="monthlyFeeUsd" className="block text-sm font-medium text-gray-700 mb-2">
+              Monthly charge (USD)
+            </label>
+            <p className="text-sm text-gray-600 mb-2">
+              One charge covers every tenant ID under this organization. An amount above 0.00 enables the organization charge. Tenant IDs stay complimentary. Use 0.00 to leave the charge off.
+            </p>
+            {(() => {
+              const amount = parseFloat(displayMonthlyFee);
+              const enabled = Number.isFinite(amount) && amount > 0;
+              return (
+                <p className="mb-2">
+                  <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${enabled ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                    {enabled ? 'Enabled' : 'Not enabled'}
+                  </span>
+                </p>
+              );
+            })()}
+            <input
+              id="monthlyFeeUsd"
+              type="text"
+              inputMode="decimal"
+              value={displayMonthlyFee}
+              onChange={(event) => {
+                let inputValue = event.target.value;
+                if (inputValue.startsWith('.')) {
+                  inputValue = `0${inputValue}`;
+                }
+                setDisplayMonthlyFee(inputValue);
+                const numeric = inputValue === '' || inputValue === '0.' ? 0 : parseFloat(inputValue);
+                setValue('monthlyFeeUsd', Number.isFinite(numeric) ? numeric : 0);
+              }}
+              onBlur={() => {
+                const numeric = parseFloat(displayMonthlyFee) || 0;
+                setValue('monthlyFeeUsd', numeric);
+                setDisplayMonthlyFee(numeric.toFixed(2));
+              }}
+              className="block w-full max-w-xs border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+              placeholder="0.00"
+            />
+          </div>
           <input type="hidden" {...register('stripeCustomerId')} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -215,8 +306,15 @@ export default function TenantOrganizationForm({
                     value: 255,
                     message: 'Organization name must be less than 255 characters'
                   },
+                  onBlur: (event) => {
+                    void handleOrganizationNameBlur(event.target.value);
+                  },
                 })}
-                className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+                className={`mt-1 block w-full border rounded-xl px-4 py-3 text-base ${
+                  errors.organizationName
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : 'border-gray-400 focus:border-blue-500 focus:ring-blue-500'
+                }`}
                 placeholder="e.g., Ford Motors"
               />
               {errors.organizationName && (

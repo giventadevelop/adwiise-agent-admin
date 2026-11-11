@@ -201,6 +201,8 @@ export default function TenantSettingsForm({
       emailFooterHtmlUrl: initialData?.emailFooterHtmlUrl || '',
       emailHeaderImageUrl: initialData?.emailHeaderImageUrl || '',
       logoImageUrl: initialData?.logoImageUrl || '',
+      primaryColor: initialData?.primaryColor || '',
+      secondaryColor: initialData?.secondaryColor || '',
       defaultHeroImageUrlsJson: initialData?.defaultHeroImageUrlsJson || '',
       defaultHeroDisplayMode: initialData?.defaultHeroDisplayMode || 'slideshow',
       defaultHeroIncludeWithEvents: initialData?.defaultHeroIncludeWithEvents ?? true,
@@ -235,6 +237,8 @@ export default function TenantSettingsForm({
   const emailFooterHtmlUrl = watch('emailFooterHtmlUrl');
   const emailHeaderImageUrl = watch('emailHeaderImageUrl');
   const logoImageUrl = watch('logoImageUrl');
+  const primaryColor = watch('primaryColor');
+  const secondaryColor = watch('secondaryColor');
   /** Row’s tenant — must match upload proxy X-Tenant-ID when editing non-default tenant in super-admin. */
   const tenantIdForUpload =
     watch('tenantId')?.trim() || initialData?.tenantId?.trim() || undefined;
@@ -2275,6 +2279,60 @@ export default function TenantSettingsForm({
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Brand colors for this tenant ID */}
+            <div className="border-t border-gray-200 pt-6">
+              <h4 className="text-md font-medium text-gray-900 mb-2">Brand colors</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                These colors belong to this tenant ID and sit with the logo below.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="primaryColor" className="block text-sm font-medium text-gray-700 mb-2">
+                    Primary color
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      aria-label="Primary color picker"
+                      value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor || '') ? primaryColor : '#3B82F6'}
+                      onChange={(event) => setValue('primaryColor', event.target.value, { shouldDirty: true })}
+                      className="h-12 w-14 rounded-lg border border-gray-300 bg-white p-1"
+                    />
+                    <input
+                      id="primaryColor"
+                      type="text"
+                      maxLength={7}
+                      placeholder="#3B82F6"
+                      {...register('primaryColor')}
+                      className="flex-1 border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base font-mono"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="secondaryColor" className="block text-sm font-medium text-gray-700 mb-2">
+                    Secondary color
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      aria-label="Secondary color picker"
+                      value={/^#[0-9A-Fa-f]{6}$/.test(secondaryColor || '') ? secondaryColor : '#1E40AF'}
+                      onChange={(event) => setValue('secondaryColor', event.target.value, { shouldDirty: true })}
+                      className="h-12 w-14 rounded-lg border border-gray-300 bg-white p-1"
+                    />
+                    <input
+                      id="secondaryColor"
+                      type="text"
+                      maxLength={7}
+                      placeholder="#1E40AF"
+                      {...register('secondaryColor')}
+                      className="flex-1 border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base font-mono"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

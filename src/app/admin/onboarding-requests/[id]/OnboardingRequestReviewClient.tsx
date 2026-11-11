@@ -24,10 +24,11 @@ import {
   validateOnboardingSubmit,
 } from '@/lib/onboarding/onboardingShared';
 import {
+  approvalSnapshotDetailRows,
   buildCursorEnvHandoffText,
   buildManualStepsText,
-  buildOrganizationDetailsText,
   domainOwnershipLabel,
+  formatOrganizationDetailText,
   hubDatabaseLabel,
   manualReminderSteps,
   organizationDetailRows,
@@ -47,8 +48,6 @@ import {
   readOnboardingSourceTenant,
   rememberOnboardingSourceTenant,
 } from '../onboardingOrgPrefill';
-import TenantOrganizationSearchSelect from '@/app/admin/tenant-management/components/TenantOrganizationSearchSelect';
-import { resolveClientOrganizationId } from '@/app/admin/tenant-management/organizations/websiteActions';
 import {
   readOnboardingSiteDraft,
   type OnboardingSiteProvisionDraft,
@@ -81,7 +80,6 @@ interface ProvisioningValues {
   cloneAdmins: boolean;
   notifySubmitter: boolean;
   adminComments: string;
-  ownerTenantId: string;
 }
 
 function toFieldValues(r: TenantOnboardingRequestDTO): OnboardingFieldValues {
@@ -126,7 +124,6 @@ function initialProvisioning(r: TenantOnboardingRequestDTO): ProvisioningValues 
     cloneAdmins: true,
     notifySubmitter: true,
     adminComments: r.adminComments ?? '',
-    ownerTenantId: '',
   };
 }
 
@@ -142,6 +139,28 @@ function parseResult(raw?: string | null): Record<string, unknown> | null {
 function numericId(value: unknown): number | null {
   const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
   return Number.isFinite(n) ? n : null;
+}
+
+function removedOrganizationMessage(
+  organizationId: number | null,
+  tenantId: string,
+  sameName: TenantOrganizationDTO | null
+): string {
+  const created = [
+    organizationId != null ? `organization ${organizationId}` : '',
+    tenantId ? `tenant ${tenantId}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const removed = created
+    ? `The organization created for this request (${created}) is no longer in the database. Deleting an organization also removes its tenant settings.`
+    : 'The organization created for this request is no longer in the database.';
+  if (!sameName?.id) {
+    return `${removed} The details below are the values saved when this request was approved.`;
+  }
+  const liveTenants = sameName.websiteTenantIds?.filter(Boolean).join(', ');
+  const liveTenant = liveTenants ? ` Tenant ${liveTenants}.` : '';
+  return `${removed} ${sameName.organizationName} (id ${sameName.id}) is a different organization that still uses this name.${liveTenant} The details below are the values saved when this request was approved.`;
 }
 
 function formatDate(value?: string | null): string {
@@ -189,14 +208,27 @@ export default function OnboardingRequestReviewClient({
   const [rejectError, setRejectError] = useState<string | null>(null);
   /** Existing org selected for prefilling (empty = brand-new organization). */
   const [sourceOrgTenantId, setSourceOrgTenantId] = useState('');
+  const [sourceOrganizationId, setSourceOrganizationId] = useState<number | null>(
+    initialRequest.sourceOrganizationId ?? null
+  );
+  const [savedSourceOrganizationId, setSavedSourceOrganizationId] = useState<number | null>(
+    initialRequest.sourceOrganizationId ?? null
+  );
   const [siteDraft, setSiteDraft] = useState<OnboardingSiteProvisionDraft | null>(null);
   const [provisionedOrg, setProvisionedOrg] = useState<TenantOrganizationDTO | null>(null);
   const [provisionedOrgError, setProvisionedOrgError] = useState<string | null>(null);
+  const [provisionedOrgMissing, setProvisionedOrgMissing] = useState(false);
+  const [sameNameOrg, setSameNameOrg] = useState<TenantOrganizationDTO | null>(null);
   const [liveSettingsId, setLiveSettingsId] = useState<number | null>(null);
 
   const editable = request.status === 'PENDING' || request.status === 'FAILED';
   const result = useMemo(() => parseResult(request.provisioningResult), [request.provisioningResult]);
-  const dirty = useMemo(() => Object.keys(diffFields(savedFields, fields)).length > 0, [savedFields, fields]);
+  const dirty = useMemo(
+    () =>
+      sourceOrganizationId !== savedSourceOrganizationId ||
+      Object.keys(diffFields(savedFields, fields)).length > 0,
+    [savedFields, fields, sourceOrganizationId, savedSourceOrganizationId]
+  );
   const requireContactDetails = !sourceOrgTenantId.trim();
   const organizationIdFromResult = numericId(result?.tenantOrganizationId);
   const settingsIdFromResult = numericId(result?.tenantSettingsId);
@@ -211,7 +243,6 @@ export default function OnboardingRequestReviewClient({
         ...prev,
         adminSourceTenantId: tid,
         cloneAdmins: true,
-        ownerTenantId: tid,
       }));
     },
     []
@@ -221,6 +252,8 @@ export default function OnboardingRequestReviewClient({
     if (request.status !== 'APPROVED' || (organizationIdFromResult == null && !tenantIdFromResult)) {
       setProvisionedOrg(null);
       setProvisionedOrgError(null);
+      setProvisionedOrgMissing(false);
+      setSameNameOrg(null);
       setLiveSettingsId(null);
       return;
     }
@@ -232,12 +265,28 @@ export default function OnboardingRequestReviewClient({
         if (!org && tenantIdFromResult) {
           org = await fetchTenantOrganizationByTenantId(tenantIdFromResult);
         }
+        let named: TenantOrganizationDTO | null = null;
+        if (!org) {
+          const orgName = request.organizationName?.trim();
+          if (orgName) {
+            const matches = await searchTenantOrganizationsForSelectServer(orgName);
+            named =
+              matches.find((candidate) => candidate.organizationName?.trim().toLowerCase() === orgName.toLowerCase()) ??
+              null;
+          }
+        }
         if (cancelled) return;
         setProvisionedOrg(org);
-        setProvisionedOrgError(org ? null : 'Organization record was not found.');
+        setSameNameOrg(named);
+        setProvisionedOrgMissing(!org);
+        setProvisionedOrgError(
+          org ? null : removedOrganizationMessage(organizationIdFromResult, tenantIdFromResult, named)
+        );
       } catch (error) {
         if (!cancelled) {
           setProvisionedOrg(null);
+          setSameNameOrg(null);
+          setProvisionedOrgMissing(false);
           setProvisionedOrgError(error instanceof Error ? error.message : 'Failed to load organization');
         }
       }
@@ -267,7 +316,7 @@ export default function OnboardingRequestReviewClient({
     return () => {
       cancelled = true;
     };
-  }, [request.status, organizationIdFromResult, settingsIdFromResult, tenantIdFromResult]);
+  }, [request.status, request.organizationName, organizationIdFromResult, settingsIdFromResult, tenantIdFromResult]);
 
   useEffect(() => {
     if (!editable || !request.id) return;
@@ -327,6 +376,7 @@ export default function OnboardingRequestReviewClient({
         delete next.contactPhone;
         return next;
       });
+      if (org.id != null) setSourceOrganizationId(org.id);
       if (org.tenantId && request.id) {
         rememberOnboardingSourceTenant(request.id, org.tenantId);
         applySourceTenantToProvisioning(org.tenantId, org.organizationName);
@@ -343,7 +393,7 @@ export default function OnboardingRequestReviewClient({
 
   const onClearExistingOrganization = useCallback(() => {
     setSourceOrgTenantId('');
-    setProv((prev) => ({ ...prev, adminSourceTenantId: '', ownerTenantId: '' }));
+    setProv((prev) => ({ ...prev, adminSourceTenantId: '' }));
   }, []);
 
   const onFieldChange = (name: keyof OnboardingFieldValues, value: string | boolean) => {
@@ -393,6 +443,9 @@ export default function OnboardingRequestReviewClient({
       return false;
     }
     const patch = diffFields(savedFields, fields);
+    if (sourceOrganizationId !== savedSourceOrganizationId && sourceOrganizationId != null) {
+      patch.sourceOrganizationId = sourceOrganizationId;
+    }
     if (Object.keys(patch).length === 0) return true;
     setBusy('save');
     const res = await updateOnboardingRequestServer(request.id!, patch);
@@ -402,6 +455,8 @@ export default function OnboardingRequestReviewClient({
       return false;
     }
     setRequest(res.data);
+    setSavedSourceOrganizationId(res.data.sourceOrganizationId ?? sourceOrganizationId);
+    setSourceOrganizationId(res.data.sourceOrganizationId ?? sourceOrganizationId);
     const refreshed = toFieldValues(res.data);
     setSavedFields(refreshed);
     setFields(refreshed);
@@ -451,6 +506,10 @@ export default function OnboardingRequestReviewClient({
     if (dirty && !(await saveFields())) return;
     const res = await runAvailability();
     if (!res) return;
+    if (res.error) {
+      setMessage({ kind: 'error', text: res.error });
+      return;
+    }
     if (res.tenantIdTaken || res.organizationDomainTaken || res.satelliteKeyTaken || res.hostnameTaken) {
       setMessage({ kind: 'error', text: 'Some values are already in use. Change them before approving.' });
       return;
@@ -475,9 +534,6 @@ export default function OnboardingRequestReviewClient({
         cloneAdmins: prov.cloneAdmins,
         notifySubmitter: prov.notifySubmitter,
         adminComments: prov.adminComments.trim() || undefined,
-        parentOrganizationId: prov.ownerTenantId.trim()
-          ? await resolveClientOrganizationId(prov.ownerTenantId.trim())
-          : undefined,
       },
       (fields.siteType || null) as TenantSiteType | null
     );
@@ -576,7 +632,14 @@ export default function OnboardingRequestReviewClient({
     process.env.NEXT_PUBLIC_API_BASE_URL
   );
   const organizationId = provisionedOrg?.id ?? null;
-  const detailRows = provisionedOrg ? organizationDetailRows(provisionedOrg, request, hubDatabase) : [];
+  const detailRows = provisionedOrg
+    ? organizationDetailRows(provisionedOrg, request, hubDatabase, tenantIdFromResult)
+    : provisionedOrgMissing
+      ? approvalSnapshotDetailRows(request, hubDatabase, {
+          organizationId: organizationIdFromResult,
+          tenantId: tenantIdFromResult,
+        })
+      : [];
   const reminderSteps = manualReminderSteps(request, tenantIdForLinks, hubDatabase);
   const clonedAdmins = Array.isArray(result?.clonedAdmins) ? (result?.clonedAdmins as { email?: string; userRole?: string }[]) : [];
   const siteTypeDisplay = siteTypeLabel(request.siteType);
@@ -588,7 +651,7 @@ export default function OnboardingRequestReviewClient({
   const siteTypeHint =
     ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === request.siteType)?.hint || '';
   const manualStepsText = buildManualStepsText(request, tenantIdForLinks, hubDatabase);
-  const orgDetailsText = provisionedOrg ? buildOrganizationDetailsText(provisionedOrg, request, hubDatabase) : '';
+  const orgDetailsText = detailRows.length > 0 ? formatOrganizationDetailText(detailRows) : '';
   const instructionsText = orgDetailsText ? `${orgDetailsText}\n\n${manualStepsText}` : manualStepsText;
   const cursorEnvText = buildCursorEnvHandoffText(request, tenantIdForLinks);
   const wwwHost = request.requestedHostname || 'www.example.com';
@@ -750,21 +813,34 @@ export default function OnboardingRequestReviewClient({
                     />
                   ) : null}
                 </div>
-                {provisionedOrgError && (
+                {provisionedOrgMissing && provisionedOrgError && (
+                  <div className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg p-3 space-y-2">
+                    <p>{provisionedOrgError}</p>
+                    {sameNameOrg?.id != null && (
+                      <Link
+                        href={`/admin/tenant-management/organizations/${sameNameOrg.id}`}
+                        className="inline-flex font-semibold text-amber-950 underline"
+                      >
+                        Open {sameNameOrg.organizationName}
+                      </Link>
+                    )}
+                  </div>
+                )}
+                {!provisionedOrgMissing && provisionedOrgError && (
                   <p className="text-sm text-red-600">{provisionedOrgError}</p>
                 )}
-                {!provisionedOrg && !provisionedOrgError && (organizationIdFromResult != null || Boolean(tenantIdForLinks)) && (
+                {!provisionedOrg && !provisionedOrgError && !provisionedOrgMissing && (organizationIdFromResult != null || Boolean(tenantIdForLinks)) && (
                   <p className="text-sm text-gray-600">Loading organization record…</p>
                 )}
-                {organizationId == null && !provisionedOrgError && organizationIdFromResult == null && !tenantIdForLinks && (
+                {organizationId == null && !provisionedOrgError && !provisionedOrgMissing && organizationIdFromResult == null && !tenantIdForLinks && (
                   <p className="text-sm text-gray-600">No organization ID in the provisioning result.</p>
                 )}
-                {provisionedOrg && (
+                {detailRows.length > 0 && (
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     {detailRows.map((row) => (
                       <div
                         key={row.label}
-                        className={row.label === 'Mailing address' || row.label === 'Website URL' ? 'sm:col-span-2' : undefined}
+                        className={row.label === 'Mailing address' || row.label === 'Website URL' || row.label === 'Organization record' ? 'sm:col-span-2' : undefined}
                       >
                         <dt className="text-gray-500">{row.label}</dt>
                         <dd className="text-gray-900 font-medium break-words">{row.value}</dd>
@@ -840,8 +916,12 @@ NEXT_PUBLIC_API_BASE_URL=<leave as template / set per environment>`}
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Provisioning</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  Approve creates the organization, tenant settings, contact/info/no-reply email addresses, the satellite domain and copies the
-                  platform admins, all in one transaction. Empty optional fields use defaults.
+                  Approve stores this tenant on the organization selected above, then creates tenant settings, contact/info/no-reply email
+                  addresses, and the satellite domain, and copies the platform admins, all in one transaction. Empty optional fields use defaults.
+                </p>
+                <p className="text-sm text-gray-800 mt-2">
+                  Tenant settings will be assigned to{' '}
+                  <span className="font-semibold">{fields.organizationName || 'the selected organization'}</span>.
                 </p>
               </div>
 
@@ -904,14 +984,6 @@ NEXT_PUBLIC_API_BASE_URL=<leave as template / set per environment>`}
                 <div>
                   <label htmlFor="adminSourceTenantId" className="block text-sm font-medium text-gray-700">Copy admins from tenant</label>
                   <input id="adminSourceTenantId" type="text" value={prov.adminSourceTenantId} onChange={(e) => setProvField('adminSourceTenantId', e.target.value.trim())} placeholder="Platform default" disabled={!prov.cloneAdmins} className={onboardingInputClass()} />
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="ownerTenantId" className="block text-sm font-medium text-gray-700">Add under organization</label>
-                  <TenantOrganizationSearchSelect
-                    value={prov.ownerTenantId}
-                    onChange={(tenantId) => setProvField('ownerTenantId', tenantId)}
-                  />
-                  <p className="text-sm text-gray-500 mt-1">Optional. Leave empty when this website is its own client. The new site keeps its own tenant ID, domain, and satellite.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label htmlFor="adminComments" className="block text-sm font-medium text-gray-700">Reviewer comments (internal)</label>

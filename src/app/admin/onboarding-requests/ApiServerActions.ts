@@ -272,12 +272,25 @@ export interface OnboardingAvailability {
   organizationDomainTaken: boolean;
   satelliteKeyTaken: boolean;
   hostnameTaken: boolean;
+  /** Set when the tenant ID lookup itself failed. Do not treat the ID as free or taken. */
+  error?: string;
 }
 
 async function existsInList(path: string, params: Record<string, string>): Promise<boolean> {
   const qs = new URLSearchParams({ ...params, size: '1' });
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}${path}?${qs.toString()}`, { cache: 'no-store' });
   if (!response.ok) return false;
+  const data = await response.json();
+  return Array.isArray(data) && data.length > 0;
+}
+
+/** Tenant IDs live on tenant_settings. A failed lookup must not be treated as free or taken. */
+async function tenantSettingsIdTaken(tenantId: string): Promise<boolean | 'error'> {
+  const qs = new URLSearchParams({ 'tenantId.equals': tenantId, size: '1' });
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-settings?${qs.toString()}`, {
+    cache: 'no-store',
+  });
+  if (!response.ok) return 'error';
   const data = await response.json();
   return Array.isArray(data) && data.length > 0;
 }
@@ -295,14 +308,28 @@ export async function checkOnboardingAvailabilityServer(input: {
   const satelliteKey = input.satelliteKey?.trim();
   const hostname = normalizeOnboardingHostname(input.hostname);
 
-  const [tenantIdTaken, organizationDomainTaken, satelliteKeyTaken, hostnameTaken] = await Promise.all([
-    tenantId ? existsInList('/api/tenant-organizations', { 'tenantId.equals': tenantId }) : Promise.resolve(false),
+  let tenantIdTaken = false;
+  if (tenantId) {
+    const taken = await tenantSettingsIdTaken(tenantId);
+    if (taken === 'error') {
+      return {
+        tenantIdTaken: false,
+        organizationDomainTaken: false,
+        satelliteKeyTaken: false,
+        hostnameTaken: false,
+        error: 'Could not check whether that tenant ID is already in use. Try again.',
+      };
+    }
+    tenantIdTaken = taken;
+  }
+
+  const [organizationDomainTaken, satelliteKeyTaken, hostnameTaken] = await Promise.all([
     domain ? existsInList('/api/tenant-organizations', { 'domain.equals': domain }) : Promise.resolve(false),
     satelliteKey ? existsInList('/api/satellite-domains', { 'satelliteKey.equals': satelliteKey }) : Promise.resolve(false),
     hostname ? existsInList('/api/satellite-domains', { 'hostname.equals': hostname }) : Promise.resolve(false),
   ]).catch((error) => {
     console.error('[onboarding-requests] availability check failed', error);
-    return [false, false, false, false];
+    return [false, false, false] as const;
   });
 
   return { tenantIdTaken, organizationDomainTaken, satelliteKeyTaken, hostnameTaken };
@@ -324,9 +351,10 @@ function defaultHeroPatch(tenantId: string): Record<string, unknown> | null {
 }
 
 /**
- * Approves a request: the backend creates organization, settings, emails, satellite domain and
- * admin profiles in one transaction. Site-type presets and hero defaults are applied afterwards
- * (best effort) and the satellite config cache is refreshed.
+ * Approves a request. When the request already has an organization, tenant settings are
+ * attached to that organization. Otherwise the backend creates one. Emails, the satellite
+ * domain, and admin profiles are created in the same transaction. Site-type presets and hero
+ * defaults are applied afterwards (best effort) and the satellite config cache is refreshed.
  */
 export async function approveOnboardingRequestServer(
   id: number,

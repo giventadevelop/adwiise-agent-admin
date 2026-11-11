@@ -2,25 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FaBan, FaSearch, FaSort, FaTrashAlt } from 'react-icons/fa';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { FaSearch, FaSort } from 'react-icons/fa';
 import type { TenantOrganizationDTO, TenantOrganizationFilters } from '@/app/admin/tenant-management/types';
 import TenantOrganizationDetailsTooltip from '@/app/admin/tenant-management/components/TenantOrganizationDetailsTooltip';
 import AdminTableActionButtons from '@/components/admin/AdminTableActionButtons';
 import { useAdminHoverTooltip } from '@/lib/admin/useAdminHoverTooltip';
-import {
-  deleteTenantOrganization,
-  toggleTenantOrganizationStatus,
-} from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { useAdminAccess } from '@/app/admin/AdminTenantContext';
+import OrganizationActiveStatusButton from '@/app/admin/tenant-management/organizations/OrganizationActiveStatusButton';
+import CascadeDeleteOrganizationButton from '@/app/admin/tenant-management/organizations/CascadeDeleteOrganizationButton';
 
 interface TenantOrganizationListProps {
   initialData?: TenantOrganizationDTO[];
@@ -33,6 +22,7 @@ export default function TenantOrganizationList({
   initialTotalCount = 0,
   onRefresh
 }: TenantOrganizationListProps) {
+  const { isPlatformSuperAdmin } = useAdminAccess();
   const [organizations, setOrganizations] = useState<TenantOrganizationDTO[]>(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +43,6 @@ export default function TenantOrganizationList({
 
   // Selection state for bulk operations
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [pendingDelete, setPendingDelete] = useState<TenantOrganizationDTO | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteDialogError, setDeleteDialogError] = useState<string | null>(null);
 
   const {
     item: tooltipOrg,
@@ -137,44 +124,9 @@ export default function TenantOrganizationList({
     );
   };
 
-  // Handle status toggle (SUPER_ADMIN only via server action)
-  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
-    try {
-      await toggleTenantOrganizationStatus(id, !currentStatus);
-      loadData();
-      onRefresh?.();
-    } catch (err) {
-      console.error('Failed to toggle status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to toggle status');
-    }
-  };
-
-  const beginDelete = (org: TenantOrganizationDTO) => {
-    setPendingDelete(org);
-    setDeleteDialogError(null);
-  };
-
-  const closeDeleteDialog = () => {
-    if (deleting) return;
-    setPendingDelete(null);
-    setDeleteDialogError(null);
-  };
-
-  const confirmDelete = async () => {
-    if (!pendingDelete?.id || deleting) return;
-    setDeleting(true);
-    setDeleteDialogError(null);
-    try {
-      await deleteTenantOrganization(pendingDelete.id);
-      setPendingDelete(null);
-      loadData();
-      onRefresh?.();
-    } catch (err) {
-      console.error('Failed to delete organization:', err);
-      setDeleteDialogError(err instanceof Error ? err.message : 'Failed to delete organization');
-    } finally {
-      setDeleting(false);
-    }
+  const reloadList = () => {
+    void loadData();
+    onRefresh?.();
   };
 
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -289,13 +241,19 @@ export default function TenantOrganizationList({
                   </div>
                 </th>
                 <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-r border-gray-300 dark:border-gray-600">
-                  Tenant ID
+                  Actions
+                </th>
+                <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-r border-gray-300 dark:border-gray-600">
+                  Tenant IDs
                 </th>
                 <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-r border-gray-300 dark:border-gray-600">
                   Website / Domain
                 </th>
                 <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-r border-gray-300 dark:border-gray-600">
                   Contact Email
+                </th>
+                <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-r border-gray-300 dark:border-gray-600">
+                  Organization charge
                 </th>
                 <th
                   className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-r border-gray-300 dark:border-gray-600"
@@ -332,25 +290,61 @@ export default function TenantOrganizationList({
                   {org.organizationName}
                 </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
-                  <div className="space-y-2">
-                    <div className="font-mono max-w-[180px] truncate" title={(org.websiteTenantIds || []).join(', ')}>
-                      {(org.websiteTenantIds || []).join(', ') || 'No website yet'}
-                    </div>
+                  <div className="flex flex-col items-start gap-2">
                     <AdminTableActionButtons
                       viewHref={`/admin/tenant-management/organizations/${org.id}`}
                       editHref={`/admin/tenant-management/organizations/${org.id}/edit`}
-                      onDelete={() => beginDelete(org)}
                       viewTitle="View Organization"
                       editTitle="Edit Organization"
-                      deleteTitle="Delete Organization"
                     />
+                    {isPlatformSuperAdmin && org.id != null && (
+                      <CascadeDeleteOrganizationButton
+                        organizationId={org.id}
+                        tenantId={org.websiteTenantIds?.[0] || org.organizationName}
+                        organizationName={org.organizationName}
+                        isActive={org.isActive !== false}
+                        fullWidth={false}
+                        onDeleted={reloadList}
+                        onChanged={reloadList}
+                      />
+                    )}
                   </div>
+                </td>
+                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm border-r border-gray-200 dark:border-gray-600">
+                  <Link
+                    href={`/admin/tenant-management/organizations/${org.id}#tenant-ids`}
+                    className="inline-flex items-center h-10 px-3 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 font-semibold"
+                    title="View tenant IDs"
+                    aria-label={`View tenant IDs for ${org.organizationName}`}
+                  >
+                    View tenant IDs
+                  </Link>
                 </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-600">
                   {org.domain || '-'}
                 </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-600">
                   {org.contactEmail}
+                </td>
+                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm border-r border-gray-200 dark:border-gray-600">
+                  {(() => {
+                    const amount = org.monthlyFeeUsd != null ? Number(org.monthlyFeeUsd) : 0;
+                    const enabled = Number.isFinite(amount) && amount > 0;
+                    const formatted = new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(enabled ? amount : 0);
+                    return enabled ? (
+                      <span className="inline-flex flex-col items-start gap-1">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Enabled</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{formatted}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Not enabled</span>
+                    );
+                  })()}
                 </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap border-r border-gray-200 dark:border-gray-600">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${org.subscriptionStatus === 'ACTIVE'
@@ -363,28 +357,31 @@ export default function TenantOrganizationList({
                   </span>
                 </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => handleToggleStatus(org.id!, org.isActive || false)}
-                    className={`flex items-center gap-1 sm:gap-2 ${org.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
+                  {isPlatformSuperAdmin && org.id != null ? (
+                    <OrganizationActiveStatusButton
+                      organizationId={org.id}
+                      organizationName={org.organizationName}
+                      isActive={org.isActive !== false}
+                      fullWidth={false}
+                      onChanged={reloadList}
+                    />
+                  ) : (
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold border-2 ${
+                        org.isActive
+                          ? 'bg-green-100 text-green-800 border-green-500'
+                          : 'bg-red-100 text-red-800 border-red-500'
                       }`}
-                  >
-                    {org.isActive ? (
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17 7H7a5 5 0 000 10h10a5 5 0 000-10zm0 8a3 3 0 110-6 3 3 0 010 6z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17 7H7a5 5 0 000 10h10a5 5 0 000-10zM7 15a3 3 0 110-6 3 3 0 010 6z" />
-                      </svg>
-                    )}
-                    <span className="text-xs sm:text-sm">{org.isActive ? 'Active' : 'Inactive'}</span>
-                  </button>
+                    >
+                      {org.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
             {organizations.length === 0 && !loading && (
               <tr>
-                <td className="px-2 sm:px-4 lg:px-6 py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center" colSpan={7}>
+                <td className="px-2 sm:px-4 lg:px-6 py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center" colSpan={8}>
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border-2 border-orange-300 rounded-lg shadow-sm">
                     <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -472,71 +469,6 @@ export default function TenantOrganizationList({
         </div>
       </div>
 
-      <AlertDialog
-        open={pendingDelete != null}
-        onOpenChange={(open) => {
-          if (!open) closeDeleteDialog();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete organization?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    This removes{' '}
-                    <span className="font-semibold text-foreground">
-                      {pendingDelete?.organizationName || 'this organization'}
-                    </span>
-                    {pendingDelete?.tenantId ? (
-                      <>
-                        {' '}
-                        (<span className="font-mono">{pendingDelete.tenantId}</span>)
-                      </>
-                    ) : null}
-                    . Websites that belong to it become their own organizations. The row cannot be restored from this screen.
-                  </p>
-                {deleteDialogError ? (
-                  <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                    {deleteDialogError}
-                  </p>
-                ) : null}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-row gap-3 sm:gap-4">
-            <AlertDialogCancel
-              disabled={deleting}
-              className="flex-1 flex-shrink-0 h-14 rounded-xl bg-teal-100 hover:bg-teal-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105"
-            >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-200 flex items-center justify-center">
-                <FaBan className="w-6 h-6 text-teal-800" aria-hidden="true" />
-              </div>
-              <span className="font-semibold text-teal-800">Cancel</span>
-            </AlertDialogCancel>
-              <AlertDialogAction
-                disabled={deleting}
-                onClick={(event) => {
-                  event.preventDefault();
-                  void confirmDelete();
-                }}
-                className="flex-1 flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              >
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
-                  {deleting ? (
-                    <svg className="animate-spin w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <FaTrashAlt className="w-6 h-6 text-red-600" aria-hidden="true" />
-                  )}
-                </div>
-                <span className="font-semibold text-red-700">{deleting ? 'Deleting...' : 'Delete organization'}</span>
-              </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

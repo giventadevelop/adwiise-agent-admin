@@ -33,7 +33,11 @@ import AdminBackButton from '@/components/admin/AdminBackButton';
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
-export default function NewOnboardingRequestClient() {
+export default function NewOnboardingRequestClient({
+  initialOrganization = null,
+}: {
+  initialOrganization?: TenantOrganizationDTO | null;
+}) {
   const router = useRouter();
   const [values, setValues] = useState<OnboardingFieldValues>(EMPTY_ONBOARDING_FIELDS);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,6 +70,7 @@ export default function NewOnboardingRequestClient() {
   const [tenantIdPreviewError, setTenantIdPreviewError] = useState<string | null>(null);
   const fieldRefs = useRef<Record<string, FieldElement>>({});
   const prefixDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const appliedOrganizationRef = useRef(false);
 
   const registerRef = (name: string) => (el: FieldElement | null) => {
     if (el) fieldRefs.current[name] = el;
@@ -162,6 +167,12 @@ export default function NewOnboardingRequestClient() {
     });
   }, []);
 
+  useEffect(() => {
+    if (appliedOrganizationRef.current || !initialOrganization?.id) return;
+    appliedOrganizationRef.current = true;
+    onSelectExistingOrganization(initialOrganization);
+  }, [initialOrganization, onSelectExistingOrganization]);
+
   const onClearExistingOrganization = useCallback(() => {
     setSourceTenantId('');
     setSourceOrganizationId(null);
@@ -205,7 +216,9 @@ export default function NewOnboardingRequestClient() {
     setSaveError(null);
 
     const errs: Record<string, string> = {};
-    if (!sourceTenantId.trim() || sourceOrganizationId == null) {
+    // A new organization has no website tenant until a request is approved.
+    // Selection is the organization id plus a contact email.
+    if (sourceOrganizationId == null) {
       errs.sourceTenantId =
         'Select an existing organization from the list (create one under Organizations first if needed).';
       errs.organizationName = errs.sourceTenantId;

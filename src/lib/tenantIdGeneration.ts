@@ -57,6 +57,24 @@ export function getNextTenantIdSequence(existingTenantIds: readonly string[]): n
   return max > 0 ? max + 1 : TENANT_ID_FIRST_SEQUENCE;
 }
 
+/**
+ * First `{prefix}_{n}` that is not already stored.
+ * Starts at the next global sequence and walks forward past exact collisions.
+ */
+export function findNextFreeTenantId(prefix: string, existingTenantIds: readonly string[]): string {
+  const taken = new Set(existingTenantIds.map((id) => id.trim().toLowerCase()).filter(Boolean));
+  let sequence = getNextTenantIdSequence(existingTenantIds);
+  const limit = sequence + 1000;
+  while (sequence < limit) {
+    const candidate = buildTenantId(prefix, sequence);
+    if (!taken.has(candidate.toLowerCase())) {
+      return candidate;
+    }
+    sequence += 1;
+  }
+  throw new Error('Could not find a free tenant ID');
+}
+
 export function formatTenantIdSequence(sequence: number, minDigits = TENANT_ID_SUFFIX_MIN_DIGITS): string {
   return String(Math.max(0, Math.floor(sequence))).padStart(minDigits, '0');
 }

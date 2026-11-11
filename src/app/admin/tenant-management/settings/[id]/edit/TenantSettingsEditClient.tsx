@@ -99,6 +99,8 @@ export default function TenantSettingsEditClient({
           emailFooterHtmlUrl: settings?.emailFooterHtmlUrl || '',
           emailHeaderImageUrl: settings?.emailHeaderImageUrl || '',
           logoImageUrl: settings?.logoImageUrl || '',
+          primaryColor: settings?.primaryColor || '',
+          secondaryColor: settings?.secondaryColor || '',
           defaultHeroImageUrlsJson: settings?.defaultHeroImageUrlsJson || '',
           defaultHeroDisplayMode: settings?.defaultHeroDisplayMode || 'slideshow',
           defaultHeroIncludeWithEvents: settings?.defaultHeroIncludeWithEvents ?? true,

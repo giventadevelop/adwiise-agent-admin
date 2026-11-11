@@ -155,6 +155,12 @@ export default function OnboardingRequestsListClient() {
             </div>
           )}
 
+          <div className="mx-6 mt-4 mb-2 px-4 py-3 bg-amber-50 border-2 border-amber-400 rounded-lg shadow-sm" role="note">
+            <p className="text-sm font-semibold text-amber-900">
+              Tenant IDs land in tenant_settings only after approval.
+            </p>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-blue-600 to-blue-700">

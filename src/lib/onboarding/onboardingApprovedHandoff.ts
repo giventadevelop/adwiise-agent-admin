@@ -94,12 +94,18 @@ function mailingAddress(source: {
     .join(', ');
 }
 
+function organizationTenantId(org: TenantOrganizationDTO, tenantIdFallback?: string | null): string {
+  const fromWebsites = org.websiteTenantIds?.map((id) => id.trim()).find(Boolean);
+  return (fromWebsites || org.tenantId || tenantIdFallback || '').trim();
+}
+
 export function organizationDetailRows(
   org: TenantOrganizationDTO,
   request: TenantOnboardingRequestDTO,
-  hubDatabase: HubDatabase
+  hubDatabase: HubDatabase,
+  tenantIdFallback?: string | null
 ): OrganizationDetailRow[] {
-  const tenantId = (org.tenantId || '').trim();
+  const tenantId = organizationTenantId(org, tenantIdFallback);
   const sequence = tenantId ? extractTenantIdSequence(tenantId) : null;
   const prefix = tenantId ? getTenantIdPrefix(tenantId) : null;
   const website = (org.websiteUrl || request.requestedHostname || '').trim();
@@ -134,13 +140,57 @@ export function organizationDetailRows(
   ];
 }
 
+export function formatOrganizationDetailText(rows: OrganizationDetailRow[]): string {
+  const lines = rows.flatMap((row) => [row.label, row.value]);
+  return ['Organization Details', ...lines].join('\n');
+}
+
+/** Values saved on an approved request after its organization row has been removed. */
+export function approvalSnapshotDetailRows(
+  request: TenantOnboardingRequestDTO,
+  hubDatabase: HubDatabase,
+  snapshot: { organizationId?: number | null; tenantId?: string | null }
+): OrganizationDetailRow[] {
+  const contactName = [request.contactFirstName, request.contactLastName]
+    .map((part) => (part ?? '').trim())
+    .filter(Boolean)
+    .join(' ');
+  const snapshotOrg: TenantOrganizationDTO = {
+    id: snapshot.organizationId ?? undefined,
+    tenantId: snapshot.tenantId ?? undefined,
+    organizationName: request.organizationName || '',
+    contactEmail: request.contactEmail || '',
+    contactPhone: request.contactPhone || undefined,
+    contactPersonName: contactName || 'Pending',
+    websiteUrl: request.requestedHostname || null,
+    siteType: request.siteType || undefined,
+    addressLine1: request.addressLine1,
+    addressLine2: request.addressLine2,
+    city: request.city,
+    stateProvince: request.stateProvince,
+    zipCode: request.zipCode,
+    country: request.country,
+    createdAt: request.createdAt || '',
+    updatedAt: request.updatedAt || '',
+  };
+  const rows = organizationDetailRows(snapshotOrg, request, hubDatabase, snapshot.tenantId);
+  return [
+    { label: 'Organization record', value: 'Removed from the database' },
+    ...rows.map((row) =>
+      row.label === 'Database ID (PK)'
+        ? { label: 'Created organization ID', value: row.value }
+        : row
+    ),
+  ];
+}
+
 export function buildOrganizationDetailsText(
   org: TenantOrganizationDTO,
   request: TenantOnboardingRequestDTO,
-  hubDatabase: HubDatabase
+  hubDatabase: HubDatabase,
+  tenantIdFallback?: string | null
 ): string {
-  const lines = organizationDetailRows(org, request, hubDatabase).flatMap((row) => [row.label, row.value]);
-  return ['Organization Details', ...lines].join('\n');
+  return formatOrganizationDetailText(organizationDetailRows(org, request, hubDatabase, tenantIdFallback));
 }
 
 export function manualReminderSteps(

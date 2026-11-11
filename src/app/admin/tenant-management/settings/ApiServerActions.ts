@@ -24,7 +24,7 @@ const API_BASE_URL = getApiBaseUrl();
 
 /** Logo changes feed auth branding via getMergedSatelliteConfigs — bust that cache. */
 function maybeRevalidateSatelliteAuthBranding(data: Partial<TenantSettingsFormDTO>) {
-  if ('logoImageUrl' in data) {
+  if ('logoImageUrl' in data || 'primaryColor' in data || 'secondaryColor' in data) {
     revalidateSatelliteConfigCache();
   }
 }

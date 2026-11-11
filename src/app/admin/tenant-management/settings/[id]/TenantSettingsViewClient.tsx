@@ -694,6 +694,36 @@ export default function TenantSettingsViewClient({ settings, settingsId, organiz
             )}
           </div>
 
+          {/* Brand colors */}
+          <div className="border-t border-gray-200 pt-6">
+            <h4 className="text-md font-medium text-gray-900 mb-2">Brand colors</h4>
+            <p className="text-sm text-gray-600 mb-4">Colors for this tenant ID, shown with the logo.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <span
+                  className="h-10 w-10 rounded-lg border border-gray-300"
+                  style={{ backgroundColor: settings?.primaryColor || 'transparent' }}
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Primary color</p>
+                  <p className="font-mono text-sm text-gray-900">{settings?.primaryColor || 'Not set'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className="h-10 w-10 rounded-lg border border-gray-300"
+                  style={{ backgroundColor: settings?.secondaryColor || 'transparent' }}
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Secondary color</p>
+                  <p className="font-mono text-sm text-gray-900">{settings?.secondaryColor || 'Not set'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Tenant Logo */}
           <div className="border-t border-gray-200 pt-6">
             <h4 className="text-md font-medium text-gray-900 mb-2">Tenant Logo</h4>
