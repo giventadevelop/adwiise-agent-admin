@@ -9,10 +9,19 @@ import {
 
 const TENANT_ORG_SELECT_LIMIT = 20;
 
+function websiteTenantLabel(org: TenantOrganizationDTO): string {
+  const ids = (org.websiteTenantIds || []).map((id) => id.trim()).filter(Boolean);
+  if (ids.length) return ids.join(', ');
+  return 'no website yet';
+}
+
 function formatOrgLabel(org: TenantOrganizationDTO): string {
   const name = org.organizationName?.trim() || 'Unnamed organization';
-  const tenantId = org.tenantId?.trim() || '—';
-  return `${name} (${tenantId})`;
+  return `${name} (${websiteTenantLabel(org)})`;
+}
+
+function organizationValue(org: TenantOrganizationDTO): string {
+  return org.id != null ? String(org.id) : '';
 }
 
 function filterOrganizationsLocally(
@@ -24,9 +33,9 @@ function filterOrganizationsLocally(
 
   return organizations.filter((org) => {
     const name = org.organizationName?.toLowerCase() ?? '';
-    const tenantId = org.tenantId?.toLowerCase() ?? '';
+    const tenantIds = (org.websiteTenantIds || []).join(' ').toLowerCase();
     const domain = org.domain?.toLowerCase() ?? '';
-    return name.includes(q) || tenantId.includes(q) || domain.includes(q);
+    return name.includes(q) || tenantIds.includes(q) || domain.includes(q);
   });
 }
 
@@ -68,7 +77,7 @@ export default function TenantOrganizationSearchSelect({
         setSelectedOrg(null);
         return;
       }
-      const match = organizations.find((org) => org.tenantId === tenantId);
+      const match = organizations.find((org) => organizationValue(org) === tenantId);
       if (match) {
         setSelectedOrg(match);
         setSearchTerm(formatOrgLabel(match));
@@ -131,11 +140,11 @@ export default function TenantOrganizationSearchSelect({
       resolveAttemptedRef.current = null;
       return;
     }
-    if (selectedOrg?.tenantId === tid) {
+    if (selectedOrg && organizationValue(selectedOrg) === tid) {
       resolveAttemptedRef.current = tid;
       return;
     }
-    if (cachedOrganizationsRef.current.some((org) => org.tenantId === tid)) {
+    if (cachedOrganizationsRef.current.some((org) => organizationValue(org) === tid)) {
       resolveAttemptedRef.current = tid;
       return;
     }
@@ -149,7 +158,7 @@ export default function TenantOrganizationSearchSelect({
       try {
         const results = await searchTenantOrganizationsForSelectServer(tid);
         if (cancelled) return;
-        const match = results.find((org) => org.tenantId === tid);
+        const match = results.find((org) => organizationValue(org) === tid);
         if (!match) return;
         setCachedOrganizations((prev) => {
           const byId = new Map<number, TenantOrganizationDTO>();
@@ -169,7 +178,7 @@ export default function TenantOrganizationSearchSelect({
     return () => {
       cancelled = true;
     };
-  }, [value, selectedOrg?.tenantId]);
+  }, [value, selectedOrg?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -252,10 +261,11 @@ export default function TenantOrganizationSearchSelect({
   };
 
   const handleSelect = (org: TenantOrganizationDTO) => {
-    if (!org.tenantId) return;
+    const selected = organizationValue(org);
+    if (!selected) return;
     setSelectedOrg(org);
     setSearchTerm(formatOrgLabel(org));
-    onChange(org.tenantId);
+    onChange(selected);
     setIsOpen(false);
   };
 
@@ -358,14 +368,14 @@ export default function TenantOrganizationSearchSelect({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSelect(org)}
                     className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors ${
-                      value === org.tenantId ? 'bg-blue-100' : ''
+                      value === organizationValue(org) ? 'bg-blue-100' : ''
                     }`}
                     role="option"
-                    aria-selected={value === org.tenantId}
+                    aria-selected={value === organizationValue(org)}
                   >
                     <div className="font-medium text-gray-900">{org.organizationName}</div>
                     <div className="text-sm text-gray-500">
-                      {org.tenantId}
+                      {websiteTenantLabel(org)}
                       {org.domain ? ` · ${org.domain}` : ''}
                     </div>
                   </button>

@@ -1,11 +1,10 @@
 'use server';
 import {
-  appendAdminTenantFilter,
   assertPlatformSuperAdmin,
   getCurrentAdminAccess,
 } from '@/app/admin/adminAccessServer';
 import { isTenantIdAllowed } from '@/lib/adminTenantAccess';
-import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl } from '@/lib/env';
+import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
 import { normalizeTenantDomain } from '@/lib/tenantDomainValidation';
@@ -55,7 +54,24 @@ function normalizeTenantOrganizationPayload<T extends Partial<TenantOrganization
     const trimmed = normalized.websiteUrl.trim();
     normalized.websiteUrl = trimmed === '' ? null : normalizeWebsiteUrl(trimmed);
   }
+  if (typeof normalized.contactPersonName === 'string') {
+    normalized.contactPersonName = normalized.contactPersonName.trim();
+  }
+  delete (normalized as { tenantId?: string }).tenantId;
   return normalized;
+}
+
+function organizationIsVisible(
+  organization: TenantOrganizationDTO,
+  access: Awaited<ReturnType<typeof getCurrentAdminAccess>>,
+): boolean {
+  if (access.isPlatformSuperAdmin || access.canQueryAllTenants) return true;
+  const ids = organization.websiteTenantIds?.length
+    ? organization.websiteTenantIds
+    : organization.tenantId
+      ? [organization.tenantId]
+      : [];
+  return ids.some((tenantId) => isTenantIdAllowed(access, tenantId));
 }
 
 function parseTenantOrganizationApiError(errorText: string, action: 'create' | 'update'): string {
@@ -84,6 +100,33 @@ export async function fetchTenantOrganizations(
   filters: TenantOrganizationFilters = {}
 ): Promise<PaginatedResponse<TenantOrganizationDTO>> {
   try {
+    const tenantQuery = (filters.tenantId || filters.tenantIdContains || '').trim();
+    if (tenantQuery) {
+      const settingsParams = new URLSearchParams();
+      settingsParams.set('tenantId.contains', tenantQuery);
+      settingsParams.set('size', String(Math.max(pagination.pageSize, 20)));
+      const settingsResponse = await fetchWithJwtRetry(
+        `${API_BASE_URL}/api/tenant-settings?${settingsParams.toString()}`,
+        { cache: 'no-store' }
+      );
+      if (!settingsResponse.ok) {
+        throw new Error(`Failed to fetch tenant organizations: ${settingsResponse.statusText}`);
+      }
+      const settingsRows = (await settingsResponse.json()) as Array<{ tenantOrganization?: { id?: number } }>;
+      const organizationIds = [...new Set(settingsRows.map((row) => row.tenantOrganization?.id).filter((id): id is number => id != null))];
+      const access = await getCurrentAdminAccess();
+      const organizations = (await Promise.all(organizationIds.map((id) => fetchTenantOrganization(id)))).filter(
+        (organization): organization is TenantOrganizationDTO => organization != null && organizationIsVisible(organization, access)
+      );
+      return {
+        data: organizations,
+        totalCount: organizations.length,
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+        totalPages: 1,
+      };
+    }
+
     const params = new URLSearchParams();
 
     // Add pagination parameters
@@ -93,30 +136,6 @@ export async function fetchTenantOrganizations(
     // Add filters
     if (filters.search) {
       params.append('organizationName.contains', filters.search);
-    }
-    // Partial tenant ID match for typeahead (distinct from tenantId.equals scoping)
-    const tenantIdContains = filters.tenantIdContains?.trim();
-    const nameSearch = filters.search?.trim();
-    const access = await getCurrentAdminAccess();
-    // A contains search by an all-tenant admin must not also pin tenantId.equals from the
-    // session, or the second matching tenant disappears.
-    // An organization admin searching by name or tenant id searches every site in their
-    // allowlist, not only the site selected for this session.
-    const allowlistSearch = !access.canQueryAllTenants && !filters.tenantId && Boolean(tenantIdContains || nameSearch);
-    if (tenantIdContains && access.canQueryAllTenants) {
-      params.append('tenantId.contains', tenantIdContains);
-    } else if (allowlistSearch) {
-      if (tenantIdContains) params.append('tenantId.contains', tenantIdContains);
-      if (access.allowedTenantIds.length === 1) {
-        params.set('tenantId.equals', access.allowedTenantIds[0]);
-      } else if (access.allowedTenantIds.length > 1) {
-        params.set('tenantId.in', access.allowedTenantIds.join(','));
-      } else {
-        params.set('tenantId.equals', '__unauthorized__');
-      }
-    } else {
-      if (tenantIdContains) params.append('tenantId.contains', tenantIdContains);
-      await appendAdminTenantFilter(params, filters.tenantId);
     }
     if (filters.subscriptionStatus) {
       params.append('subscriptionStatus.equals', filters.subscriptionStatus);
@@ -149,10 +168,13 @@ export async function fetchTenantOrganizations(
     }
 
     const data = await response.json();
+    const access = await getCurrentAdminAccess();
+    const rows = (Array.isArray(data) ? data : []) as TenantOrganizationDTO[];
+    const visible = rows.filter((organization) => organizationIsVisible(organization, access));
     const totalCount = parseInt(response.headers.get('x-total-count') || '0');
 
     return {
-      data: Array.isArray(data) ? data : [],
+      data: visible,
       totalCount,
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -184,12 +206,42 @@ export async function fetchTenantOrganization(id: number): Promise<TenantOrganiz
 
     const organization = (await response.json()) as TenantOrganizationDTO;
     const access = await getCurrentAdminAccess();
-    if (!access.isPlatformSuperAdmin && !isTenantIdAllowed(access, organization.tenantId)) {
+    if (!organizationIsVisible(organization, access)) {
       return null;
     }
     return organization;
   } catch (error) {
     console.error('Error fetching tenant organization:', error);
+    throw new Error('Failed to fetch tenant organization');
+  }
+}
+
+/**
+ * Fetch one organization by its tenant id.
+ * Approval stores a numeric id that can go stale after a database restore; tenant id stays the same.
+ */
+export async function fetchTenantOrganizationByTenantId(tenantId: string): Promise<TenantOrganizationDTO | null> {
+  const tid = tenantId.trim();
+  if (!tid) return null;
+  try {
+    const params = new URLSearchParams();
+    params.set('tenantId.equals', tid);
+    params.set('size', '1');
+    const response = await fetchWithJwtRetry(
+      `${API_BASE_URL}/api/tenant-settings?${params.toString()}`,
+      { cache: 'no-store', headers: { 'X-Tenant-ID': tid } }
+    );
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tenant organization: ${response.statusText}`);
+    }
+    const data = await response.json();
+    const settings = (Array.isArray(data) ? data[0] : null) as { tenantOrganization?: { id?: number } } | null;
+    const organizationId = settings?.tenantOrganization?.id;
+    if (!organizationId) return null;
+    return fetchTenantOrganization(organizationId);
+  } catch (error) {
+    console.error('Error fetching tenant organization by tenant id:', error);
     throw new Error('Failed to fetch tenant organization');
   }
 }
@@ -229,26 +281,6 @@ export async function createTenantOrganization(data: TenantOrganizationFormDTO):
   }
 }
 
-const TENANT_ID_PATTERN = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
-
-async function tenantIdForUpdate(
-  existingTenantId: string,
-  requestedTenantId: string | undefined,
-): Promise<string> {
-  const access = await getCurrentAdminAccess();
-  const requested = requestedTenantId?.trim();
-  if (!access.isPlatformSuperAdmin) {
-    return existingTenantId;
-  }
-  if (!requested || requested === existingTenantId) {
-    return existingTenantId;
-  }
-  if (requested.length > 255 || !TENANT_ID_PATTERN.test(requested)) {
-    throw new Error('Tenant ID must use lowercase letters, numbers, and underscores.');
-  }
-  return requested;
-}
-
 /**
  * Update an existing tenant organization.
  * Tenant ID changes are applied only for a platform super admin.
@@ -261,11 +293,12 @@ export async function updateTenantOrganization(
   try {
     // First fetch the existing tenant organization to get the original createdAt
     const existingOrganization = await fetchTenantOrganization(id);
-    const tenantId = await tenantIdForUpdate(existingOrganization.tenantId, data.tenantId);
+    if (!existingOrganization) {
+      throw new Error('Organization not found');
+    }
 
     const payload = withTenantId({
       ...normalizeTenantOrganizationPayload(data),
-      tenantId,
       id,
       createdAt: existingOrganization.createdAt, // Preserve original createdAt
       updatedAt: new Date().toISOString(),
@@ -313,12 +346,14 @@ export async function patchTenantOrganization(
   const access = await getCurrentAdminAccess();
   if (!access.isPlatformSuperAdmin) {
     const existing = await fetchTenantOrganization(id);
-    if (!existing?.tenantId || !isTenantIdAllowed(access, existing.tenantId)) {
+    if (!existing || !organizationIsVisible(existing, access)) {
       throw new Error('That tenant is not in your organization.');
     }
     const limited: Partial<TenantOrganizationFormDTO> = {};
     for (const field of ORGANIZATION_SUBSCRIPTION_FIELDS) {
-      if (field in data) limited[field] = data[field];
+      if (field in data) {
+        (limited as Record<string, unknown>)[field] = data[field];
+      }
     }
     data = limited;
   }
@@ -327,12 +362,8 @@ export async function patchTenantOrganization(
     if (!existingOrganization) {
       throw new Error('Organization not found');
     }
-    const tenantId = data.tenantId
-      ? await tenantIdForUpdate(existingOrganization.tenantId, data.tenantId)
-      : undefined;
     const payload = withTenantId({
       ...normalizeTenantOrganizationPayload(data),
-      ...(tenantId ? { tenantId } : {}),
       id,
       updatedAt: new Date().toISOString(),
     });
@@ -493,41 +524,34 @@ export async function cascadeDeleteTenantOrganizationServer(
     };
   }
 
-  const tenantId = org.tenantId?.trim();
-  if (!tenantId) {
-    return {
-      ok: false,
-      tenantId: '',
-      organizationId,
-      steps,
-      error: 'Organization has no tenantId',
-    };
-  }
-
-  if (expectedTenantId && expectedTenantId.trim() !== tenantId) {
+  const tenantIds = org.websiteTenantIds?.map((id) => id.trim()).filter(Boolean) || [];
+  const tenantId = tenantIds[0] || '';
+  if (expectedTenantId && !tenantIds.includes(expectedTenantId.trim())) {
     return {
       ok: false,
       tenantId,
       organizationId,
       steps,
-      error: `Tenant ID mismatch: expected ${expectedTenantId.trim()}, found ${tenantId}`,
+      error: `Tenant ID mismatch: expected ${expectedTenantId.trim()}`,
     };
   }
 
   try {
-    const satelliteIds = await listIdsByTenantEquals('/api/satellite-domains', tenantId);
-    for (const id of satelliteIds) {
-      await deleteById('/api/satellite-domains', id, 'satellite-domain', steps);
-    }
+    for (const siteTenantId of tenantIds) {
+      const satelliteIds = await listIdsByTenantEquals('/api/satellite-domains', siteTenantId);
+      for (const id of satelliteIds) {
+        await deleteById('/api/satellite-domains', id, 'satellite-domain', steps);
+      }
 
-    const emailIds = await listIdsByTenantEquals('/api/tenant-email-addresses', tenantId);
-    for (const id of emailIds) {
-      await deleteById('/api/tenant-email-addresses', id, 'tenant-email-address', steps);
-    }
+      const emailIds = await listIdsByTenantEquals('/api/tenant-email-addresses', siteTenantId);
+      for (const id of emailIds) {
+        await deleteById('/api/tenant-email-addresses', id, 'tenant-email-address', steps);
+      }
 
-    const settingsIds = await listIdsByTenantEquals('/api/tenant-settings', tenantId);
-    for (const id of settingsIds) {
-      await deleteById('/api/tenant-settings', id, 'tenant-settings', steps);
+      const settingsIds = await listIdsByTenantEquals('/api/tenant-settings', siteTenantId);
+      for (const id of settingsIds) {
+        await deleteById('/api/tenant-settings', id, 'tenant-settings', steps);
+      }
     }
 
     await deleteById('/api/tenant-organizations', organizationId, 'tenant-organization', steps);

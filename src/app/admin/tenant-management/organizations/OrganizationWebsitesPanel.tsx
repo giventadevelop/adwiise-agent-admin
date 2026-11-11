@@ -5,6 +5,7 @@ import Link from 'next/link';
 import TenantOrganizationSearchSelect from '@/app/admin/tenant-management/components/TenantOrganizationSearchSelect';
 import {
   attachWebsiteToClient,
+  createWebsiteForOrganization,
   loadOrganizationFlatFee,
   loadOrganizationWebsites,
   moveWebsiteToClient,
@@ -27,6 +28,7 @@ export default function OrganizationWebsitesPanel({ organizationId }: { organiza
   const [fee, setFee] = useState<OrganizationFlatFee | null>(null);
   const [displayAmount, setDisplayAmount] = useState('');
   const [addTenantId, setAddTenantId] = useState('');
+  const [newWebsiteTenantId, setNewWebsiteTenantId] = useState('');
   const [moveWebsiteId, setMoveWebsiteId] = useState('');
   const [moveTenantId, setMoveTenantId] = useState('');
   const [message, setMessage] = useState('');
@@ -124,7 +126,7 @@ export default function OrganizationWebsitesPanel({ organizationId }: { organiza
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-lg font-medium text-gray-900">Websites for this organization</h3>
         <p className="text-sm text-gray-600 mt-1">
-          One client owns these tenant IDs. The home tenant carries the single monthly charge. A website can move to another client.
+          Website tenant ids live on tenant settings for this organization. Child organizations linked by a parent stay listed too.
         </p>
       </div>
       <div className="px-6 py-4 space-y-6">
@@ -156,7 +158,7 @@ export default function OrganizationWebsitesPanel({ organizationId }: { organiza
                     ) : (
                       <span className="text-sm text-gray-500">No settings row</span>
                     )}
-                    {!site.isHome ? (
+                    {site.isChildOrganization ? (
                       <button
                         type="button"
                         disabled={busy}
@@ -179,6 +181,27 @@ export default function OrganizationWebsitesPanel({ organizationId }: { organiza
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-900">Add a website</h4>
+                <input
+                  type="text"
+                  value={newWebsiteTenantId}
+                  onChange={(event) => setNewWebsiteTenantId(event.target.value.trim().toLowerCase())}
+                  placeholder="website_tenant_id"
+                  className="block w-full border border-gray-400 rounded-xl px-4 py-3 font-mono"
+                />
+                <button
+                  type="button"
+                  disabled={busy || !newWebsiteTenantId}
+                  onClick={() =>
+                    void run(async () => {
+                      await createWebsiteForOrganization(organizationId, newWebsiteTenantId);
+                      setNewWebsiteTenantId('');
+                    }, `Website ${newWebsiteTenantId} was added.`)
+                  }
+                  className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-6 font-semibold text-green-700 disabled:opacity-50"
+                >
+                  Create website
+                </button>
+                <h4 className="font-semibold text-gray-900 pt-2">Link a child organization</h4>
                 <TenantOrganizationSearchSelect value={addTenantId} onChange={setAddTenantId} />
                 <button
                   type="button"

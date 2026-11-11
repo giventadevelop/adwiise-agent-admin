@@ -77,8 +77,9 @@ export default function TenantSubscriptionPanel({ organization, editable = false
         monthlyFeeUsd: fee != null && Number.isFinite(fee) ? fee : undefined,
         stripeCustomerId: stripeCustomerId.trim() || undefined,
       });
-      if (isComplimentarySubscriptionPlan(plan) && organization.tenantId) {
-        await applyComplimentaryPlatformBilling(organization.tenantId);
+      const websiteTenantId = organization.websiteTenantIds?.[0];
+      if (isComplimentarySubscriptionPlan(plan) && websiteTenantId) {
+        await applyComplimentaryPlatformBilling(websiteTenantId);
         setMessage('Subscription saved. This plan is free or demo, so the platform charge switch is off and Stripe is not called.');
       } else {
         setMessage('Subscription saved for this tenant.');
@@ -95,7 +96,7 @@ export default function TenantSubscriptionPanel({ organization, editable = false
       <div>
         <h4 className="text-md font-medium text-indigo-900">Tenant subscription</h4>
         <p className="text-xs text-indigo-800/80 mt-1">
-          Applies to tenant <span className="font-mono">{organization.tenantId}</span> only. Other
+          Applies to tenant <span className="font-mono">{organization.websiteTenantIds?.[0] || 'the website'}</span> only. Other
           websites in the same company portfolio have their own subscription.
         </p>
       </div>

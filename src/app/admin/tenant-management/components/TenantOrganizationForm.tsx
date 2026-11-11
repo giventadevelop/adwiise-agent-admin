@@ -1,28 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { FaSave, FaBan } from 'react-icons/fa';
 import type { TenantOrganizationDTO, TenantOrganizationFormDTO } from '@/app/admin/tenant-management/types';
-import {
-  getTenantIdPrefixValidationError,
-  normalizeTenantIdPrefix,
-  suggestTenantIdPrefixFromName,
-} from '@/lib/tenantIdGeneration';
 import { getTenantDomainFormatError, normalizeTenantDomain } from '@/lib/tenantDomainValidation';
 import { getWebsiteUrlFormatError, normalizeWebsiteUrl } from '@/lib/websiteUrlValidation';
-import { previewNextTenantIdServer } from '@/app/admin/tenant-management/organizations/tenantIdServerActions';
 import { isTenantOrganizationDomainAvailableServer } from '@/app/admin/tenant-management/organizations/domainServerActions';
 import AddressFieldsSection from '@/components/admin/AddressFieldsSection';
 import DescriptionTextareaField from '@/components/admin/DescriptionTextareaField';
 import EventFormHelpTooltip from '@/components/EventFormHelpTooltip';
-
-/** Deferred hostname when CRM create has no real website yet (unique + valid domain shape). */
-function pendingShellDomain(tenantId: string): string {
-  const slug = tenantId.trim().toLowerCase().replace(/_/g, '-').replace(/[^a-z0-9-]/g, '');
-  return `pending-${slug || 'org'}.adwiise.local`;
-}
 
 interface TenantOrganizationFormProps {
   initialData?: TenantOrganizationDTO;
@@ -40,9 +28,7 @@ export default function TenantOrganizationForm({
   mode,
 }: TenantOrganizationFormProps) {
   const router = useRouter();
-  const [tenantIdPrefix, setTenantIdPrefix] = useState('');
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null);
-  const prefixDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     register,
@@ -52,7 +38,6 @@ export default function TenantOrganizationForm({
     watch,
   } = useForm<TenantOrganizationFormDTO>({
     defaultValues: {
-      tenantId: initialData?.tenantId || '',
       organizationName: initialData?.organizationName || '',
       domain: initialData?.domain || '',
       primaryColor: initialData?.primaryColor || '#3B82F6',
@@ -60,6 +45,7 @@ export default function TenantOrganizationForm({
       logoUrl: initialData?.logoUrl || '',
       contactEmail: initialData?.contactEmail || '',
       contactPhone: initialData?.contactPhone || '',
+      contactPersonName: initialData?.contactPersonName || '',
       subscriptionPlan: initialData?.subscriptionPlan || '',
       subscriptionStatus: initialData?.subscriptionStatus || '',
       subscriptionStartDate: initialData?.subscriptionStartDate || '',
@@ -86,7 +72,6 @@ export default function TenantOrganizationForm({
 
   const domainField = register('domain', {
     validate: (value) => {
-      // CRM form: create may omit domain (pending placeholder on submit); edit keeps existing via hidden field.
       if (!(value || '').trim()) return true;
       const formatError = getTenantDomainFormatError(value || '');
       return formatError || true;
@@ -99,46 +84,6 @@ export default function TenantOrganizationForm({
       return formatError || true;
     },
   });
-
-  const refreshTenantIdPreview = useCallback(async (rawPrefix: string) => {
-    if (mode !== 'create') return;
-
-    const normalized = normalizeTenantIdPrefix(rawPrefix);
-    const prefixError = getTenantIdPrefixValidationError(rawPrefix);
-    if (!normalized || prefixError) {
-      setValue('tenantId', '');
-      return;
-    }
-
-    try {
-      const preview = await previewNextTenantIdServer(normalized);
-      if (!preview) {
-        setValue('tenantId', '');
-        return;
-      }
-      setValue('tenantId', preview.tenantId, { shouldValidate: true });
-    } catch (error) {
-      console.error('[TenantOrganizationForm] Failed to preview tenant ID:', error);
-    }
-  }, [mode, setValue]);
-
-  useEffect(() => {
-    if (mode !== 'create') return;
-
-    if (prefixDebounceRef.current) {
-      clearTimeout(prefixDebounceRef.current);
-    }
-
-    prefixDebounceRef.current = setTimeout(() => {
-      void refreshTenantIdPreview(tenantIdPrefix);
-    }, tenantIdPrefix.trim() ? 350 : 0);
-
-    return () => {
-      if (prefixDebounceRef.current) {
-        clearTimeout(prefixDebounceRef.current);
-      }
-    };
-  }, [tenantIdPrefix, mode, refreshTenantIdPreview]);
 
   const validateDomainAvailability = useCallback(
     async (rawDomain: string): Promise<string | null> => {
@@ -176,40 +121,15 @@ export default function TenantOrganizationForm({
   const onFormSubmit = async (data: TenantOrganizationFormDTO) => {
     setFormSubmitError(null);
     try {
-      let submitData = { ...data };
+      const submitData = {
+        ...data,
+        tenantId: undefined,
+        siteType: data.siteType || 'EVENT_ORG',
+        primaryColor: data.primaryColor || '#3B82F6',
+        secondaryColor: data.secondaryColor || '#10B981',
+      };
 
-      if (mode === 'create') {
-        // CRM shell: auto placeholder tenantId from organization name (no UI for prefix).
-        const suggested =
-          normalizeTenantIdPrefix(tenantIdPrefix) ||
-          suggestTenantIdPrefixFromName(submitData.organizationName || '');
-        const prefixError = getTenantIdPrefixValidationError(suggested);
-        if (prefixError) {
-          setFormSubmitError(
-            'Could not derive a tenant ID from the organization name. Use letters in the name.',
-          );
-          return;
-        }
-        const preview = await previewNextTenantIdServer(suggested);
-        if (!preview) {
-          setFormSubmitError('Could not generate a placeholder tenant ID. Try again.');
-          return;
-        }
-        submitData = {
-          ...submitData,
-          tenantId: preview.tenantId,
-          siteType: submitData.siteType || 'EVENT_ORG',
-          primaryColor: submitData.primaryColor || '#3B82F6',
-          secondaryColor: submitData.secondaryColor || '#10B981',
-        };
-        setValue('tenantId', preview.tenantId);
-        setTenantIdPrefix(suggested);
-      }
-
-      let normalizedDomain = normalizeTenantDomain(submitData.domain || '');
-      if (mode === 'create' && !normalizedDomain) {
-        normalizedDomain = pendingShellDomain(submitData.tenantId);
-      }
+      const normalizedDomain = normalizeTenantDomain(submitData.domain || '');
       if (normalizedDomain) {
         const domainError = await validateDomainAvailability(normalizedDomain);
         if (domainError) {
@@ -256,22 +176,19 @@ export default function TenantOrganizationForm({
               title="Organization before Tenant ID"
               customContent={
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  This form is company contact and address only. Website <strong>Tenant ID</strong>,
-                  hostname, site type, branding, and subscription are managed under{' '}
-                  <strong>Onboarding → Add Request</strong> (and Tenant Settings after approval).
+                  An organization is the client. Its websites are tenant settings rows, each with its own tenant id.
+                  Enter the company domain here when you have one. A website id is created later on tenant settings.
                 </p>
               }
             />
           </div>
           <p className="text-sm text-gray-600 mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
             {mode === 'create'
-              ? 'Captures company contact details only. A placeholder Tenant ID is assigned automatically. Provision the real website Tenant ID and domain from Onboarding after this organization exists.'
-              : 'Edit company contact and address only. Tenant ID, domain, site type, branding, and subscription are not edited here — use Onboarding / Tenant Settings.'}
+              ? 'Creates the client organization. It does not create a website tenant id. Add a tenant settings row after the organization exists.'
+              : 'Edit the company and its domain. Website tenant ids are edited on tenant settings.'}
           </p>
 
           {/* Preserve site/tenant fields on save without exposing them in the CRM UI */}
-          <input type="hidden" {...register('tenantId')} />
-          <input type="hidden" {...domainField} />
           <input type="hidden" {...register('siteType')} />
           <input type="hidden" {...register('retailerTypeCode')} />
           <input type="hidden" {...register('retailerSizeBandCode')} />
@@ -298,17 +215,40 @@ export default function TenantOrganizationForm({
                     value: 255,
                     message: 'Organization name must be less than 255 characters'
                   },
-                  onChange: (e) => {
-                    if (mode === 'create') {
-                      setTenantIdPrefix(suggestTenantIdPrefixFromName(e.target.value));
-                    }
-                  },
                 })}
                 className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
                 placeholder="e.g., Ford Motors"
               />
               {errors.organizationName && (
                 <p className="mt-1 text-sm text-red-600">{errors.organizationName.message}</p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="domain">
+                Domain
+              </label>
+              <input
+                id="domain"
+                type="text"
+                {...domainField}
+                onBlur={(event) => {
+                  domainField.onBlur(event);
+                  const trimmed = event.target.value.trim();
+                  if (!trimmed) return;
+                  const normalized = normalizeTenantDomain(trimmed);
+                  if (normalized !== trimmed) {
+                    setValue('domain', normalized, { shouldValidate: true });
+                  }
+                }}
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+                placeholder="example.org"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The company domain. Leave it empty when the organization does not have one yet.
+              </p>
+              {errors.domain && (
+                <p className="mt-1 text-sm text-red-600">{errors.domain.message}</p>
               )}
             </div>
 
@@ -353,6 +293,34 @@ export default function TenantOrganizationForm({
               />
               {errors.contactPhone && (
                 <p className="mt-1 text-sm text-red-600">{errors.contactPhone.message}</p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Contact person name *
+              </label>
+              <input
+                type="text"
+                {...register('contactPersonName', {
+                  required: 'Contact person name is required',
+                  validate: (value) => {
+                    const trimmed = (value || '').trim();
+                    if (!trimmed || trimmed.toLowerCase() === 'pending') {
+                      return 'Enter the contact person name';
+                    }
+                    return true;
+                  },
+                  maxLength: {
+                    value: 255,
+                    message: 'Contact person name must be less than 255 characters',
+                  },
+                })}
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+                placeholder="e.g., Bino Joseph"
+              />
+              {errors.contactPersonName && (
+                <p className="mt-1 text-sm text-red-600">{errors.contactPersonName.message}</p>
               )}
             </div>
           </div>

@@ -12,7 +12,7 @@ async function filterOrgsForCurrentAdmin(
   const access = await getCurrentAdminAccess();
   if (access.canQueryAllTenants) return orgs;
   const allowed = new Set(access.allowedTenantIds);
-  return orgs.filter((org) => org.tenantId && allowed.has(org.tenantId));
+  return orgs.filter((org) => (org.websiteTenantIds || []).some((tenantId) => allowed.has(tenantId)));
 }
 
 function mergeOrganizationsByKey(

@@ -410,7 +410,7 @@ export default function TenantSettingsList({
                   href={
                     isPlatformSuperAdmin
                       ? `/admin/tenant-management/organizations/${org.id}`
-                      : `/admin/tenant-management/settings/new?tenantId=${encodeURIComponent(org.tenantId)}`
+                      : `/admin/tenant-management/settings/new?organizationId=${org.id}`
                   }
                   className="font-semibold text-amber-900 underline"
                 >

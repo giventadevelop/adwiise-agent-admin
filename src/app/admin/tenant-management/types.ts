@@ -6,7 +6,10 @@ import type { TenantSiteType } from '@/types/profileSite';
  */
 export interface TenantOrganizationDTO {
   id?: number;
-  tenantId: string;
+  /** Website tenant ids stored on tenant_settings for this organization. */
+  websiteTenantIds?: string[];
+  /** @deprecated Organizations no longer store a tenant id. Present only on older responses. */
+  tenantId?: string;
   organizationName: string;
   /** Website hostname; required on create and unique across all tenant organizations. */
   domain?: string;
@@ -15,11 +18,13 @@ export interface TenantOrganizationDTO {
   logoUrl?: string;
   contactEmail: string;
   contactPhone?: string;
+  /** Person to reach at this organization. Pending means the name has not been entered yet. */
+  contactPersonName: string;
   subscriptionPlan?: string;
   subscriptionStatus?: string;
   subscriptionStartDate?: string; // YYYY-MM-DD
   subscriptionEndDate?: string;   // YYYY-MM-DD
-  monthlyFeeUsd?: number;
+  monthlyFeeUsd?: number | null;
   stripeCustomerId?: string;
   /** Stripe subscription id for the tenant platform subscription (gas station billing) */
   stripeSubscriptionId?: string;
@@ -188,7 +193,10 @@ export type TenantOrganizationFormDTO = Omit<TenantOrganizationDTO, 'id' | 'crea
  * Form DTO for tenant settings creation/editing.
  * Omits fields that are auto-generated or supplied by the system.
  */
-export type TenantSettingsFormDTO = Omit<TenantSettingsDTO, 'id' | 'createdAt' | 'updatedAt' | 'tenantOrganization'>;
+export type TenantSettingsFormDTO = Omit<TenantSettingsDTO, 'id' | 'createdAt' | 'updatedAt' | 'tenantOrganization'> & {
+  /** Required when creating settings. The website tenant id is entered separately. */
+  organizationId?: number;
+};
 
 /**
  * Filter options for tenant organization list

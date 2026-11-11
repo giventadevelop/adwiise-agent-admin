@@ -4,41 +4,13 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { FaTimes } from 'react-icons/fa';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
-import { extractTenantIdSequence, getTenantIdPrefix } from '@/lib/tenantIdGeneration';
-
 type DetailRow =
   | { kind: 'field'; key: keyof TenantOrganizationDTO; label: string }
   | { kind: 'computed'; label: string; render: (org: TenantOrganizationDTO) => ReactNode };
 
 const DETAIL_ROWS: DetailRow[] = [
   { kind: 'field', key: 'id', label: 'Database ID (PK)' },
-  { kind: 'field', key: 'tenantId', label: 'Tenant ID' },
-  {
-    kind: 'computed',
-    label: 'Tenant ID Sequence',
-    render: (org) => {
-      const seq = org.tenantId ? extractTenantIdSequence(org.tenantId) : null;
-      if (seq === null) {
-        return <span className="text-gray-400 italic">(not parsed)</span>;
-      }
-      return (
-        <span className="font-mono font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-          {seq}
-        </span>
-      );
-    },
-  },
-  {
-    kind: 'computed',
-    label: 'Tenant ID Prefix',
-    render: (org) => {
-      const prefix = org.tenantId ? getTenantIdPrefix(org.tenantId) : null;
-      if (!prefix) {
-        return <span className="text-gray-400 italic">(not parsed)</span>;
-      }
-      return <span className="font-mono text-gray-800">{prefix}</span>;
-    },
-  },
+  { kind: 'field', key: 'websiteTenantIds', label: 'Website tenant IDs' },
   { kind: 'field', key: 'organizationName', label: 'Organization Name' },
   { kind: 'field', key: 'domain', label: 'Website / Domain' },
   { kind: 'field', key: 'websiteUrl', label: 'Website URL' },
@@ -51,6 +23,7 @@ const DETAIL_ROWS: DetailRow[] = [
   { kind: 'field', key: 'country', label: 'Country' },
   { kind: 'field', key: 'contactEmail', label: 'Contact Email' },
   { kind: 'field', key: 'contactPhone', label: 'Contact Phone' },
+  { kind: 'field', key: 'contactPersonName', label: 'Contact person name' },
   { kind: 'field', key: 'subscriptionPlan', label: 'Subscription Plan' },
   { kind: 'field', key: 'subscriptionStatus', label: 'Subscription Status' },
   { kind: 'field', key: 'subscriptionStartDate', label: 'Subscription Start' },
@@ -152,7 +125,7 @@ export default function TenantOrganizationDetailsTooltip({
 }: TenantOrganizationDetailsTooltipProps) {
   if (!organization || !anchorRect || typeof document === 'undefined') return null;
 
-  const parsedSequence = organization.tenantId ? extractTenantIdSequence(organization.tenantId) : null;
+  const websiteTenantLabel = (organization.websiteTenantIds || []).join(', ') || '(none)';
 
   const tooltipWidth = 600;
   const thWidth = 200;
@@ -239,15 +212,9 @@ export default function TenantOrganizationDetailsTooltip({
           </div>
         </div>
         <div>
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tenant ID</div>
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Website tenant IDs</div>
           <div className="font-mono font-bold text-blue-800 break-all">
-            {organization.tenantId || '(empty)'}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">ID Sequence</div>
-          <div className="font-mono font-bold text-blue-700">
-            {parsedSequence !== null ? parsedSequence : '(not parsed)'}
+            {websiteTenantLabel}
           </div>
         </div>
       </div>

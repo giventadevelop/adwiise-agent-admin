@@ -44,8 +44,8 @@ async function fetchAllTenantOrganizationIds(): Promise<string[]> {
     while (true) {
       const result = await fetchTenantOrganizations({ page, pageSize }, { sortBy: 'createdAt', sortOrder: 'asc' });
       for (const org of result.data) {
-        if (org.tenantId?.trim()) {
-          tenantIds.push(org.tenantId.trim());
+        for (const websiteTenantId of org.websiteTenantIds || []) {
+          if (websiteTenantId.trim()) tenantIds.push(websiteTenantId.trim());
         }
       }
       if (result.data.length < pageSize || page + 1 >= result.totalPages) {

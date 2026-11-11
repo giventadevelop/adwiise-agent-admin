@@ -5,7 +5,7 @@ import { isTenantIdAllowed } from '@/lib/adminTenantAccess';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl } from '@/lib/env';
-import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { fetchTenantOrganizationByTenantId, fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import { stripDeprecatedSettingsIdentityFields } from '@/lib/stripDeprecatedSettingsIdentityFields';
 import { getSiteTypePresetSettings } from '@/lib/siteTypePresets';
 import { fetchSiteTypes } from '@/app/admin/access-catalogs/ApiServerActions';
@@ -41,11 +41,7 @@ async function resolveTenantOrganizationByTenantId(
   if (!tid) return null;
 
   try {
-    const orgResult = await fetchTenantOrganizations(
-      { page: 0, pageSize: 1 },
-      { tenantId: tid },
-    );
-    const org = orgResult.data?.[0];
+    const org = await fetchTenantOrganizationByTenantId(tid);
     if (org?.id) {
       console.log(`[${logLabel}] Found tenantOrganization:`, {
         id: org.id,
@@ -213,11 +209,11 @@ export async function fetchTenantSettings(
         }
       }
       organizationsWithoutSettings = (orgResult?.data ?? [])
-        .filter((org) => org.id != null && org.tenantId && !settingsTenantIds.has(org.tenantId))
+        .filter((org) => org.id != null && !(org.websiteTenantIds || []).some((tenantId) => settingsTenantIds.has(tenantId)))
         .map((org) => ({
           id: org.id as number,
-          tenantId: org.tenantId,
-          organizationName: org.organizationName?.trim() || org.tenantId,
+          tenantId: org.websiteTenantIds?.[0] || '',
+          organizationName: org.organizationName?.trim() || `Organization ${org.id}`,
         }));
     }
 
@@ -376,10 +372,10 @@ export async function createTenantSetting(data: TenantSettingsFormDTO): Promise<
         : getOnboardingDefaultHeroPayload(data.tenantId);
 
     // Form omits tenantOrganization — auto-link by tenantId (same as update/patch).
-    const tenantOrganization = await resolveTenantOrganizationByTenantId(
-      data.tenantId,
-      'createTenantSetting',
-    );
+    if (!data.organizationId) {
+      throw new Error('Choose an existing organization before saving website settings.');
+    }
+    const tenantOrganization = { id: data.organizationId } as TenantOrganizationDTO;
 
     const repositoryUrl = await repositoryUrlForSave(data.repositoryUrl, null);
     const payload = withTenantId({

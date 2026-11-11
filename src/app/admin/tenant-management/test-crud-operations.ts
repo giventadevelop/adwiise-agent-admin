@@ -32,6 +32,7 @@ const testOrganizationData: TenantOrganizationFormDTO = {
   description: 'A test organization for CRUD testing',
   contactEmail: 'test@example.com',
   contactPhone: '+1-555-0123',
+  contactPersonName: 'Test Person',
   addressLine1: '123 Test Street',
   city: 'Test City',
   stateProvince: 'TC',

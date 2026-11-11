@@ -661,6 +661,8 @@ export interface TenantOrganizationDTO {
   logoUrl?: string;
   contactEmail: string;
   contactPhone?: string;
+  /** Person to reach at this organization. Pending means the name has not been entered yet. */
+  contactPersonName?: string;
   subscriptionPlan?: string;
   subscriptionStatus?: string;
   subscriptionStartDate?: string; // date (YYYY-MM-DD)

@@ -42,13 +42,134 @@ function domainOwnershipGuidance(ownership: DomainOwnership | string | null | un
   }
 }
 
-export function buildManualStepsText(request: TenantOnboardingRequestDTO, tenantId?: string | null): string {
+export type HubDatabase = 'local' | 'dev' | 'prod';
+
+export type OrganizationDetailRow = { label: string; value: string };
+
+function isLoopback(value: string): boolean {
+  const host = value.toLowerCase();
+  return host.includes('localhost') || host.includes('127.0.0.1') || host.includes('[::1]');
+}
+
+/** Which database the open hub is reading: loopback is local, a dev/staging host is dev, otherwise prod. */
+export function hubDatabaseLabel(pageHost?: string | null, apiBase?: string | null): HubDatabase {
+  const host = (pageHost || '').trim();
+  const api = (apiBase || '').trim();
+  if (isLoopback(host) || isLoopback(api)) return 'local';
+  const combined = `${host} ${api}`.toLowerCase();
+  if (combined.includes('dev') || combined.includes('staging')) return 'dev';
+  return 'prod';
+}
+
+function filled(value: string | null | undefined, missing = 'Not provided'): string {
+  const trimmed = (value ?? '').trim();
+  return trimmed || missing;
+}
+
+function stripeAtLaunch(wantsPayments: boolean | null | undefined): string {
+  if (wantsPayments === true) return 'yes';
+  if (wantsPayments === false) return 'no';
+  return 'Not provided';
+}
+
+function withScheme(value: string): string {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function mailingAddress(source: {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  stateProvince?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
+}): string {
+  const cityLine = [source.city, source.stateProvince, source.zipCode]
+    .map((part) => (part ?? '').trim())
+    .filter(Boolean)
+    .join(', ');
+  return [source.addressLine1, source.addressLine2, cityLine, source.country]
+    .map((part) => (part ?? '').trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+export function organizationDetailRows(
+  org: TenantOrganizationDTO,
+  request: TenantOnboardingRequestDTO,
+  hubDatabase: HubDatabase
+): OrganizationDetailRow[] {
+  const tenantId = (org.tenantId || '').trim();
+  const sequence = tenantId ? extractTenantIdSequence(tenantId) : null;
+  const prefix = tenantId ? getTenantIdPrefix(tenantId) : null;
+  const website = (org.websiteUrl || request.requestedHostname || '').trim();
+  const address = mailingAddress(org) || mailingAddress(request);
+  const requestContactName = [request.contactFirstName, request.contactLastName]
+    .map((part) => (part ?? '').trim())
+    .filter(Boolean)
+    .join(' ');
+  const storedContactName = (org.contactPersonName || '').trim();
+  const contactName =
+    storedContactName && storedContactName.toLowerCase() !== 'pending'
+      ? storedContactName
+      : requestContactName;
+
+  return [
+    { label: 'Database ID (PK)', value: org.id != null ? String(org.id) : 'Not available' },
+    { label: 'Tenant ID', value: filled(tenantId) },
+    { label: 'Tenant ID Sequence', value: sequence != null ? String(sequence) : 'Not parsed' },
+    { label: 'Tenant ID Prefix', value: prefix || 'Not parsed' },
+    { label: 'Organization Name', value: filled(org.organizationName) },
+    { label: 'Contact Email', value: filled(org.contactEmail || request.contactEmail) },
+    { label: 'Contact Phone', value: filled(org.contactPhone || request.contactPhone) },
+    { label: 'Contact person name', value: contactName || 'Pending' },
+    { label: 'Website URL', value: website ? withScheme(website) : 'Not provided' },
+    { label: 'Site type', value: filled(request.siteType || org.siteType) },
+    { label: 'Domain ownership', value: filled(request.domainOwnership) },
+    { label: 'Mailing address', value: filled(address) },
+    { label: 'Stripe at launch', value: stripeAtLaunch(request.wantsPayments) },
+    { label: 'Hub database', value: hubDatabase },
+    { label: 'Request code', value: filled(request.requestCode) },
+    { label: 'Satellite key', value: filled(request.satelliteKey) },
+  ];
+}
+
+export function buildOrganizationDetailsText(
+  org: TenantOrganizationDTO,
+  request: TenantOnboardingRequestDTO,
+  hubDatabase: HubDatabase
+): string {
+  const lines = organizationDetailRows(org, request, hubDatabase).flatMap((row) => [row.label, row.value]);
+  return ['Organization Details', ...lines].join('\n');
+}
+
+export function manualReminderSteps(
+  request: TenantOnboardingRequestDTO,
+  tenantId: string | null | undefined,
+  hubDatabase: HubDatabase
+): string[] {
   const host = request.requestedHostname || '<hostname>';
   const bare = stripWww(host) || '<apex>';
   const tid = tenantId || request.assignedTenantId || '<tenant_id>';
   const noreply = request.noreplyEmail || 'the no-reply address';
+  const stripe = stripeAtLaunch(request.wantsPayments);
+  return [
+    `DNS: point ${host} (and the bare domain ${bare}) at the satellite Amplify app.`,
+    `Amplify: add the custom domain, then set NEXT_PUBLIC_TENANT_ID=${tid} and the site env vars on the satellite app.`,
+    `Clerk: add ${host} as a satellite domain on the ${hubDatabase} Clerk instance and verify its DNS records. Production Clerk waits until the dev path has succeeded.`,
+    `Email: verify the sending domain for ${noreply} in SES.`,
+    `Payments: Stripe at launch is ${stripe}. Set up Stripe keys in Tenant Settings when the answer is yes.`,
+  ];
+}
+
+export function buildManualStepsText(
+  request: TenantOnboardingRequestDTO,
+  tenantId?: string | null,
+  hubDatabase: HubDatabase = 'local'
+): string {
   const site = siteTypeLabel(request.siteType as TenantSiteType | undefined);
   const ownership = domainOwnershipLabel(request.domainOwnership as DomainOwnership | undefined);
+  const steps = manualReminderSteps(request, tenantId, hubDatabase).map((step, index) => `${index + 1}. ${step}`);
 
   return [
     `Remaining manual steps for ${request.organizationName || 'organization'}`,
@@ -59,21 +180,7 @@ export function buildManualStepsText(request: TenantOnboardingRequestDTO, tenant
     domainOwnershipGuidance(request.domainOwnership),
     ...(request.registrarNotes?.trim() ? ['', 'Registrar notes:', request.registrarNotes.trim()] : []),
     '',
-    `1. DNS: point ${host} (and bare domain ${bare}) at the satellite Amplify app.`,
-    `2. Amplify: add the custom domain, then set NEXT_PUBLIC_TENANT_ID=${tid} and the site env vars on the satellite app.`,
-    `3. Clerk: add ${host} as a satellite domain on the production instance and verify its DNS records.`,
-    `4. Email: verify the sending domain for ${noreply} in SES.`,
-    `5. Payments (if requested): set up Stripe keys in Tenant Settings.`,
-  ].join('\n');
-}
-
-export function buildOrganizationDetailsText(org: TenantOrganizationDTO): string {
-  const sequence = org.tenantId ? extractTenantIdSequence(org.tenantId) : null;
-  return [
-    'Organization Details',
-    `Organization Name: ${org.organizationName || '—'}`,
-    `Website Tenant ID: ${org.tenantId || '—'}`,
-    `Tenant ID Sequence: ${sequence != null ? sequence : 'Not parsed'}`,
+    ...steps,
   ].join('\n');
 }
 

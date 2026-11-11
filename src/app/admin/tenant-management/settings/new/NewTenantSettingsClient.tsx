@@ -10,12 +10,14 @@ import type { TenantOrganizationDTO, TenantSettingsFormDTO } from '@/app/admin/t
 interface NewTenantSettingsClientProps {
   organizations: TenantOrganizationDTO[];
   initialTenantId?: string;
+  initialOrganizationId?: string;
   canEditRepositoryUrl?: boolean;
 }
 
 export default function NewTenantSettingsClient({
   organizations,
   initialTenantId,
+  initialOrganizationId,
   canEditRepositoryUrl = false,
 }: NewTenantSettingsClientProps) {
   const router = useRouter();
@@ -65,6 +67,7 @@ export default function NewTenantSettingsClient({
         canEditRepositoryUrl={canEditRepositoryUrl}
         initialData={{
           tenantId: initialTenantId || '',
+          organizationId: initialOrganizationId && /^\d+$/.test(initialOrganizationId) ? Number(initialOrganizationId) : undefined,
           allowUserRegistration: true,
           enableWhatsappIntegration: false,
           enableEmailMarketing: false,

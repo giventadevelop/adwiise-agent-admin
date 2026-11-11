@@ -48,7 +48,7 @@ export default async function TenantOrganizationSettingsPage({ params }: PagePro
     );
   }
 
-  const tenantId = organization.tenantId?.trim();
+  const tenantId = organization.websiteTenantIds?.[0]?.trim();
   if (!tenantId) {
     return (
       <AdminRecordMissing
@@ -65,5 +65,5 @@ export default async function TenantOrganizationSettingsPage({ params }: PagePro
     redirect(`/admin/tenant-management/settings/${settings.id}`);
   }
 
-  redirect(`/admin/tenant-management/settings/new?tenantId=${encodeURIComponent(tenantId)}`);
+  redirect(`/admin/tenant-management/settings/new?organizationId=${organization.id}&tenantId=${encodeURIComponent(tenantId)}`);
 }

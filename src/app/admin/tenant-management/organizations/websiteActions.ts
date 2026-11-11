@@ -12,9 +12,10 @@ import {
 } from '@/lib/platformBilling/complimentaryPlan';
 import { cancelPlatformSubscription } from '@/lib/platformBilling/stripeCheckout';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import type { TenantOrganizationDTO } from '@/types';
+import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import type { PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
-import { fetchTenantOrganizations } from './ApiServerActions';
+import { fetchTenantOrganization, fetchTenantOrganizationByTenantId, patchTenantOrganization } from './ApiServerActions';
+import { createTenantSetting } from '@/app/admin/tenant-management/settings/ApiServerActions';
 
 const unscoped = {
   cache: 'no-store' as const,
@@ -28,6 +29,7 @@ export type OrganizationWebsiteRow = {
   tenantId: string;
   organizationName: string;
   isHome: boolean;
+  isChildOrganization?: boolean;
   settingsId: number | null;
 };
 
@@ -77,59 +79,100 @@ export async function loadOrganizationWebsites(organizationId: number): Promise<
   const body = (await response.json()) as {
     client: TenantOrganizationDTO;
     websites: TenantOrganizationDTO[];
+    settingsWebsites?: Array<{ settingsId?: number; tenantId?: string; organizationId?: number }>;
     viewedIsClient: boolean;
   };
   const client = body.client;
-  if (!client?.id || !client.tenantId) {
+  if (!client?.id) {
     throw new Error('Client organization was not found');
   }
-  const homeSettingsId = await settingsIdFor(client.tenantId);
-  const websites: OrganizationWebsiteRow[] = [
-    {
-      id: client.id,
-      tenantId: client.tenantId,
+  const websites: OrganizationWebsiteRow[] = [];
+  for (const site of body.settingsWebsites || []) {
+    if (!site.tenantId || site.settingsId == null) continue;
+    websites.push({
+      id: site.organizationId || client.id,
+      tenantId: site.tenantId,
       organizationName: client.organizationName,
-      isHome: true,
-      settingsId: homeSettingsId,
-    },
-  ];
+      isHome: false,
+      settingsId: site.settingsId,
+    });
+  }
   for (const site of body.websites || []) {
-    if (!site.id || !site.tenantId) continue;
+    const tenantId = site.websiteTenantIds?.[0] || site.tenantId;
+    if (!site.id || !tenantId) continue;
     websites.push({
       id: site.id,
-      tenantId: site.tenantId,
+      tenantId,
       organizationName: site.organizationName,
       isHome: false,
-      settingsId: await settingsIdFor(site.tenantId),
+      isChildOrganization: true,
+      settingsId: await settingsIdFor(tenantId),
     });
   }
   return {
     clientId: client.id,
     clientName: client.organizationName,
-    homeTenantId: client.tenantId,
+    homeTenantId: websites[0]?.tenantId || '',
     viewedIsClient: body.viewedIsClient !== false,
     websites,
   };
 }
 
+export async function createWebsiteForOrganization(organizationId: number, tenantId: string): Promise<void> {
+  await assertPlatformSuperAdmin();
+  const websiteTenantId = tenantId.trim();
+  if (!/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(websiteTenantId)) {
+    throw new Error('Website tenant id must use lowercase letters, numbers, and underscores.');
+  }
+  await createTenantSetting({
+    tenantId: websiteTenantId,
+    organizationId,
+    allowUserRegistration: true,
+    requireAdminApproval: false,
+    enableEmailMarketing: false,
+    isMembershipSubscriptionEnabled: false,
+    enableGuestRegistration: true,
+    showEventsSectionInHomePage: true,
+    showTeamMembersSectionInHomePage: true,
+    showSponsorsSectionInHomePage: true,
+    homepageCacheVersion: 0,
+    displayEventHeroImages: true,
+    enableGoogleAdsense: false,
+    showPublicProfileHeroSection: false,
+    showProfileWritingsSection: false,
+    showProfileAchievementsSection: false,
+    showProfileAffiliationsSection: false,
+    showProfileMediaDownloadsSection: false,
+    showProfileContactSection: false,
+    showProfileFamilySection: false,
+    showProfileProjectsSection: false,
+    showProfileServicesSection: false,
+    showLeagueStandingsSectionInHomePage: false,
+    showHeaderLeagues: false,
+    showNewsAdvertisements: true,
+    enableGasStationModule: false,
+    enableRetailModule: false,
+  });
+}
+
 async function organizationIdForTenant(tenantId: string): Promise<number> {
-  const listed = await fetchTenantOrganizations({ page: 0, pageSize: 5 }, { tenantId });
-  const match = listed.data.find((org) => org.tenantId === tenantId && org.id != null);
+  const match = await fetchTenantOrganizationByTenantId(tenantId);
   if (!match?.id) throw new Error(`Organization for tenant ${tenantId} was not found.`);
   return match.id;
 }
 
-export async function resolveClientOrganizationId(tenantId: string): Promise<number> {
+export async function resolveClientOrganizationId(organizationIdOrTenant: string): Promise<number> {
   await assertPlatformSuperAdmin();
-  const id = await organizationIdForTenant(tenantId.trim());
-  const listed = await fetchTenantOrganizations({ page: 0, pageSize: 5 }, { tenantId: tenantId.trim() });
-  const match = listed.data.find((org) => org.id === id);
-  return match?.parentOrganizationId ?? id;
+  const trimmed = organizationIdOrTenant.trim();
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return organizationIdForTenant(trimmed);
 }
 
 export async function attachWebsiteToClient(clientOrganizationId: number, tenantId: string): Promise<void> {
   await assertPlatformSuperAdmin();
-  const websiteId = await organizationIdForTenant(tenantId.trim());
+  const websiteId = /^\d+$/.test(tenantId.trim())
+    ? Number(tenantId.trim())
+    : await organizationIdForTenant(tenantId.trim());
   if (websiteId === clientOrganizationId) {
     throw new Error('The home tenant is already part of this organization.');
   }
@@ -164,7 +207,7 @@ export async function moveWebsiteToClient(websiteOrganizationId: number, clientO
   if (!response.ok) {
     throw new Error(await readError(response, 'Failed to move website'));
   }
-  const tenantId = current.tenantId?.trim();
+  const tenantId = current.websiteTenantIds?.[0]?.trim() || current.tenantId?.trim();
   if (!tenantId) return;
   if (previousClientId != null && previousClientId !== clientOrganizationId) {
     await uncoverTenant(tenantId, previousClientId).catch((error) => {
@@ -234,15 +277,15 @@ async function coverTenantWhenOrganizationIsCharged(organizationId: number, tena
   await markTenantCovered(tenantId, view.clientId);
 }
 
-export async function loadOrganizationFlatFee(organizationId: number, homeTenantId: string): Promise<OrganizationFlatFee> {
+export async function loadOrganizationFlatFee(organizationId: number, _homeTenantId: string): Promise<OrganizationFlatFee> {
   await assertPlatformSuperAdmin();
-  const rows = await fetchTenantProductBillings(homeTenantId);
-  const row = findOrganizationCharge(rows, organizationId);
+  const organization = await fetchTenantOrganization(organizationId);
+  const monthlyUsd = organization?.monthlyFeeUsd != null ? Number(organization.monthlyFeeUsd) : null;
   return {
-    billingId: row?.id ?? null,
-    monthlyUsd: row?.customFeeUsd != null ? Number(row.customFeeUsd) : null,
-    chargeEnabled: !!row?.chargeEnabled,
-    status: row?.status ?? null,
+    billingId: null,
+    monthlyUsd,
+    chargeEnabled: monthlyUsd != null && monthlyUsd > 0,
+    status: monthlyUsd != null && monthlyUsd > 0 ? 'PAYMENT_DUE' : null,
   };
 }
 
@@ -256,67 +299,11 @@ export async function saveOrganizationFlatFee(input: {
   if (!Number.isFinite(amount) || amount < 0) {
     throw new Error('Enter a monthly amount of zero or more.');
   }
-  const homeTenantId = input.homeTenantId.trim();
-  const note = organizationChargeNote(input.organizationId);
-  const tenantIds = await organizationTenantIds(input.organizationId, homeTenantId);
-  const primaryRows = await fetchTenantProductBillings(homeTenantId);
-  const existing = findOrganizationCharge(primaryRows, input.organizationId);
-
-  if (amount <= 0) {
-    if (existing?.id) {
-      await saveTenantProductBilling({
-        ...existing,
-        chargeEnabled: false,
-        status: 'COMPLIMENTARY',
-        customFeeUsd: null,
-        clearCustomFee: true,
-      });
-    }
-    for (const tenantId of tenantIds) {
-      await uncoverTenant(tenantId, input.organizationId);
-    }
-    return { billingId: existing?.id ?? null, monthlyUsd: null, chargeEnabled: false, status: 'COMPLIMENTARY' };
-  }
-
-  for (const tenantId of tenantIds) {
-    if (tenantId === homeTenantId) continue;
-    const otherRows = await fetchTenantProductBillings(tenantId);
-    const stale = findOrganizationCharge(otherRows, input.organizationId);
-    if (!stale?.id) continue;
-    if (stale.stripeSubscriptionId) {
-      try {
-        await cancelPlatformSubscription(stale, false);
-      } catch (error) {
-        console.error('[organization-billing] previous home subscription cancel skipped', error);
-      }
-    }
-    await saveTenantProductBilling({
-      ...stale,
-      chargeEnabled: false,
-      status: 'COMPLIMENTARY',
-    });
-  }
-
-  const saved = await saveTenantProductBilling({
-    ...(existing || { tenantId: homeTenantId, product: 'RETAIL', graceDays: 14 }),
-    tenantId: homeTenantId,
-    product: 'RETAIL',
-    customFeeUsd: amount,
-    chargeEnabled: true,
-    billingMode: 'RECURRING',
-    status: existing?.status === 'ACTIVE' || existing?.status === 'PAST_DUE' ? existing.status : 'PAYMENT_DUE',
-    notes: withNoteLine(existing?.notes, note),
-    clearCustomFee: false,
+  await patchTenantOrganization(input.organizationId, {
+    monthlyFeeUsd: amount <= 0 ? null : amount,
   });
-
-  for (const tenantId of tenantIds) {
-    await markTenantCovered(tenantId, input.organizationId);
+  if (amount <= 0) {
+    return { billingId: null, monthlyUsd: null, chargeEnabled: false, status: 'COMPLIMENTARY' };
   }
-
-  return {
-    billingId: saved.id ?? null,
-    monthlyUsd: amount,
-    chargeEnabled: true,
-    status: saved.status ?? 'PAYMENT_DUE',
-  };
+  return { billingId: null, monthlyUsd: amount, chargeEnabled: true, status: 'PAYMENT_DUE' };
 }

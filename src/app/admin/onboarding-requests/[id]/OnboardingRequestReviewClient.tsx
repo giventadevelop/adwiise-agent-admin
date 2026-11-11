@@ -28,18 +28,19 @@ import {
   buildManualStepsText,
   buildOrganizationDetailsText,
   domainOwnershipLabel,
+  hubDatabaseLabel,
+  manualReminderSteps,
+  organizationDetailRows,
   siteTypeLabel,
   suggestFolderFromHostname,
 } from '@/lib/onboarding/onboardingApprovedHandoff';
-import {
-  extractTenantIdSequence,
-  suggestTenantIdPrefixFromName,
-} from '@/lib/tenantIdGeneration';
+import { suggestTenantIdPrefixFromName } from '@/lib/tenantIdGeneration';
 import { useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
 import type { TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
-import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { fetchTenantOrganization, fetchTenantOrganizationByTenantId } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { fetchTenantSetting, fetchTenantSettingsByTenantId } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import OnboardingRequestFields, { onboardingInputClass, type OnboardingFieldValues } from '../OnboardingRequestFields';
 import {
   mapTenantOrganizationToOnboardingFields,
@@ -138,6 +139,11 @@ function parseResult(raw?: string | null): Record<string, unknown> | null {
   }
 }
 
+function numericId(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
 function formatDate(value?: string | null): string {
   if (!value) return '—';
   const d = new Date(value);
@@ -186,12 +192,15 @@ export default function OnboardingRequestReviewClient({
   const [siteDraft, setSiteDraft] = useState<OnboardingSiteProvisionDraft | null>(null);
   const [provisionedOrg, setProvisionedOrg] = useState<TenantOrganizationDTO | null>(null);
   const [provisionedOrgError, setProvisionedOrgError] = useState<string | null>(null);
+  const [liveSettingsId, setLiveSettingsId] = useState<number | null>(null);
 
   const editable = request.status === 'PENDING' || request.status === 'FAILED';
   const result = useMemo(() => parseResult(request.provisioningResult), [request.provisioningResult]);
   const dirty = useMemo(() => Object.keys(diffFields(savedFields, fields)).length > 0, [savedFields, fields]);
   const requireContactDetails = !sourceOrgTenantId.trim();
-  const organizationIdFromResult = result?.tenantOrganizationId as number | undefined;
+  const organizationIdFromResult = numericId(result?.tenantOrganizationId);
+  const settingsIdFromResult = numericId(result?.tenantSettingsId);
+  const tenantIdFromResult = (result?.tenantId as string | undefined) || request.assignedTenantId || '';
 
   const applySourceTenantToProvisioning = useCallback(
     (sourceTenantId: string) => {
@@ -209,31 +218,56 @@ export default function OnboardingRequestReviewClient({
   );
 
   useEffect(() => {
-    if (request.status !== 'APPROVED' || organizationIdFromResult == null) {
+    if (request.status !== 'APPROVED' || (organizationIdFromResult == null && !tenantIdFromResult)) {
       setProvisionedOrg(null);
       setProvisionedOrgError(null);
+      setLiveSettingsId(null);
       return;
     }
     let cancelled = false;
     async function loadOrg() {
       try {
-        const org = await fetchTenantOrganization(organizationIdFromResult!);
-        if (!cancelled) {
-          setProvisionedOrg(org);
-          setProvisionedOrgError(org ? null : 'Organization record was not found.');
+        let org =
+          organizationIdFromResult != null ? await fetchTenantOrganization(organizationIdFromResult) : null;
+        if (!org && tenantIdFromResult) {
+          org = await fetchTenantOrganizationByTenantId(tenantIdFromResult);
         }
+        if (cancelled) return;
+        setProvisionedOrg(org);
+        setProvisionedOrgError(org ? null : 'Organization record was not found.');
       } catch (error) {
         if (!cancelled) {
           setProvisionedOrg(null);
           setProvisionedOrgError(error instanceof Error ? error.message : 'Failed to load organization');
         }
       }
+
+      try {
+        let settingsId = settingsIdFromResult;
+        if (settingsId != null) {
+          const setting = await fetchTenantSetting(settingsId);
+          if (setting?.id != null) {
+            settingsId = setting.id;
+          } else if (tenantIdFromResult) {
+            const byTenant = await fetchTenantSettingsByTenantId(tenantIdFromResult);
+            settingsId = byTenant?.id ?? null;
+          } else {
+            settingsId = null;
+          }
+        } else if (tenantIdFromResult) {
+          const byTenant = await fetchTenantSettingsByTenantId(tenantIdFromResult);
+          settingsId = byTenant?.id ?? null;
+        }
+        if (!cancelled) setLiveSettingsId(settingsId);
+      } catch {
+        if (!cancelled) setLiveSettingsId(null);
+      }
     }
     void loadOrg();
     return () => {
       cancelled = true;
     };
-  }, [request.status, organizationIdFromResult]);
+  }, [request.status, organizationIdFromResult, settingsIdFromResult, tenantIdFromResult]);
 
   useEffect(() => {
     if (!editable || !request.id) return;
@@ -537,8 +571,13 @@ export default function OnboardingRequestReviewClient({
   };
 
   const tenantIdForLinks = request.assignedTenantId ?? (result?.tenantId as string | undefined);
-  const settingsId = result?.tenantSettingsId as number | undefined;
-  const organizationId = organizationIdFromResult;
+  const hubDatabase = hubDatabaseLabel(
+    typeof window !== 'undefined' ? window.location.hostname : undefined,
+    process.env.NEXT_PUBLIC_API_BASE_URL
+  );
+  const organizationId = provisionedOrg?.id ?? null;
+  const detailRows = provisionedOrg ? organizationDetailRows(provisionedOrg, request, hubDatabase) : [];
+  const reminderSteps = manualReminderSteps(request, tenantIdForLinks, hubDatabase);
   const clonedAdmins = Array.isArray(result?.clonedAdmins) ? (result?.clonedAdmins as { email?: string; userRole?: string }[]) : [];
   const siteTypeDisplay = siteTypeLabel(request.siteType);
   const ownershipMatch = ownershipOptions.find((o) => o.value === request.domainOwnership);
@@ -548,12 +587,12 @@ export default function OnboardingRequestReviewClient({
   const domainOwnershipHint = ownershipMatch?.label || request.domainOwnership || 'Not set';
   const siteTypeHint =
     ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === request.siteType)?.hint || '';
-  const manualStepsText = buildManualStepsText(request, tenantIdForLinks);
-  const orgDetailsText = provisionedOrg ? buildOrganizationDetailsText(provisionedOrg) : '';
+  const manualStepsText = buildManualStepsText(request, tenantIdForLinks, hubDatabase);
+  const orgDetailsText = provisionedOrg ? buildOrganizationDetailsText(provisionedOrg, request, hubDatabase) : '';
+  const instructionsText = orgDetailsText ? `${orgDetailsText}\n\n${manualStepsText}` : manualStepsText;
   const cursorEnvText = buildCursorEnvHandoffText(request, tenantIdForLinks);
   const wwwHost = request.requestedHostname || 'www.example.com';
   const folderHint = suggestFolderFromHostname(wwwHost);
-  const orgSequence = provisionedOrg?.tenantId ? extractTenantIdSequence(provisionedOrg.tenantId) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8" style={{ paddingTop: '180px' }}>
@@ -640,8 +679,8 @@ export default function OnboardingRequestReviewClient({
                     <span className="font-semibold text-green-700">View Organization</span>
                   </Link>
                 )}
-                {settingsId != null && (
-                  <Link href={`/admin/tenant-management/settings/${settingsId}/edit`} className="w-full flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105" title="Edit Settings" aria-label="Edit Settings">
+                {liveSettingsId != null && (
+                  <Link href={`/admin/tenant-management/settings/${liveSettingsId}/edit`} className="w-full flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105" title="Edit Settings" aria-label="Edit Settings">
                     <span className="font-semibold text-blue-700">Edit Tenant Settings</span>
                   </Link>
                 )}
@@ -652,11 +691,18 @@ export default function OnboardingRequestReviewClient({
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <h3 className="font-semibold text-blue-900">Remaining manual steps</h3>
-                  <CopyInstructionsButton
-                    text={manualStepsText}
-                    label="Copy instructions"
-                    title="Copy remaining manual steps for application deployment"
-                  />
+                  <div className="flex flex-col items-start sm:items-end gap-1">
+                    <CopyInstructionsButton
+                      text={instructionsText}
+                      label="Copy instructions"
+                      title="Copy organization details and the remaining manual steps"
+                    />
+                    <p className="text-xs font-semibold text-amber-950 bg-amber-200 border border-amber-500 rounded-md px-2.5 py-1">
+                      {orgDetailsText
+                        ? 'The above copy button also copies the organization details.'
+                        : 'The above copy button includes the organization details once that record has loaded.'}
+                    </p>
+                  </div>
                 </div>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-blue-900">
                   <div>
@@ -687,11 +733,9 @@ export default function OnboardingRequestReviewClient({
                   </div>
                 </dl>
                 <ol className="list-decimal pl-5 space-y-1 text-sm text-blue-900">
-                  <li>DNS: point <span className="font-mono">{request.requestedHostname}</span> (and the bare domain <span className="font-mono">{stripWww(request.requestedHostname || '')}</span>) at the satellite Amplify app.</li>
-                  <li>Amplify: add the custom domain, then set <span className="font-mono">NEXT_PUBLIC_TENANT_ID={tenantIdForLinks}</span> and the site env vars on the satellite app.</li>
-                  <li>Clerk: add the hostname as a satellite domain on the production instance and verify its DNS records.</li>
-                  <li>Email: verify the sending domain for <span className="font-mono">{request.noreplyEmail || 'the no-reply address'}</span> in SES.</li>
-                  <li>Payments (if requested): set up Stripe keys in Tenant Settings.</li>
+                  {reminderSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
                 </ol>
               </div>
 
@@ -709,26 +753,23 @@ export default function OnboardingRequestReviewClient({
                 {provisionedOrgError && (
                   <p className="text-sm text-red-600">{provisionedOrgError}</p>
                 )}
-                {!provisionedOrg && !provisionedOrgError && organizationId != null && (
+                {!provisionedOrg && !provisionedOrgError && (organizationIdFromResult != null || Boolean(tenantIdForLinks)) && (
                   <p className="text-sm text-gray-600">Loading organization record…</p>
                 )}
-                {organizationId == null && (
+                {organizationId == null && !provisionedOrgError && organizationIdFromResult == null && !tenantIdForLinks && (
                   <p className="text-sm text-gray-600">No organization ID in the provisioning result.</p>
                 )}
                 {provisionedOrg && (
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div className="sm:col-span-2">
-                      <dt className="text-gray-500">Organization Name</dt>
-                      <dd className="text-gray-900 font-medium">{provisionedOrg.organizationName || '—'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Website Tenant ID</dt>
-                      <dd className="font-mono text-gray-900">{provisionedOrg.tenantId || '—'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Tenant ID Sequence</dt>
-                      <dd className="font-mono text-gray-900">{orgSequence != null ? orgSequence : 'Not parsed'}</dd>
-                    </div>
+                    {detailRows.map((row) => (
+                      <div
+                        key={row.label}
+                        className={row.label === 'Mailing address' || row.label === 'Website URL' ? 'sm:col-span-2' : undefined}
+                      >
+                        <dt className="text-gray-500">{row.label}</dt>
+                        <dd className="text-gray-900 font-medium break-words">{row.value}</dd>
+                      </div>
+                    ))}
                   </dl>
                 )}
               </div>

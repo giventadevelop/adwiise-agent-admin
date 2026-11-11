@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
-import { applySiteTypePresetsForTenant } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import TenantOrganizationForm from '@/app/admin/tenant-management/components/TenantOrganizationForm';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
@@ -15,10 +14,6 @@ export default function NewTenantOrganizationPage() {
 
     try {
       await createTenantOrganization(data);
-      if (data.siteType && data.siteType !== 'EVENT_ORG') {
-        // Best-effort: settings row may not exist yet for a brand-new tenant
-        await applySiteTypePresetsForTenant(data.tenantId, data.siteType);
-      }
       redirect('/admin/tenant-management/organizations');
     } catch (error) {
       console.error('Error creating organization:', error);
@@ -88,10 +83,10 @@ export default function NewTenantOrganizationPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Create New Organization</h1>
         <div className="mt-4">
-          <AdminTenantIdBanner contextLine="Creating a new organization — Tenant ID is generated when you save the form below." />
+          <AdminTenantIdBanner contextLine="Creating an organization. Website tenant ids are added later on tenant settings." />
         </div>
         <p className="mt-2 text-sm text-gray-600">
-          Add a new tenant organization to the system. Tenant IDs are auto-generated from your name prefix plus the next sequence number (e.g. ford_motors_1).
+          Add a client organization. A website is a tenant settings row created after this organization exists.
         </p>
       </div>
 
@@ -106,11 +101,11 @@ export default function NewTenantOrganizationPage() {
             onSubmit={handleSubmit}
             initialData={{
               organizationName: '',
-              tenantId: '',
               domain: '',
               description: '',
               contactEmail: '',
               contactPhone: '',
+              contactPersonName: '',
               addressLine1: '',
               addressLine2: '',
               city: '',

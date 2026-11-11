@@ -5,7 +5,6 @@ import { fetchTenantSettingsByTenantId } from '@/app/admin/tenant-management/set
 import Link from 'next/link';
 import { FaArrowLeft, FaEdit, FaCog, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import { TenantOrganizationDTO, TenantSettingsDTO } from '@/app/admin/tenant-management/types';
-import { extractTenantIdSequence, getTenantIdPrefix } from '@/lib/tenantIdGeneration';
 import { formatOrganizationAddress } from '@/lib/formatOrganizationAddress';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
@@ -55,7 +54,8 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
 
     // Fetch associated settings
     try {
-      settings = await fetchTenantSettingsByTenantId(organization.tenantId);
+      const firstWebsiteTenantId = organization.websiteTenantIds?.[0];
+      settings = firstWebsiteTenantId ? await fetchTenantSettingsByTenantId(firstWebsiteTenantId) : null;
     } catch (settingsError) {
       console.warn('Settings not found for organization:', settingsError);
       // Settings are optional, so we continue without them
@@ -123,12 +123,8 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
     );
   }
 
-  const tenantIdSequence = organization?.tenantId
-    ? extractTenantIdSequence(organization.tenantId)
-    : null;
-  const tenantIdPrefix = organization?.tenantId
-    ? getTenantIdPrefix(organization.tenantId)
-    : null;
+  const websiteTenantIds = organization.websiteTenantIds || [];
+  const websiteTenantLabel = websiteTenantIds.length ? websiteTenantIds.join(', ') : 'No website yet';
 
   const identity = organization
     ? resolveTenantOrganizationIdentity(organization, settings)
@@ -212,7 +208,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
             </div>
             <div className="mt-4">
               <AdminTenantIdBanner
-                tenantId={organization?.tenantId}
+                tenantId={websiteTenantLabel}
                 contextLine="Organization profile and linked tenant settings for this tenant."
               />
             </div>
@@ -221,9 +217,9 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
             </p>
           </div>
           <div className="flex gap-3">
-            {organization?.tenantId && (
+            {websiteTenantIds[0] && (
               <Link
-                href={`/admin/platform-billing/${encodeURIComponent(organization.tenantId)}`}
+                href={`/admin/platform-billing/${encodeURIComponent(websiteTenantIds[0])}`}
                 className="flex-shrink-0 h-14 rounded-xl bg-amber-100 hover:bg-amber-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
                 title="Platform billing"
                 aria-label="Platform billing"
@@ -271,26 +267,10 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
         </div>
         <div>
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            Tenant ID
+            Website tenant IDs
           </div>
           <div className="font-mono font-bold text-blue-800 text-sm break-all">
-            {organization?.tenantId || '—'}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            ID Sequence
-          </div>
-          <div className="font-mono font-bold text-blue-700 text-lg">
-            {tenantIdSequence !== null ? tenantIdSequence : 'Not parsed'}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            Tenant ID Prefix
-          </div>
-          <div className="font-mono font-semibold text-gray-800 text-sm break-all">
-            {tenantIdPrefix || 'Not parsed'}
+            {websiteTenantLabel}
           </div>
         </div>
       </div>
@@ -318,30 +298,12 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">
-                    Tenant ID
+                    Website tenant IDs
                   </dt>
                   <dd className="mt-1">
                     <span className="inline-block font-mono font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-sm break-all">
-                      {organization?.tenantId}
+                      {websiteTenantLabel}
                     </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">
-                    Tenant ID Sequence
-                  </dt>
-                  <dd className="mt-1">
-                    <span className="inline-block font-mono font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-sm">
-                      {tenantIdSequence !== null ? tenantIdSequence : 'Not parsed'}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">
-                    Tenant ID Prefix
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900 font-mono">
-                    {tenantIdPrefix || 'Not parsed'}
                   </dd>
                 </div>
                 <div>
@@ -366,6 +328,14 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
                     {organization?.contactPhone || 'Not provided'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Contact person name
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {organization?.contactPersonName || 'Pending'}
                   </dd>
                 </div>
                 <div>
@@ -510,7 +480,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 </Link>
               ) : (
                 <Link
-                  href={`/admin/tenant-management/settings/new?tenantId=${organization?.tenantId}`}
+                  href={`/admin/tenant-management/settings/new?organizationId=${organization?.id}`}
                   className="w-full flex-shrink-0 h-14 rounded-xl bg-green-100 hover:bg-green-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105"
                   title="Create Settings"
                   aria-label="Create Settings"
@@ -521,11 +491,11 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                   <span className="font-semibold text-green-700">Create Settings</span>
                 </Link>
               )}
-              {organization?.id != null && organization.tenantId && (
+              {organization?.id != null && (
                 <CascadeDeleteOrganizationButton
                   organizationId={organization.id}
-                  tenantId={organization.tenantId}
-                  organizationName={organization.organizationName || organization.tenantId}
+                  tenantId={websiteTenantIds[0] || organization.organizationName}
+                  organizationName={organization.organizationName}
                 />
               )}
             </div>
@@ -586,7 +556,7 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                     No settings configured for this organization
                   </p>
                   <Link
-                    href={`/admin/tenant-management/settings/new?tenantId=${organization?.tenantId}`}
+                    href={`/admin/tenant-management/settings/new?organizationId=${organization?.id}`}
                     className="text-blue-600 hover:text-blue-500 text-sm font-medium"
                   >
                     Create Settings

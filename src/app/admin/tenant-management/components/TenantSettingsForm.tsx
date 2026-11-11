@@ -39,7 +39,7 @@ import {
 } from '@/lib/integrations/validateTenantIntegrationsForSave';
 
 interface TenantSettingsFormProps {
-  initialData?: TenantSettingsDTO;
+  initialData?: TenantSettingsDTO & { organizationId?: number };
   onSubmit: (data: TenantSettingsFormDTO) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -123,6 +123,7 @@ export default function TenantSettingsForm({
   } = useForm<TenantSettingsFormDTO>({
     defaultValues: {
       tenantId: initialData?.tenantId || '',
+      organizationId: initialData?.organizationId,
       repositoryUrl: initialData?.repositoryUrl || '',
       allowUserRegistration: initialData?.allowUserRegistration ?? true,
       requireAdminApproval: initialData?.requireAdminApproval ?? false,
@@ -325,6 +326,11 @@ export default function TenantSettingsForm({
         data.twilioAccountSid = '';
         data.twilioAuthToken = '';
       }
+      if (mode === 'create' && !data.organizationId) {
+        setError('organizationId', { type: 'manual', message: 'Choose an existing organization.' });
+        selectTab('general');
+        return;
+      }
       await onSubmit(data);
     } catch (error) {
       console.error('Form submission error:', error);
@@ -401,7 +407,7 @@ export default function TenantSettingsForm({
     try {
       const tenantId = tenantIdForUpload;
       const organization =
-        availableOrganizations.find((org) => org.tenantId === tenantId) ?? null;
+        availableOrganizations.find((org) => (org.websiteTenantIds || []).includes(tenantId)) ?? null;
       const settingsSnapshot = {
         ...(initialData || {}),
         ...watchedValues,
@@ -856,7 +862,7 @@ export default function TenantSettingsForm({
                 editable
                 organization={
                   initialData?.tenantOrganization ||
-                  availableOrganizations.find((org) => org.tenantId === initialData?.tenantId) ||
+                  availableOrganizations.find((org) => (org.websiteTenantIds || []).includes(initialData?.tenantId || '')) ||
                   null
                 }
               />
@@ -875,19 +881,42 @@ export default function TenantSettingsForm({
 
             {/* Tenant Selection (for create mode) */}
             {mode === 'create' && (
-              <div>
-                <input
-                  type="hidden"
-                  {...register('tenantId', { required: 'Please select a tenant organization' })}
-                />
-                <TenantOrganizationSearchSelect
-                  value={watch('tenantId') || ''}
-                  onChange={(tenantId) =>
-                    setValue('tenantId', tenantId, { shouldValidate: true, shouldDirty: true })
-                  }
-                  initialOrganizations={availableOrganizations}
-                  error={errors.tenantId?.message}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="organizationId">
+                    Organization *
+                  </label>
+                  <input type="hidden" {...register('organizationId', { required: 'Choose an existing organization.', valueAsNumber: true })} />
+                  <TenantOrganizationSearchSelect
+                    value={watch('organizationId') ? String(watch('organizationId')) : ''}
+                    onChange={(organizationId) =>
+                      setValue('organizationId', Number(organizationId), { shouldValidate: true, shouldDirty: true })
+                    }
+                    initialOrganizations={availableOrganizations}
+                    error={errors.organizationId?.message}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="tenantId">
+                    Website tenant ID *
+                  </label>
+                  <input
+                    id="tenantId"
+                    type="text"
+                    {...register('tenantId', {
+                      required: 'Enter the website tenant id.',
+                      pattern: {
+                        value: /^[a-z0-9]+(?:_[a-z0-9]+)*$/,
+                        message: 'Use lowercase letters, numbers, and underscores.',
+                      },
+                    })}
+                    className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base font-mono"
+                    placeholder="example_school_1"
+                  />
+                  {errors.tenantId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.tenantId.message}</p>
+                  )}
+                </div>
               </div>
             )}
 

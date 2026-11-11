@@ -8,14 +8,14 @@ import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
 import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 
 interface PageProps {
-  searchParams: Promise<{ tenantId?: string }> | { tenantId?: string };
+  searchParams: Promise<{ tenantId?: string; organizationId?: string }> | { tenantId?: string; organizationId?: string };
 }
 
 export default async function NewTenantSettingsPage({ searchParams }: PageProps) {
   const resolvedSearchParams =
-    typeof (searchParams as Promise<{ tenantId?: string }>).then === 'function'
-      ? await (searchParams as Promise<{ tenantId?: string }>)
-      : (searchParams as { tenantId?: string });
+    typeof (searchParams as Promise<{ tenantId?: string; organizationId?: string }>).then === 'function'
+      ? await (searchParams as Promise<{ tenantId?: string; organizationId?: string }>)
+      : (searchParams as { tenantId?: string; organizationId?: string });
 
   const access = await getCurrentAdminAccess();
   const initialTenantId = resolvedSearchParams.tenantId?.trim();
@@ -24,7 +24,7 @@ export default async function NewTenantSettingsPage({ searchParams }: PageProps)
       { page: 0, pageSize: 1 },
       { tenantId: initialTenantId }
     ).catch(() => null);
-    if (existing && !existing.data.some((org) => org.tenantId === initialTenantId)) {
+    if (existing && !existing.data.some((org) => (org.websiteTenantIds || []).includes(initialTenantId))) {
       return (
         <AdminRecordMissing
           title="This tenant is no longer available"
@@ -109,7 +109,7 @@ export default async function NewTenantSettingsPage({ searchParams }: PageProps)
           </div>
         ) : null}
         <p className={`text-sm text-gray-600 ${initialTenantId ? 'mt-2' : 'mt-2'}`}>
-          Configure settings for a tenant organization. To add a new tenant with an auto-generated ID, create the organization first under{' '}
+          Configure website settings for an existing organization. Create the organization first under{' '}
           <Link href="/admin/tenant-management/organizations/new" className="text-blue-600 hover:text-blue-800 font-medium">
             Organizations → New Organization
           </Link>
@@ -126,6 +126,7 @@ export default async function NewTenantSettingsPage({ searchParams }: PageProps)
           <NewTenantSettingsClient
             organizations={organizations}
             initialTenantId={resolvedSearchParams.tenantId}
+            initialOrganizationId={resolvedSearchParams.organizationId}
             canEditRepositoryUrl={access.isPlatformSuperAdmin}
           />
         </div>

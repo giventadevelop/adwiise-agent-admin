@@ -69,7 +69,7 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
       { page: 0, pageSize: 1 },
       { tenantId }
     );
-    const match = orgs.data.find((org) => org.tenantId === tenantId);
+    const match = orgs.data.find((org) => (org.websiteTenantIds || []).includes(tenantId));
     if (!match) {
       return (
         <AdminRecordMissing

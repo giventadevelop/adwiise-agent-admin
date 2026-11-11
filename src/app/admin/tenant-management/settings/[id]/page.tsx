@@ -66,7 +66,7 @@ export default async function TenantSettingsViewPage({ params, searchParams }: P
       { page: 0, pageSize: 1 },
       { tenantId }
     );
-    const matchedOrganization = organizations.data.find((org) => org.tenantId === tenantId) ?? null;
+    const matchedOrganization = organizations.data.find((org) => (org.websiteTenantIds || []).includes(tenantId)) ?? null;
     if (!matchedOrganization) {
       return (
         <AdminRecordMissing

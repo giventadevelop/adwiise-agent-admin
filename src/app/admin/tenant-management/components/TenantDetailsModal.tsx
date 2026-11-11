@@ -83,7 +83,7 @@ export default function TenantDetailsModal({
                     {organization.organizationName}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    Tenant ID: {organization.tenantId}
+                    Website tenant IDs: {(organization.websiteTenantIds || []).join(', ') || 'none'}
                   </p>
                 </div>
               </div>
@@ -141,7 +141,7 @@ export default function TenantDetailsModal({
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Tenant ID</label>
-                      <p className="text-sm text-gray-900 font-mono">{organization.tenantId}</p>
+                      <p className="text-sm text-gray-900 font-mono">{(organization.websiteTenantIds || []).join(', ') || 'none'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Domain</label>
@@ -154,6 +154,10 @@ export default function TenantDetailsModal({
                     <div>
                       <label className="text-sm font-medium text-gray-500">Contact Phone</label>
                       <p className="text-sm text-gray-900">{organization.contactPhone || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Contact person name</label>
+                      <p className="text-sm text-gray-900">{organization.contactPersonName || 'Pending'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Status</label>

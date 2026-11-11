@@ -333,8 +333,8 @@ export default function TenantOrganizationList({
                 </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
                   <div className="space-y-2">
-                    <div className="font-mono max-w-[180px] truncate" title={org.tenantId}>
-                      {org.tenantId}
+                    <div className="font-mono max-w-[180px] truncate" title={(org.websiteTenantIds || []).join(', ')}>
+                      {(org.websiteTenantIds || []).join(', ') || 'No website yet'}
                     </div>
                     <AdminTableActionButtons
                       viewHref={`/admin/tenant-management/organizations/${org.id}`}
