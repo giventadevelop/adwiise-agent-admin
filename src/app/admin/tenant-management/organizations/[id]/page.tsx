@@ -10,6 +10,7 @@ import CascadeDeleteOrganizationButton from '@/app/admin/tenant-management/organ
 import OrganizationActiveStatusButton from '@/app/admin/tenant-management/organizations/OrganizationActiveStatusButton';
 import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
 import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
+import OrganizationBillingScopeCard from '@/app/admin/tenant-management/organizations/OrganizationBillingScopeCard';
 
 interface PageProps {
   params: { id: string };
@@ -263,7 +264,14 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                   {monthlyChargeEnabled ? 'Enabled' : 'Not enabled'}
                 </span>
                 <span className="text-sm font-semibold text-gray-900">{monthlyChargeLabel}</span>
+                <span className="text-sm text-gray-700">{organization.billingScope === 'ORGANIZATION' || monthlyChargeEnabled ? 'Organization' : 'Per website'}</span>
               </div>
+              <OrganizationBillingScopeCard
+                organizationId={organization.id as number}
+                homeTenantId={organization.websiteTenantIds?.[0] || organization.tenantId || ''}
+                initialScope={organization.billingScope === 'ORGANIZATION' || monthlyChargeEnabled ? 'ORGANIZATION' : 'PER_TENANT'}
+                initialAmount={monthlyChargeEnabled ? monthlyChargeAmount : 0}
+              />
             </div>
           </div>
 
@@ -293,6 +301,19 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 </svg>
               </div>
               <span className="font-semibold text-indigo-700">Move a tenant ID to this organization</span>
+            </Link>
+            <Link
+              href={`/admin/tenant-management/organizations/move-between?left=${organization.id}`}
+              className="w-full flex-shrink-0 h-14 rounded-xl bg-violet-100 hover:bg-violet-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+              title="Move tenant IDs between two organizations"
+              aria-label="Move tenant IDs between two organizations"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </div>
+              <span className="font-semibold text-violet-700">Move tenant IDs between two organizations</span>
             </Link>
           </div>
 

@@ -21,6 +21,7 @@ const emptyPlan = (): PlatformBillingPlanDTO => ({
   code: '',
   billingMode: 'BOTH',
   billingInterval: 'MONTH',
+  intervalCount: 1,
   listPriceUsd: 0,
   published: false,
   featureSummary: '',

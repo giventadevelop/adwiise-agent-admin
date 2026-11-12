@@ -1,6 +1,9 @@
 'use server';
 
 import { assertPlatformSuperAdmin } from '@/app/admin/adminAccessServer';
+import { after } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { appendAssignmentEvent } from '@/lib/platformBilling/chargeLedger';
 import { fetchTenantProductBillings, saveTenantProductBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { fetchTenantSettingsByTenantId } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import { getBackendApiUrl } from '@/lib/env';
@@ -272,21 +275,135 @@ async function uncoverTenant(tenantId: string, organizationId: number): Promise<
 
 async function coverTenantWhenOrganizationIsCharged(organizationId: number, tenantId: string): Promise<void> {
   const view = await loadOrganizationWebsites(organizationId);
+  const organization = await fetchTenantOrganization(view.clientId);
   const fee = await loadOrganizationFlatFee(view.clientId, view.homeTenantId);
-  if (!fee.chargeEnabled || fee.monthlyUsd == null || fee.monthlyUsd <= 0) return;
+  const organizationMode = organization?.billingScope === 'ORGANIZATION' || fee.chargeEnabled;
+  if (!organizationMode || fee.monthlyUsd == null || fee.monthlyUsd <= 0) return;
   await markTenantCovered(tenantId, view.clientId);
 }
 
-export async function loadOrganizationFlatFee(organizationId: number, _homeTenantId: string): Promise<OrganizationFlatFee> {
+export async function loadOrganizationFlatFee(organizationId: number, homeTenantId: string): Promise<OrganizationFlatFee> {
   await assertPlatformSuperAdmin();
   const organization = await fetchTenantOrganization(organizationId);
   const monthlyUsd = organization?.monthlyFeeUsd != null ? Number(organization.monthlyFeeUsd) : null;
+  const organizationMode = organization?.billingScope === 'ORGANIZATION' || (monthlyUsd != null && monthlyUsd > 0);
+  const rows = homeTenantId.trim() ? await fetchTenantProductBillings(homeTenantId.trim()).catch(() => []) : [];
+  const charge = findOrganizationCharge(rows, organizationId);
   return {
-    billingId: null,
-    monthlyUsd,
-    chargeEnabled: monthlyUsd != null && monthlyUsd > 0,
-    status: monthlyUsd != null && monthlyUsd > 0 ? 'PAYMENT_DUE' : null,
+    billingId: charge?.id ?? null,
+    monthlyUsd: organizationMode ? monthlyUsd : null,
+    chargeEnabled: organizationMode && monthlyUsd != null && monthlyUsd > 0,
+    status: charge?.status || (organizationMode ? 'PAYMENT_DUE' : null),
   };
+}
+
+async function writeOrganizationCharge(input: {
+  organizationId: number;
+  homeTenantId: string;
+  monthlyUsd: number;
+}): Promise<OrganizationFlatFee> {
+  const homeTenantId = input.homeTenantId.trim();
+  if (!homeTenantId) {
+    throw new Error('This organization needs a website tenant before it can be billed as one subscription.');
+  }
+  const note = organizationChargeNote(input.organizationId);
+  await patchTenantOrganization(input.organizationId, {
+    monthlyFeeUsd: input.monthlyUsd,
+    billingScope: 'ORGANIZATION',
+  });
+  const rows = await fetchTenantProductBillings(homeTenantId);
+  const existing = findOrganizationCharge(rows, input.organizationId);
+  const saved = await saveTenantProductBilling({
+    ...(existing || { tenantId: homeTenantId, product: 'RETAIL', graceDays: 14, billingMode: 'RECURRING' }),
+    tenantId: homeTenantId,
+    product: 'RETAIL',
+    chargeEnabled: true,
+    status: existing?.status === 'ACTIVE' || existing?.status === 'PAST_DUE' ? existing.status : 'PAYMENT_DUE',
+    customFeeUsd: input.monthlyUsd,
+    billingMode: 'RECURRING',
+    billingInterval: 'MONTH',
+    intervalCount: 1,
+    notes: withNoteLine(existing?.notes, note),
+  });
+  const tenantIds = await organizationTenantIds(input.organizationId, homeTenantId);
+  for (const tenantId of tenantIds) {
+    await markTenantCovered(tenantId, input.organizationId);
+  }
+  const { userId } = await auth();
+  await appendAssignmentEvent({
+    organizationId: input.organizationId,
+    tenantId: homeTenantId,
+    product: 'RETAIL',
+    newAmountUsd: input.monthlyUsd,
+    actorUserId: userId,
+    reason: 'Set organization billing to one subscription',
+  }).catch(() => undefined);
+  return {
+    billingId: saved.id ?? null,
+    monthlyUsd: input.monthlyUsd,
+    chargeEnabled: true,
+    status: saved.status || 'PAYMENT_DUE',
+  };
+}
+
+export async function setOrganizationBillingScope(input: {
+  organizationId: number;
+  homeTenantId: string;
+  scope: 'ORGANIZATION' | 'PER_TENANT';
+  monthlyUsd?: number | null;
+}): Promise<OrganizationFlatFee> {
+  await assertPlatformSuperAdmin();
+  if (input.scope === 'ORGANIZATION') {
+    const amount = Math.round(Number(input.monthlyUsd) * 100) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Enter a monthly amount greater than zero to bill the organization once.');
+    }
+    return writeOrganizationCharge({
+      organizationId: input.organizationId,
+      homeTenantId: input.homeTenantId,
+      monthlyUsd: amount,
+    });
+  }
+  const homeTenantId = input.homeTenantId.trim();
+  const rows = homeTenantId ? await fetchTenantProductBillings(homeTenantId).catch(() => []) : [];
+  const existing = findOrganizationCharge(rows, input.organizationId);
+  if (existing?.stripeSubscriptionId) {
+    try {
+      await cancelPlatformSubscription(existing, false);
+    } catch (error) {
+      console.error('[organization-billing] organization subscription was not canceled', error);
+    }
+  }
+  if (existing?.id) {
+    await saveTenantProductBilling({
+      ...existing,
+      chargeEnabled: false,
+      status: 'COMPLIMENTARY',
+      customFeeUsd: null,
+      clearCustomFee: true,
+    });
+  }
+  await patchTenantOrganization(input.organizationId, {
+    monthlyFeeUsd: null,
+    billingScope: 'PER_TENANT',
+    stripeSubscriptionId: null,
+  });
+  if (homeTenantId) {
+    const tenantIds = await organizationTenantIds(input.organizationId, homeTenantId).catch(() => [homeTenantId]);
+    for (const tenantId of tenantIds) {
+      await uncoverTenant(tenantId, input.organizationId);
+    }
+  }
+  const { userId } = await auth();
+  await appendAssignmentEvent({
+    organizationId: input.organizationId,
+    tenantId: homeTenantId || null,
+    product: 'RETAIL',
+    newAmountUsd: null,
+    actorUserId: userId,
+    reason: 'Set organization billing to each website separately',
+  }).catch(() => undefined);
+  return { billingId: null, monthlyUsd: null, chargeEnabled: false, status: 'COMPLIMENTARY' };
 }
 
 export async function saveOrganizationFlatFee(input: {
@@ -299,13 +416,18 @@ export async function saveOrganizationFlatFee(input: {
   if (!Number.isFinite(amount) || amount < 0) {
     throw new Error('Enter a monthly amount of zero or more.');
   }
-  await patchTenantOrganization(input.organizationId, {
-    monthlyFeeUsd: amount <= 0 ? null : amount,
-  });
   if (amount <= 0) {
-    return { billingId: null, monthlyUsd: null, chargeEnabled: false, status: 'COMPLIMENTARY' };
+    return setOrganizationBillingScope({
+      organizationId: input.organizationId,
+      homeTenantId: input.homeTenantId,
+      scope: 'PER_TENANT',
+    });
   }
-  return { billingId: null, monthlyUsd: amount, chargeEnabled: true, status: 'PAYMENT_DUE' };
+  return writeOrganizationCharge({
+    organizationId: input.organizationId,
+    homeTenantId: input.homeTenantId,
+    monthlyUsd: amount,
+  });
 }
 
 export type TenantMovePreview = {
@@ -336,8 +458,21 @@ export async function lookupTenantForMove(tenantId: string): Promise<TenantMoveP
     settingsId: row.id,
     tenantId: row.tenantId,
     organizationId,
-    organizationName: organization?.organizationName || `Organization #${organizationId}`,
+    organizationName: organization?.organizationName?.trim() || `#${organizationId}`,
   };
+}
+
+async function settleMoveBilling(
+  tenantId: string,
+  previousOrganizationId: number,
+  destinationOrganizationId: number,
+): Promise<void> {
+  await uncoverTenant(tenantId, previousOrganizationId).catch((error) => {
+    console.error('[organization-billing] previous cover note was not removed', error);
+  });
+  await coverTenantWhenOrganizationIsCharged(destinationOrganizationId, tenantId).catch((error) => {
+    console.error('[organization-billing] moved tenant was not marked covered', error);
+  });
 }
 
 export async function reassignTenantToOrganization(tenantId: string, destinationOrganizationId: number): Promise<void> {
@@ -357,10 +492,12 @@ export async function reassignTenantToOrganization(tenantId: string, destination
   if (!response.ok) {
     throw new Error(await readError(response, 'Could not move the tenant ID'));
   }
-  await uncoverTenant(current.tenantId, current.organizationId).catch((error) => {
-    console.error('[organization-billing] previous cover note was not removed', error);
-  });
-  await coverTenantWhenOrganizationIsCharged(destinationOrganizationId, current.tenantId).catch((error) => {
-    console.error('[organization-billing] moved tenant was not marked covered', error);
-  });
+  await Promise.race([
+    response.text().catch(() => ''),
+    new Promise((resolve) => setTimeout(resolve, 1000)),
+  ]);
+  void response.body?.cancel().catch(() => undefined);
+  const movedTenantId = current.tenantId;
+  const previousOrganizationId = current.organizationId;
+  after(() => settleMoveBilling(movedTenantId, previousOrganizationId, destinationOrganizationId));
 }

@@ -95,6 +95,25 @@ function dollarsToCents(amount: number): number {
   return Math.round(amount * 100);
 }
 
+function stripeSecretKey(): string {
+  return (
+    process.env.STRIPE_SECRET_KEY ||
+    process.env.AMPLIFY_STRIPE_SECRET_KEY ||
+    process.env.AWS_AMPLIFY_STRIPE_SECRET_KEY ||
+    ''
+  );
+}
+
+function stripeRecurring(interval: string, intervalCount: number): { interval: 'day' | 'week' | 'month' | 'year'; interval_count: number } {
+  const normalized = interval.toUpperCase();
+  const count = Number.isFinite(intervalCount) && intervalCount >= 1 ? Math.floor(intervalCount) : 1;
+  if ((normalized === 'DAY' || normalized === 'WEEK') && !stripeSecretKey().startsWith('sk_test_')) {
+    throw new Error('Day and week billing intervals are only allowed while the Stripe secret key is a test key.');
+  }
+  const mapped = normalized === 'DAY' ? 'day' : normalized === 'WEEK' ? 'week' : normalized === 'YEAR' ? 'year' : 'month';
+  return { interval: mapped, interval_count: count };
+}
+
 export async function createPlatformCheckout(input: {
   billing: TenantProductBillingDTO;
   plan: PlatformBillingPlanDTO | null;
@@ -123,7 +142,12 @@ export async function createPlatformCheckout(input: {
 
   const customFee = billing.customFeeUsd != null && Number(billing.customFeeUsd) > 0;
   const quantity = billing.product === 'GAS_STATION' && !customFee ? await countBillableLocations(billing.tenantId) : 1;
-  await patchBilling(billing, { locationQuantity: quantity, billingMode: mode });
+  await patchBilling(billing, {
+    locationQuantity: quantity,
+    billingMode: mode,
+    billingInterval: billing.billingInterval || plan?.billingInterval || null,
+    intervalCount: billing.intervalCount || plan?.intervalCount || 1,
+  });
 
   let priceId = customFee ? null : plan?.stripePriceId || billing.stripePriceId || null;
   if (!priceId) {
@@ -132,8 +156,10 @@ export async function createPlatformCheckout(input: {
     }
     const amount = customFee ? Number(billing.customFeeUsd) : Number(plan?.listPriceUsd ?? 0);
     if (!amount || amount <= 0) throw new Error('Set a catalog price or a custom fee before charging.');
-    const interval = (billing.billingMode === 'ONE_TIME' ? plan?.billingInterval : plan?.billingInterval) || 'MONTH';
-    const portfolioFee = (billing.notes || '').includes('portfolio-flat:');
+    const interval = billing.billingInterval || plan?.billingInterval || 'MONTH';
+    const intervalCount = billing.intervalCount || plan?.intervalCount || 1;
+    const recurring = mode === 'RECURRING' ? stripeRecurring(interval, intervalCount) : null;
+    const portfolioFee = (billing.notes || '').includes('organization-flat:') || (billing.notes || '').includes('portfolio-flat:');
     const price = await stripe.prices.create({
       currency: 'usd',
       unit_amount: dollarsToCents(amount),
@@ -144,9 +170,7 @@ export async function createPlatformCheckout(input: {
             ? `Custom ${billing.product} fee`
             : plan?.name || 'Platform fee',
       },
-      ...(mode === 'RECURRING'
-        ? { recurring: { interval: interval === 'YEAR' ? 'year' : 'month' } }
-        : {}),
+      ...(recurring ? { recurring } : {}),
     });
     priceId = price.id;
     if (customFee) await patchBilling(billing, { stripePriceId: priceId });

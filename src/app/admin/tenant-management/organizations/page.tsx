@@ -27,6 +27,21 @@ export default async function TenantOrganizationsPage() {
                 Manage company organization records (contact and address). Website Tenant IDs and
                 hostnames are provisioned from Onboarding.
               </p>
+              <div className="mt-4">
+                <Link
+                  href="/admin/tenant-management/organizations/search"
+                  className="inline-flex flex-shrink-0 h-14 rounded-xl bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-900 dark:hover:bg-cyan-800 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+                  title="Search organizations"
+                  aria-label="Search organizations"
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-200 dark:bg-cyan-700 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-cyan-700 dark:text-cyan-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-cyan-800 dark:text-cyan-100">Search organizations</span>
+                </Link>
+              </div>
 
               {/* Primary path: create Tenant ID + hostname via onboarding */}
               <div

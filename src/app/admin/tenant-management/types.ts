@@ -25,9 +25,11 @@ export interface TenantOrganizationDTO {
   subscriptionStartDate?: string; // YYYY-MM-DD
   subscriptionEndDate?: string;   // YYYY-MM-DD
   monthlyFeeUsd?: number | null;
+  /** ORGANIZATION bills every website once. PER_TENANT bills each website on its own. */
+  billingScope?: 'ORGANIZATION' | 'PER_TENANT' | null;
   stripeCustomerId?: string;
   /** Stripe subscription id for the tenant platform subscription (gas station billing) */
-  stripeSubscriptionId?: string;
+  stripeSubscriptionId?: string | null;
   isActive?: boolean;
   description?: string | null;
   addressLine1?: string | null;

@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import AdminNavigation from '@/components/AdminNavigation';
 import { saveTenantProductBilling, setLocationIncludedInBilling } from '@/app/admin/platform-billing/ApiServerActions';
+import { isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
 import { YellowCheckbox } from '@/components/retail/RetailUi';
 import type { RetailLocationDTO } from '@/types/retail';
-import type { PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
+import type { PlatformBillingChargeDTO, PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 const money = (amount?: number | null) =>
   new Intl.NumberFormat('en-US', {
@@ -25,6 +26,7 @@ export default function BillingDesk({
   locations,
   lockedNotice,
   complimentaryPlan = false,
+  charges = [],
 }: {
   tenantId: string;
   canEditSwitch: boolean;
@@ -33,6 +35,7 @@ export default function BillingDesk({
   locations: RetailLocationDTO[];
   lockedNotice?: boolean;
   complimentaryPlan?: boolean;
+  charges?: PlatformBillingChargeDTO[];
 }) {
   const [rows, setRows] = useState(initialRows);
   const [locationRows, setLocationRows] = useState(locations);
@@ -120,13 +123,15 @@ export default function BillingDesk({
       {message && <p className="text-sm text-blue-800">{message}</p>}
       {PRODUCTS.map((product) => {
         const row = rowFor(product);
-        const productPlans = plans.filter((plan) => plan.product === product && plan.published !== false);
+        const covered = isCoveredByPortfolio(row.notes);
+        const productPlans = plans.filter((plan) => plan.product === product && (plan.published !== false || plan.id === row.platformPlanId));
         return (
           <section key={product} className="bg-card rounded-lg sacred-shadow p-6 space-y-4">
             <h2 className="text-xl font-semibold">{product === 'EVENT_SITE' ? 'Event site' : 'Gas stations'}</h2>
             <p className="text-sm">
               Status <strong>{row.status || 'COMPLIMENTARY'}</strong>
               {row.customFeeUsd != null ? ` · custom fee ${money(row.customFeeUsd)}` : ''}
+              {row.graceEndsAt ? ` · grace ends ${new Date(row.graceEndsAt).toLocaleDateString()}` : ''}
               {row.locationQuantity != null ? ` · quantity ${row.locationQuantity}` : ''}
             </p>
             {canEditSwitch && (
@@ -199,6 +204,11 @@ export default function BillingDesk({
                 </button>
               </div>
             )}
+            {covered ? (
+              <p className="text-sm text-emerald-800">
+                This website is covered by its organization. The organization subscription is the one that is paid and canceled.
+              </p>
+            ) : (
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
@@ -236,20 +246,28 @@ export default function BillingDesk({
                   Update location count
                 </button>
               )}
+              {row.stripeSubscriptionId && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700"
+                  onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}
+                >
+                  Cancel at period end
+                </button>
+              )}
               {canEditSwitch && row.stripeSubscriptionId && (
                 <button
                   type="button"
                   disabled={busy}
                   className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700"
-                  onClick={() => {
-                    const cancelNow = window.confirm('Cancel the Stripe subscription now? Choose Cancel to stop at the period end instead.');
-                    post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow });
-                  }}
+                  onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}
                 >
-                  Turn charging off
+                  Cancel now
                 </button>
               )}
             </div>
+            )}
             {!complimentaryPlan && !row.chargeEnabled && <p className="text-sm text-muted-foreground">Switch is off. Stripe is not called.</p>}
             <p className="text-sm text-muted-foreground">
               Pay opens Stripe Checkout with a card or a US bank account. Bank debit appears when ACH Direct Debit is active on the Stripe account.
@@ -262,6 +280,32 @@ export default function BillingDesk({
           </section>
         );
       })}
+      {rows.filter((row) => row.product === 'RETAIL').map((row) => (
+        <section key={row.id || 'retail'} className="bg-card rounded-lg sacred-shadow p-6 space-y-3">
+          <h2 className="text-xl font-semibold">Organization subscription</h2>
+          <p className="text-sm">Status <strong>{row.status || 'COMPLIMENTARY'}</strong> · {money(row.customFeeUsd)} per month</p>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" disabled={busy || !row.id || !row.chargeEnabled} className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-4 font-semibold text-green-700 disabled:opacity-50" onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'RECURRING' })}>Pay monthly</button>
+            <button type="button" disabled={busy} className="h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-4 font-semibold text-indigo-700" onClick={() => post('/api/platform-billing/portal', { tenantId })}>Payment methods</button>
+            {row.stripeSubscriptionId && <button type="button" disabled={busy} className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}>Cancel at period end</button>}
+            {canEditSwitch && row.stripeSubscriptionId && <button type="button" disabled={busy} className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}>Cancel now</button>}
+          </div>
+        </section>
+      ))}
+      <section className="bg-card rounded-lg sacred-shadow p-6">
+        <h2 className="text-xl font-semibold mb-3">Charges</h2>
+        {charges.length === 0 ? <p className="text-sm text-muted-foreground">No platform charges are recorded for this website yet.</p> : (
+          <ul className="space-y-2 text-sm">
+            {charges.map((charge) => (
+              <li key={charge.id || charge.stripeEventId} className="flex flex-wrap justify-between gap-2 border-b border-gray-200 py-2">
+                <span>{charge.status} · {money(charge.amountUsd)}</span>
+                <span>{charge.occurredAt ? new Date(charge.occurredAt).toLocaleString() : ''}</span>
+                <span className="text-gray-600">{charge.stripeInvoiceId || charge.stripeSubscriptionId || ''}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       {locationRows.length > 0 && (
         <section className="bg-card rounded-lg sacred-shadow p-6">
           <h2 className="text-xl font-semibold mb-3">Locations counted in the location fee</h2>

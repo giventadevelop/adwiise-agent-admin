@@ -1,11 +1,9 @@
-import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
-import { fetchTenantOrganization, updateTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import AdminRecordMissing, { isMissingRecordError } from '@/components/admin/AdminRecordMissing';
-import TenantOrganizationForm from '@/app/admin/tenant-management/components/TenantOrganizationForm';
+import OrganizationEditClient from './OrganizationEditClient';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
-import { TenantOrganizationDTO, TenantOrganizationFormDTO } from '@/app/admin/tenant-management/types';
+import { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
@@ -49,18 +47,6 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
     }
     console.error('Error fetching organization:', err);
     error = 'The organization could not be loaded. Refresh the page, or go back to the list.';
-  }
-
-  async function handleSubmit(data: TenantOrganizationFormDTO) {
-    'use server';
-
-    try {
-      await updateTenantOrganization(organizationId, data);
-      redirect(`/admin/tenant-management/organizations/${organizationId}`);
-    } catch (error) {
-      console.error('Error updating organization:', error);
-      throw error;
-    }
   }
 
   if (error) {
@@ -203,11 +189,7 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
           <h2 className="text-lg font-medium text-gray-900">Company information</h2>
         </div>
         <div className="px-6 py-6">
-          <TenantOrganizationForm
-            mode="edit"
-            onSubmit={handleSubmit}
-            initialData={organization ?? undefined}
-          />
+          <OrganizationEditClient organizationId={organizationId} organization={organization} />
         </div>
       </div>
 

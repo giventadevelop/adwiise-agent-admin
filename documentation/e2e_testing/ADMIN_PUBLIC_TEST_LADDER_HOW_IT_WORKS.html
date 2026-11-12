@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="How the admin and public TestSprite ladder runs: Playwright Chromium, live tenant data, route inventory, CRUD clicks, and smoke crawls.">
+  <title>Admin and Public Test Ladder — How It Works</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f7fbff;
+    }
+    h1 {
+      font-size: 2.5em;
+      color: #0d3b66;
+      border-bottom: 3px solid #0066cc;
+      padding-bottom: 10px;
+    }
+    h2 {
+      font-size: 1.8em;
+      color: #0d3b66;
+      border-left: 4px solid #0066cc;
+      padding-left: 15px;
+      margin-top: 36px;
+    }
+    h3 { font-size: 1.4em; color: #333; }
+    h4 { font-size: 1.2em; color: #555; }
+    a { color: #0052a3; }
+    a:focus, button:focus, input:focus {
+      outline: 3px solid #0066cc;
+      outline-offset: 2px;
+    }
+
+    .toc {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+    }
+    .toc h2 { border: none; margin: 0 0 8px; padding: 0; font-size: 1.4em; }
+    .toc ol { margin: 0; }
+    .toc a { color: #0052a3; }
+
+    .section-intro {
+      background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%);
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+    }
+    .section-container {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+    }
+    .section-container.parameters {
+      background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+      border-left-color: #ff9800;
+    }
+    .section-container.output {
+      background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%);
+      border-left-color: #28a745;
+    }
+    .section-container.usage {
+      background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%);
+      border-left-color: #9c27b0;
+    }
+    .section-header {
+      background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+      color: white;
+      padding: 12px 20px;
+      margin: -20px -20px 20px -20px;
+      border-radius: 8px 8px 0 0;
+      font-size: 1.2em;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+    .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+    .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+
+    .info, .warning, .success, .error {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 14px 0;
+    }
+    .info { background: #d1ecf1; border-left: 4px solid #0c5460; }
+    .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+    .success { background: #d4edda; border-left: 4px solid #28a745; }
+    .error { background: #f8d7da; border-left: 4px solid #dc3545; }
+    .info code, .info .code-highlight,
+    .warning code, .warning .code-highlight,
+    .success code, .success .code-highlight,
+    .error code, .error .code-highlight,
+    .section-intro code,
+    .parameters-list code {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+      font-family: 'Courier New', monospace;
+    }
+
+    code, .code-highlight {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    .script-name {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      display: inline-block;
+      box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+      border: none;
+    }
+    pre, .code-block {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 15px;
+      border-radius: 5px;
+      border: 1px solid #b8d4e3;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+    pre code, .code-block code {
+      background: transparent;
+      color: #0d3b66;
+      padding: 0;
+      border: none;
+    }
+
+    .parameters-list {
+      background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+      border-left: 4px solid #ff9800;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin: 15px 0;
+    }
+    .parameters-list strong { color: #e65100; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 15px 0;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    th, td {
+      border: 1px solid #b8d4e3;
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+      color: white;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 0.9em;
+      letter-spacing: 0.5px;
+    }
+    tr:nth-child(even) { background-color: #f8fbfd; }
+    tr:hover { background-color: #e3f2fd; transition: background-color 0.2s ease; }
+    td code {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+      font-family: 'Courier New', monospace;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .flow-step {
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #0066cc;
+      padding: 12px;
+    }
+    .flow-step strong { display: block; color: #0052a3; margin-bottom: 6px; }
+    .flow-step.files { border-color: #2196f3; }
+    .flow-step.pages { border-color: #9c27b0; }
+    .flow-step.crud { border-color: #ff9800; }
+    .flow-step.smoke { border-color: #4caf50; }
+
+    .command-block {
+      border: 2px solid #2196f3;
+      border-radius: 10px;
+      margin: 16px 0;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+    .command-block.setup { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196f3; }
+    .command-block.advance { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #ff9800; }
+    .command-block.verify { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4caf50; }
+    .command-block.expedite { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9c27b0; }
+    .command-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.45);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .command-type { font-weight: 700; color: #0d3b66; }
+    .command-header-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .copy-button, .copy-button-template {
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-weight: bold;
+      color: #fff;
+      transition: all 0.3s ease;
+    }
+    .copy-button { background-color: #0066cc; }
+    .copy-button:hover { background-color: #0052a3; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    .copy-button-template { background-color: #6c757d; }
+    .copy-button-template:hover { background-color: #5a6268; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    .copy-button.copied, .copy-button-template.copied { background-color: #28a745; }
+    .command-parameters {
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.5);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    .command-parameters h5 { margin: 0 0 12px 0; font-size: 0.9em; color: #333; font-weight: bold; }
+    .parameter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .parameter-group.single { grid-template-columns: 1fr; }
+    .parameter-input { display: flex; flex-direction: column; gap: 4px; }
+    .parameter-input label { font-size: 0.8em; color: #555; font-weight: 600; }
+    .parameter-input input {
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    .parameter-input input:focus {
+      outline: none;
+      border-color: #0066cc;
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+    .command-content {
+      padding: 14px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.92em;
+      color: #0d3b66;
+      word-break: break-all;
+    }
+    .command-single-line {
+      margin: 0 14px 14px;
+      background: #e8f4f8;
+      color: #0d3b66;
+      border: 1px solid #b8d4e3;
+      border-radius: 4px;
+      padding: 12px 15px;
+    }
+    .command-single-line-label { color: #555; font-size: 0.8em; font-weight: 700; margin-bottom: 6px; }
+    .command-single-line code {
+      display: block;
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #0d3b66;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .flow, .parameter-group { grid-template-columns: 1fr; }
+      .command-block { font-size: 0.85em; }
+      h1 { font-size: 1.8em; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Admin and public test ladder — how it works</h1>
+    <div class="section-intro">
+      <p>
+        This page explains the Windows command that runs four Node scripts in order against a local Next.js app.
+        The browser steps use <strong>Playwright</strong> (<code class="code-highlight">playwright</code> <code class="code-highlight">^1.57.0</code>) and launch a real <strong>Chromium</strong> process.
+        They sign in through the Clerk form, open pages, click buttons, and type into fields on the live app for tenant <code class="code-highlight">tenant_demo_002</code>.
+        They do not use Cypress, Selenium, Puppeteer, Jest, or mocked API fixtures.
+      </p>
+      <p>
+        Run-the-command details also live in
+        <a href="FULL_SITE_E2E_TESTSPRITE_GUIDE.html">Full-site E2E TestSprite guide</a>
+        and <code class="script-name">TestSprite/E2E_FULL_README.md</code>.
+        The folder name TestSprite is the local suite. This ladder does not call the TestSprite cloud or MCP server.
+      </p>
+    </div>
+
+    <nav class="toc" aria-label="Table of contents">
+      <h2>Table of contents</h2>
+      <ol>
+        <li><a href="#answer">Direct answers</a></li>
+        <li><a href="#command">The command and how Windows runs it</a></li>
+        <li><a href="#stack">Libraries and technique</a></li>
+        <li><a href="#flow">The four steps</a></li>
+        <li><a href="#inventory">1. Route inventory (no browser)</a></li>
+        <li><a href="#comprehensive">2. Comprehensive admin pages</a></li>
+        <li><a href="#crud">3. CRUD on the demo tenant</a></li>
+        <li><a href="#smoke">4. Inventory smoke crawl</a></li>
+        <li><a href="#login">How login works</a></li>
+        <li><a href="#data">How test data is created</a></li>
+        <li><a href="#reports">Reports</a></li>
+        <li><a href="#watch">Watching the real browser</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="answer">Direct answers</h2>
+    <div class="section-container">
+      <div class="section-header">What kind of test this is</div>
+      <table>
+        <thead>
+          <tr><th>Question</th><th>Answer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Test type</td>
+            <td>Local end-to-end checks against a running Next.js dev server (default <code>http://localhost:3001</code>) and the real backend behind <code>/api/proxy</code>.</td>
+          </tr>
+          <tr>
+            <td>Browser library</td>
+            <td><strong>Playwright</strong>, package <code>playwright</code>. Scripts call <code>chromium.launch()</code> from <code>playwright</code>. They are custom Node ESM scripts, not <code>@playwright/test</code> spec files and not the Playwright test runner UI.</td>
+          </tr>
+          <tr>
+            <td>Real browser?</td>
+            <td>Yes. Chromium loads the real pages, runs React, and follows redirects. Default mode is <strong>headless</strong> (no window). Set <code>"headless": false</code> in <code class="script-name">auth.json</code> to watch the window.</td>
+          </tr>
+          <tr>
+            <td>Does it click buttons?</td>
+            <td>Yes, on the CRUD suite and on admin-home tiles during smoke. The comprehensive suite mostly navigates and asserts visible elements; a few pages also type into search boxes and open dialogs.</td>
+          </tr>
+          <tr>
+            <td>Fake data?</td>
+            <td>CRUD creates real rows named <code>[E2E] Demo &lt;timestamp&gt;</code> through the UI, then tries to delete that row. IDs for dynamic URLs come from live <code>/api/proxy</code> list calls. There is no in-memory mock server.</td>
+          </tr>
+          <tr>
+            <td>Payments</td>
+            <td><code>/admin/test-stripe</code> is opened as a read-only page check. The ladder does not capture a live Stripe payment.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="warning">
+        <strong>Needs a running app.</strong>
+        Start the Next app on the same port as <code>TEST_BASE_URL</code> (this command uses port <code>3001</code>) and keep the backend that <code>/api/proxy</code> calls available. The admin user in <code class="script-name">TestSprite/admin-tests/auth.json</code> must be able to sign in with email and password, and that user’s <code>user_role</code> for the tenant must be <code>ADMIN</code> or <code>SUPER_ADMIN</code>.
+      </div>
+    </div>
+
+    <h2 id="command">The command and how Windows runs it</h2>
+    <div class="section-intro">
+      <p>
+        One <code>cmd /c</code> process sets three tenant variables and the app URL, then runs four <code>node</code> scripts one after another.
+        In Windows CMD, <code>&amp;&amp;</code> runs the next command only if the previous one succeeded.
+        A single <code>&amp;</code> always runs the next command, even when the previous Node process exits with a failure.
+        That is why inventory, comprehensive admin, CRUD, and smoke are separated with <code>&amp;</code>: a failed page in the comprehensive suite does not skip CRUD or the smoke crawl.
+        The variables from <code>set</code> stay in that same CMD process, so every Node script sees them.
+      </p>
+    </div>
+
+    <div class="section-container usage">
+      <div class="section-header usage">Run the ladder</div>
+      <div class="parameters-list">
+        <p><strong>Environment variables set for every script in the chain:</strong></p>
+        <ul>
+          <li><code>TEST_TENANT_ID</code> — tenant the harness must use</li>
+          <li><code>E2E_TENANT_ID</code> — same tenant, second accepted name</li>
+          <li><code>E2E_EXPECTED_TENANT</code> — hard check; the resolved tenant must match or the CRUD and smoke scripts exit immediately</li>
+          <li><code>TEST_BASE_URL</code> — origin of the Next app, for example <code>http://localhost:3001</code></li>
+        </ul>
+      </div>
+
+      <div class="command-block advance"
+           data-command-type="advance"
+           data-command-base="cmd /c"
+           data-template-command="cmd /c &quot;set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001&quot;">
+        <div class="command-header">
+          <span class="command-type">Full ladder (inventory, comprehensive, CRUD, smoke)</span>
+          <div class="command-header-buttons">
+            <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this, 'ladder')" title="Copy template command">📄 Template</button>
+            <button type="button" class="copy-button" onclick="copyCommand(this, 'ladder')" title="Copy customized command">📋 Copy</button>
+          </div>
+        </div>
+        <div class="command-parameters">
+          <h5>🔧 Customize Parameters:</h5>
+          <div class="parameter-group">
+            <div class="parameter-input">
+              <label for="ladder-tenant">Tenant ID:</label>
+              <input type="text" id="ladder-tenant" value="tenant_demo_002" oninput="updateCommand('ladder', 'tenant', this.value)">
+            </div>
+            <div class="parameter-input">
+              <label for="ladder-port">Port:</label>
+              <input type="text" id="ladder-port" value="3001" inputmode="numeric" oninput="updateCommand('ladder', 'port', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="command-content" id="ladder">cmd /c "set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</div>
+        <div class="command-single-line" id="ladder-single">
+          <div class="command-single-line-label">Windows Single-Line:</div>
+          <code id="ladder-single-code">cmd /c "set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</code>
+        </div>
+      </div>
+
+      <div class="command-block setup"
+           data-command-type="setup"
+           data-command-base="npx playwright install"
+           data-template-command="npx playwright install chromium">
+        <div class="command-header">
+          <span class="command-type">Install the Playwright browser (once per machine)</span>
+          <div class="command-header-buttons">
+            <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this, 'install-pw')" title="Copy template command">📄 Template</button>
+            <button type="button" class="copy-button" onclick="copyCommand(this, 'install-pw')" title="Copy customized command">📋 Copy</button>
+          </div>
+        </div>
+        <div class="command-parameters">
+          <h5>🔧 Customize Parameters:</h5>
+          <div class="parameter-group single">
+            <div class="parameter-input">
+              <label for="install-pw-browser">Playwright browser:</label>
+              <input type="text" id="install-pw-browser" value="chromium" oninput="updateCommand('install-pw', 'browser', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="command-content" id="install-pw">npx playwright install chromium</div>
+        <div class="command-single-line" id="install-pw-single">
+          <div class="command-single-line-label">Windows Single-Line:</div>
+          <code id="install-pw-single-code">npx playwright install chromium</code>
+        </div>
+      </div>
+      <p>The npm script <code>npm run test:install-playwright</code> runs the same Chromium install.</p>
+    </div>
+
+    <h2 id="stack">Libraries and technique</h2>
+    <div class="section-container">
+      <div class="section-header">What each layer does</div>
+      <table>
+        <thead>
+          <tr><th>Piece</th><th>Role in this ladder</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>playwright</code> → <code>chromium</code></td>
+            <td>Launches Chromium, creates a browser context, navigates with <code>page.goto</code>, clicks with <code>locator.click</code>, and types with <code>locator.fill</code>.</td>
+          </tr>
+          <tr>
+            <td><code class="script-name">authenticate-playwright.js</code></td>
+            <td>Opens <code>/sign-in</code>, finds the Clerk email and password fields, submits, waits until the URL leaves sign-in, and saves cookies to <code class="script-name">.auth-state.json</code>.</td>
+          </tr>
+          <tr>
+            <td><code class="script-name">e2e-harness.js</code></td>
+            <td>Shared helpers: tenant hard-check, reachability probe, <code>safeGoto</code> retries, <code>smokeCheckPage</code>, demo ID discovery, and HTML/JSON coverage reports.</td>
+          </tr>
+          <tr>
+            <td><code class="script-name">platform-admin-test-tenant.js</code></td>
+            <td>Appends <code>?tenant=</code> to admin URLs and, if the sticky tenant field is visible and empty, types the tenant id into <code>#admin-tenant-id</code>.</td>
+          </tr>
+          <tr>
+            <td>Node <code>fs</code></td>
+            <td>Inventory generation only. Walks <code>src/app/**/page.tsx</code> on disk. No HTTP and no browser.</td>
+          </tr>
+          <tr>
+            <td>Node <code>fetch</code></td>
+            <td><code>discoverDemoIds()</code> GETs public proxy lists (<code>/api/proxy/event-details</code>, membership plans, polls, sponsors, focus groups) and keeps the first id. Used to fill <code>[id]</code> in URLs. This call is HTTP from Node, not a browser click.</td>
+          </tr>
+          <tr>
+            <td><code>dotenv</code></td>
+            <td>Harness loads <code>.env.local</code> when resolving tenant and API settings.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="info">
+        <strong>Technique in one sentence:</strong>
+        build a route list from the App Router source tree, then drive one signed-in Chromium session through admin pages (assertions, a few typed searches, and create/save/delete clicks) and through every admin and public route in that list.
+      </div>
+    </div>
+
+    <h2 id="flow">The four steps</h2>
+    <div class="section-container usage">
+      <div class="section-header usage">Order of the command</div>
+      <div class="flow">
+        <div class="flow-step files">
+          <strong>1. Inventory</strong>
+          Filesystem walk. Writes <code class="script-name">route-inventory.json</code>. No Chromium.
+        </div>
+        <div class="flow-step pages">
+          <strong>2. Comprehensive</strong>
+          Chromium visits about 31 fixed admin URLs. Checks selectors, JS errors, and sign-in redirects.
+        </div>
+        <div class="flow-step crud">
+          <strong>3. CRUD</strong>
+          Chromium clicks Create/Add, types an <code>[E2E]</code> name, saves, then tries to delete that row.
+        </div>
+        <div class="flow-step smoke">
+          <strong>4. Smoke</strong>
+          Chromium opens every admin and public inventory route, plus admin-home tile clicks.
+        </div>
+      </div>
+      <p>Steps 2–4 each launch their own Chromium process. They can reuse the saved Clerk storage state in <code class="script-name">TestSprite/admin-tests/.auth-state.json</code> so they do not type the password on every script when the cookie is still valid.</p>
+    </div>
+
+    <h2 id="inventory">1. Route inventory (no browser)</h2>
+    <div class="section-container">
+      <div class="section-header">generate-route-inventory.js</div>
+      <div class="section-intro">
+        <p>
+          <code class="script-name">generate-route-inventory.js</code> reads the repo. It does not open a browser and does not need the dev server.
+          Later smoke uses the file it writes. The comprehensive and CRUD scripts have their own page lists and do not read this file.
+        </p>
+      </div>
+      <ul>
+        <li>Recurses <code>src/app</code> and collects every <code>page.tsx</code>.</li>
+        <li>Drops route groups such as <code>(auth)</code> from the URL.</li>
+        <li>Marks dynamic segments (<code>[id]</code>, <code>[...slug]</code>, <code>[[...sign-in]]</code>).</li>
+        <li>Classifies each path: <code>admin</code> if it starts with <code>/admin</code>, otherwise <code>public</code> (plus <code>mosc</code>, <code>gas-station</code>, and <code>profile-site</code> when those prefixes exist).</li>
+        <li>Writes <code class="script-name">TestSprite/generated/route-inventory.json</code>.</li>
+      </ul>
+    </div>
+
+    <h2 id="comprehensive">2. Comprehensive admin pages</h2>
+    <div class="section-container usage">
+      <div class="section-header usage">comprehensive-admin-test-suite.js</div>
+      <div class="section-intro">
+        <p>
+          <code class="script-name">comprehensive-admin-test-suite.js</code> is a fixed catalog of about 31 admin pages
+          (<code>adminTestPages</code> in that file). Playwright opens each URL with <code>?tenant=</code> appended.
+          This is a <strong>page-render and UI-presence</strong> suite. It is not a full create/update/delete pass; that is step 3.
+        </p>
+      </div>
+      <h3>What Chromium does on each page</h3>
+      <ol>
+        <li>Launch Chromium (<code>headless</code> from <code class="script-name">auth.json</code>, default <code>true</code>).</li>
+        <li>Reuse <code class="script-name">.auth-state.json</code> if a visit to <code>/admin</code> stays off <code>/sign-in</code>. Otherwise fill the Clerk sign-in form and save the new storage state.</li>
+        <li><code>page.goto</code> the admin URL (<code>waitUntil: domcontentloaded</code>), then wait for <code>h1</code> (or <code>h2</code> / <code>main</code>) so client components can hydrate.</li>
+        <li>Fail on a redirect to <code>/sign-in</code>, a visible 404, or a visible unauthorized/forbidden alert.</li>
+        <li>Fail on critical page errors and console messages (ReferenceError, TypeError, uncaught). A known missing logo 404 is ignored.</li>
+        <li>Count the CSS selectors listed for that page (tables, search inputs, action buttons).</li>
+        <li>On failure, save a screenshot under <code class="script-name">TestSprite/admin-tests/screenshots</code> when <code>screenshotOnFailure</code> is true.</li>
+      </ol>
+      <h3>Places it types or clicks, beyond navigation</h3>
+      <ul>
+        <li><strong>Focus groups:</strong> types <code>__testsprite_no_results_xyz__</code> into <code>#focus-groups-search</code> and expects the empty-search message, then clears the field.</li>
+        <li><strong>Membership plans:</strong> extra checks on the plans list UI.</li>
+        <li><strong>Executive committee:</strong> types a no-match search, and opens/closes the add-member flow when the controls are present.</li>
+      </ul>
+      <p>The HTML report for this step only is <code class="script-name">TestSprite/admin-tests/admin-test-report.html</code>. It does not write the coverage files under <code>TestSprite/reports</code>.</p>
+    </div>
+
+    <h2 id="crud">3. CRUD on the demo tenant</h2>
+    <div class="section-container parameters">
+      <div class="section-header parameters">admin-crud-demo-tenant-suite.js</div>
+      <div class="section-intro">
+        <p>
+          <code class="script-name">admin-crud-demo-tenant-suite.js</code> is the step that <strong>clicks through create, save, and delete</strong>.
+          It uses the same Playwright Chromium session and the same Clerk storage state.
+          Before the browser work, Node calls <code>discoverDemoIds()</code> so ticket types and discount codes can target a real event id from <code>/api/proxy/event-details</code>.
+        </p>
+      </div>
+      <h3>Safe data pattern</h3>
+      <div class="parameters-list">
+        <p><strong>Values typed into the live forms:</strong></p>
+        <ul>
+          <li><code>E2E_NAME</code> — <code>[E2E] Demo</code> plus the current timestamp (<code>E2E_PREFIX</code> is <code>[E2E]</code>)</li>
+          <li><code>E2E_CODE</code> — <code>E2E</code> plus the last 6 digits of that timestamp (plan codes are lowercased)</li>
+          <li>Organization domain <code>e2e-&lt;stamp&gt;.example.test</code> and contact email <code>e2e.&lt;stamp&gt;@example.test</code></li>
+        </ul>
+      </div>
+      <p>For each module the script:</p>
+      <ol>
+        <li>Opens the list URL with <code>?tenant=</code> and runs <code>smokeCheckPage</code> (main/heading/nav or enough body text, and no visible auth error).</li>
+        <li>If the module is read-only, it records a pass and moves on. Read-only modules: <strong>manage usage</strong>, <strong>tenant settings</strong>, and <strong>test Stripe</strong>.</li>
+        <li>Otherwise it opens a known create route (for example <code>/admin/events/new</code>) or clicks the first visible Create/Add control.</li>
+        <li>Fills the first visible name/title/code field with the <code>[E2E]</code> value, fills extra fields, and clicks Save/Create.</li>
+        <li>Returns to the list, finds text <code>[E2E]</code>, clicks Delete on that row or card, and confirms the dialog when one appears.</li>
+      </ol>
+      <div class="warning">
+        A module is marked <strong>pass</strong> when the list loaded and a name field was filled. The log line still says whether save and delete happened (<code>filled, saved, deleted</code> or <code>filled, not-saved, not-deleted</code>).
+        A missing create button becomes <strong>skip</strong> when the list itself loaded. A broken list or a thrown navigation error is <strong>fail</strong>.
+        Rows are real database rows until delete succeeds. Search the tenant for names starting with <code>[E2E]</code> if a run stops mid-module.
+      </div>
+      <h3>Modules exercised</h3>
+      <table>
+        <thead>
+          <tr><th>Module</th><th>Interaction</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Manage usage</td><td>Read-only page check</td></tr>
+          <tr><td>Manage events</td><td>Open <code>/admin/events/new</code>, fill title, save, delete the <code>[E2E]</code> row</td></tr>
+          <tr><td>Ticket types and discount codes</td><td>Only if a live event id was discovered; click Add, fill name/code, save, delete</td></tr>
+          <tr><td>Membership plans, focus groups, gallery albums, sponsors, performers, contacts, directors, organizations, polls</td><td>Create UI click or <code>/new</code> route, fill, save, delete</td></tr>
+          <tr><td>Tenant settings, Test Stripe</td><td>Read-only page check</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="smoke">4. Inventory smoke crawl</h2>
+    <div class="section-container output">
+      <div class="section-header output">run-inventory-smoke-crawl.js</div>
+      <div class="section-intro">
+        <p>
+          <code class="script-name">run-inventory-smoke-crawl.js</code> with <code>--kind=admin,public</code> loads the inventory from step 1 and visits those routes in one Chromium page.
+          Because <code>admin</code> is included, the crawl signs in first. Public routes in this combined run are opened in that same signed-in context.
+        </p>
+      </div>
+      <h3>Admin home buttons (real clicks)</h3>
+      <p>
+        Before the route loop, the script opens <code>/admin?tenant=</code> once per destination in <code>ADMIN_HOME_BUTTONS</code> (Manage Users, Manage Events, Polls, and the other tiles listed in <code class="script-name">e2e-harness.js</code>).
+        If the tile link is visible, Playwright <strong>clicks</strong> it and waits for the path to change. If the click does not land, it falls back to <code>page.goto</code>.
+        The report records <code>via: click</code> or <code>via: goto</code>.
+      </p>
+      <h3>Every other route</h3>
+      <ul>
+        <li>Static paths are opened as-is. Admin paths get <code>?tenant=</code>.</li>
+        <li>Dynamic paths such as <code>/events/[id]</code> are rewritten with ids from <code>discoverDemoIds()</code>. Event paths use the event id, polls use the poll id, sponsors use the sponsor id, membership subscribe uses the plan id, focus groups use the slug. If a required id is missing, the route is <strong>skip</strong>, not fail.</li>
+        <li>Optional catch-all segments (<code>[[...sign-in]]</code>) are dropped so the smoke hits the page root.</li>
+        <li><code>/auth/signout-redirect</code> is skipped on purpose (it would sign the session out).</li>
+        <li>HTTP 500 fails the route. A public URL that still redirects to sign-in is recorded as <strong>pass</strong> with message <code>auth-gated</code>.</li>
+        <li><code>smokeCheckPage</code> requires visible structure (main, heading, nav, a container, or more than 40 characters of body text) and rejects a visible auth error.</li>
+      </ul>
+      <div class="info">
+        The smoke crawl does not click every button on every page. Aside from the admin-home tiles, it checks that each route renders. Create/save/delete clicks are the CRUD suite.
+      </div>
+    </div>
+
+    <h2 id="login">How login works</h2>
+    <div class="section-container">
+      <div class="section-header">Clerk form, then saved cookies</div>
+      <ol>
+        <li>Credentials come from <code class="script-name">TestSprite/admin-tests/auth.json</code> (copy <code class="script-name">auth.json.example</code>). Fields: <code>email</code>, <code>password</code>, <code>baseUrl</code>, <code>tenantId</code>, <code>timeout</code>, <code>headless</code>, <code>screenshotOnFailure</code>.</li>
+        <li><code class="script-name">authenticate-playwright.js</code> goes to <code>/sign-in</code> and tries several selectors (<code>input[name="identifier"]</code>, email inputs, then password inputs) because the Clerk DOM can vary.</li>
+        <li>It presses Enter, and if the page is still on sign-in it clicks a visible Sign in / Continue button.</li>
+        <li>It polls the URL for up to about 30 seconds. An OAuth redirect (Google and similar) fails the run; the account needs email and password.</li>
+        <li>Cookies and local storage are written with Playwright <code>storageState</code> to <code class="script-name">.auth-state.json</code>. The next script loads that file and only retypes the password if <code>/admin</code> bounces back to sign-in.</li>
+      </ol>
+      <div class="error">
+        If every admin URL lands on sign-in, the usual cause is role data: <code>user_profile.user_role</code> for this Clerk user and <code>tenant_demo_002</code> must be <code>ADMIN</code> or <code>SUPER_ADMIN</code>. The suite does not grant that role itself.
+      </div>
+    </div>
+
+    <h2 id="data">How test data is created</h2>
+    <div class="section-container parameters">
+      <div class="section-header parameters">Live app, not a fixture database</div>
+      <table>
+        <thead>
+          <tr><th>Need</th><th>How it is satisfied</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Which pages exist</td>
+            <td>Generated from source files. No scenario file of fake routes.</td>
+          </tr>
+          <tr>
+            <td>Event, plan, poll, sponsor, focus-group ids</td>
+            <td>First row returned by the running app’s <code>/api/proxy/...</code> lists (<code>size=5</code>, <code>sort=id,desc</code>). These are existing tenant records.</td>
+          </tr>
+          <tr>
+            <td>New entities</td>
+            <td>Only the CRUD step creates them, by typing into the real admin forms and clicking Save. Names are prefixed <code>[E2E]</code> so they can be found and deleted in the same run.</td>
+          </tr>
+          <tr>
+            <td>Search “no results” checks</td>
+            <td>The comprehensive suite types a nonsense string into a search box. It does not insert a matching database row.</td>
+          </tr>
+          <tr>
+            <td>Tenant scope</td>
+            <td>Query string <code>?tenant=tenant_demo_002</code> plus the admin tenant field when the URL does not already carry it. Proxy calls from the app still rely on the app’s own JWT and tenant header. The tests do not add <code>tenantId.equals</code> themselves.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="success">
+        Nothing in this ladder stubs <code>fetch</code>, intercepts Stripe webhooks, or resets the database before the run. What you see in the admin UI during a headed run is what the test sees.
+      </div>
+    </div>
+
+    <h2 id="reports">Reports</h2>
+    <div class="section-container output">
+      <div class="section-header output">Where results are written</div>
+      <table>
+        <thead>
+          <tr><th>Step</th><th>Output</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Inventory</td>
+            <td><code class="script-name">TestSprite/generated/route-inventory.json</code> and a console count by kind</td>
+          </tr>
+          <tr>
+            <td>Comprehensive</td>
+            <td><code class="script-name">TestSprite/admin-tests/admin-test-report.html</code> plus screenshots on failure</td>
+          </tr>
+          <tr>
+            <td>CRUD</td>
+            <td><code>TestSprite/reports/coverage-admin-crud-&lt;stamp&gt;.json</code> and the matching <code>.html</code>. Pass / fail / skip and a short message such as <code>filled, saved, deleted</code></td>
+          </tr>
+          <tr>
+            <td>Smoke</td>
+            <td><code>TestSprite/reports/coverage-smoke-admin+public-&lt;stamp&gt;.html</code> (suite name follows the <code>--kind</code> list)</td>
+          </tr>
+          <tr>
+            <td>Rollup</td>
+            <td>Each harness suite also refreshes <code class="script-name">TestSprite/reports/coverage-global-latest.html</code> and appends <code class="script-name">TestSprite/reports/LOOP_LOG.md</code> unless <code>E2E_AUTO_CONSOLIDATED=false</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Old coverage files are pruned to the newest <code>E2E_REPORT_KEEP</code> per suite (default 5) and files older than <code>E2E_REPORT_MAX_AGE_DAYS</code> (default 5). The reports folder is gitignored.</p>
+    </div>
+
+    <h2 id="watch">Watching the real browser</h2>
+    <div class="section-container">
+      <div class="section-header">Headless by default</div>
+      <p>
+        <code>"headless": true</code> in <code class="script-name">auth.json</code> still launches Chromium. The window is hidden, which is faster.
+        Set <code>"headless": false</code> to see sign-in, page loads, search typing, Create clicks, and admin-home tile clicks.
+        Comprehensive, CRUD, and smoke all read that flag (<code>config.headless !== false</code>).
+      </p>
+      <div class="info">
+        Related run guide: <a href="FULL_SITE_E2E_TESTSPRITE_GUIDE.html">Full-site E2E TestSprite guide</a>.
+        Source of the shared browser helpers: <code class="script-name">TestSprite/lib/e2e-harness.js</code>.
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const commandParams = {};
+
+    function getParam(commandId, name, fallback) {
+      const stored = commandParams[commandId] && commandParams[commandId][name];
+      if (stored != null && String(stored).trim() !== '') return String(stored).trim();
+      const input = document.getElementById(commandId + '-' + name);
+      if (input && input.value.trim()) return input.value.trim();
+      return fallback;
+    }
+
+    function setCommandText(commandId, command) {
+      const commandElement = document.getElementById(commandId);
+      if (commandElement) commandElement.textContent = command;
+      const singleLineCode = document.getElementById(commandId + '-single-code');
+      if (singleLineCode) singleLineCode.textContent = command;
+    }
+
+    function updateCommandFromParams(commandId) {
+      const commandElement = document.getElementById(commandId);
+      if (!commandElement) return;
+
+      let command = '';
+      if (commandId === 'ladder') {
+        const tenant = getParam(commandId, 'tenant', 'tenant_demo_002');
+        const port = getParam(commandId, 'port', '3001');
+        command = 'cmd /c "set TEST_TENANT_ID=' + tenant +
+          '&& set E2E_TENANT_ID=' + tenant +
+          '&& set E2E_EXPECTED_TENANT=' + tenant +
+          '&& set TEST_BASE_URL=http://localhost:' + port +
+          '&& node TestSprite\\tools\\generate-route-inventory.js' +
+          ' & node TestSprite\\admin-tests\\comprehensive-admin-test-suite.js --port=' + port +
+          ' & node TestSprite\\admin-tests\\admin-crud-demo-tenant-suite.js --tenant=' + tenant + ' --port=' + port +
+          ' & node TestSprite\\sanity-tests\\run-inventory-smoke-crawl.js --kind=admin,public --tenant=' + tenant + ' --port=' + port + '"';
+      } else if (commandId === 'install-pw') {
+        const browser = getParam(commandId, 'browser', 'chromium');
+        command = 'npx playwright install ' + browser;
+      } else {
+        command = commandElement.textContent.trim();
+      }
+      setCommandText(commandId, command);
+    }
+
+    function updateCommand(commandId, paramName, paramValue) {
+      if (!commandParams[commandId]) commandParams[commandId] = {};
+      commandParams[commandId][paramName] = paramValue;
+      updateCommandFromParams(commandId);
+    }
+
+    function initializeCommands() {
+      document.querySelectorAll('.command-block[data-command-base]').forEach(function (block) {
+        const commandContent = block.querySelector('.command-content');
+        if (!commandContent || !commandContent.id) return;
+        const commandId = commandContent.id;
+        block.querySelectorAll('.parameter-input input').forEach(function (input) {
+          const inputId = input.id || '';
+          const prefix = commandId + '-';
+          if (!inputId.startsWith(prefix)) return;
+          const paramName = inputId.slice(prefix.length);
+          if (!commandParams[commandId]) commandParams[commandId] = {};
+          commandParams[commandId][paramName] = input.value;
+        });
+        updateCommandFromParams(commandId);
+      });
+    }
+
+    function copyTemplateCommand(button, commandId) {
+      const commandBlock = button.closest('.command-block');
+      if (!commandBlock) return;
+      let templateCommand = commandBlock.getAttribute('data-template-command');
+      if (!templateCommand) {
+        const commandElement = document.getElementById(commandId);
+        if (!commandElement) return;
+        templateCommand = commandElement.textContent.trim();
+      }
+      templateCommand = templateCommand.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      writeClipboard(templateCommand, button, '📄 Template');
+    }
+
+    function copyCommand(button, commandId) {
+      const commandElement = document.getElementById(commandId);
+      if (!commandElement) return;
+      writeClipboard(commandElement.textContent.trim(), button, '📋 Copy');
+      const singleLineElement = document.getElementById(commandId + '-single');
+      if (singleLineElement) singleLineElement.style.display = 'block';
+    }
+
+    function writeClipboard(text, button, resetLabel) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          button.classList.add('copied');
+          button.textContent = '✓ Copied!';
+          setTimeout(function () {
+            button.classList.remove('copied');
+            button.textContent = resetLabel;
+          }, 2000);
+        }).catch(function (err) {
+          console.error('Failed to copy:', err);
+          fallbackCopy(text, button, resetLabel);
+        });
+      } else {
+        fallbackCopy(text, button, resetLabel);
+      }
+    }
+
+    function fallbackCopy(text, button, resetLabel) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('aria-hidden', 'true');
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        button.classList.add('copied');
+        button.textContent = '✓ Copied!';
+        setTimeout(function () {
+          button.classList.remove('copied');
+          button.textContent = resetLabel || '📋 Copy';
+        }, 2000);
+      } catch (err) {
+        console.error('Fallback copy failed:', err);
+        window.alert('Failed to copy command. Please copy manually:\n\n' + text);
+      }
+      document.body.removeChild(textArea);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      initializeCommands();
+      const platform = (navigator.platform || '').toLowerCase();
+      const ua = (navigator.userAgent || '').toLowerCase();
+      if (platform.indexOf('win') >= 0 || ua.indexOf('windows') >= 0) {
+        document.querySelectorAll('.command-single-line').forEach(function (el) {
+          el.style.display = 'block';
+        });
+      }
+    });
+  </script>
+</body>
+</html>

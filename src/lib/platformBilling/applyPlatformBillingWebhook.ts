@@ -3,7 +3,8 @@ import type Stripe from 'stripe';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { patchTenantProductBillingFromWebhook } from '@/app/admin/platform-billing/ApiServerActions';
-import type { TenantProductBillingDTO } from '@/types/platformBilling';
+import { appendPlatformCharge, lockBillingIfGraceEnded } from '@/lib/platformBilling/chargeLedger';
+import type { PlatformBillingChargeDTO, TenantProductBillingDTO } from '@/types/platformBilling';
 
 function asMeta(value: unknown): Record<string, string> {
   if (!value || typeof value !== 'object') return {};
@@ -81,6 +82,7 @@ export async function handlePlatformTenantBillingEvent(event: Stripe.Event): Pro
       const paid = object.payment_status === 'paid' || event.type === 'checkout.session.async_payment_succeeded';
       if (!paid) {
         await patchTenantProductBillingFromWebhook({ ...base, status: 'PAYMENT_DUE' });
+        await recordCharge(event, object, billingId, existing, tenantId, 'OPEN');
       } else {
         await patchTenantProductBillingFromWebhook({
           ...base,
@@ -89,19 +91,23 @@ export async function handlePlatformTenantBillingEvent(event: Stripe.Event): Pro
           stripePaymentId: typeof object.payment_intent === 'string' ? object.payment_intent : undefined,
           paidThroughDate: mode === 'ONE_TIME' ? paidThrough(mode, meta.billingInterval) : undefined,
         });
+        await recordCharge(event, object, billingId, existing, tenantId, 'PAID', subscriptionId);
       }
     } else if (event.type === 'checkout.session.async_payment_failed' || event.type === 'invoice.payment_failed') {
       await patchTenantProductBillingFromWebhook({ ...base, status: 'PAST_DUE' });
+      await recordCharge(event, object, billingId, existing, tenantId, 'FAILED', subscriptionId);
     } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
       await patchTenantProductBillingFromWebhook({
         ...base,
         status: 'ACTIVE',
         stripeSubscriptionId: subscriptionId || undefined,
       });
+      await recordCharge(event, object, billingId, existing, tenantId, 'PAID', subscriptionId);
     } else if (event.type === 'customer.subscription.deleted') {
       const reason = (object.cancellation_details as { reason?: string } | undefined)?.reason;
       if (reason === 'payment_failed') {
         await patchTenantProductBillingFromWebhook({ ...base, status: 'LOCKED', stripeSubscriptionId: '' });
+        await recordCharge(event, object, billingId, existing, tenantId, 'FAILED', subscriptionId);
       } else {
         await patchTenantProductBillingFromWebhook({
           ...base,
@@ -109,10 +115,12 @@ export async function handlePlatformTenantBillingEvent(event: Stripe.Event): Pro
           status: 'COMPLIMENTARY',
           stripeSubscriptionId: '',
         });
+        await recordCharge(event, object, billingId, existing, tenantId, 'VOID', subscriptionId);
       }
     } else if (!isMarked) {
       return null;
     }
+    if (existing) await lockBillingIfGraceEnded(existing);
   } catch (error) {
     console.error('[platform-billing] webhook update failed', error);
     return new NextResponse('Platform billing update failed', { status: 500 });
@@ -121,5 +129,51 @@ export async function handlePlatformTenantBillingEvent(event: Stripe.Event): Pro
   return new NextResponse(JSON.stringify({ ok: true, billingScope: 'platform_tenant' }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function recordCharge(
+  event: Stripe.Event,
+  object: Record<string, unknown>,
+  billingId: number,
+  existing: TenantProductBillingDTO | null,
+  tenantId: string,
+  status: PlatformBillingChargeDTO['status'],
+  subscriptionId = ''
+): Promise<void> {
+  let row = existing;
+  if (!row?.organizationId && Number.isFinite(billingId)) {
+    const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-product-billings/${billingId}`, {
+      cache: 'no-store',
+      headers: tenantId ? { 'X-Tenant-ID': tenantId } : {},
+    });
+    if (response.ok) row = (await response.json()) as TenantProductBillingDTO;
+  }
+  const organizationId = row?.organizationId;
+  if (!organizationId) return;
+  const cents = Number(object.amount_paid ?? object.amount_total ?? object.amount_due ?? 0);
+  const amount = Number.isFinite(cents) ? Math.round(cents) / 100 : Number(row.customFeeUsd || 0);
+  const period = (object.lines as { data?: Array<{ period?: { start?: number; end?: number } }> } | undefined)?.data?.[0]?.period;
+  const invoiceId = typeof object.invoice === 'string' ? object.invoice : event.type.startsWith('invoice.') ? String(object.id || '') : '';
+  await appendPlatformCharge({
+    organizationId,
+    tenantId: row.product === 'RETAIL' && (row.notes || '').includes('organization-flat:') ? null : tenantId,
+    product: row.product,
+    billingScope: (row.notes || '').includes('organization-flat:') ? 'ORGANIZATION' : 'PER_TENANT',
+    platformPlanId: row.platformPlanId ?? null,
+    amountUsd: amount,
+    currency: 'USD',
+    billingInterval: row.billingInterval || null,
+    intervalCount: row.intervalCount || 1,
+    stripeEventId: event.id,
+    stripeInvoiceId: invoiceId || null,
+    stripeSubscriptionId: subscriptionId || row.stripeSubscriptionId || null,
+    stripePaymentIntentId: typeof object.payment_intent === 'string' ? object.payment_intent : null,
+    status,
+    periodStart: period?.start ? new Date(period.start * 1000).toISOString() : null,
+    periodEnd: period?.end ? new Date(period.end * 1000).toISOString() : null,
+    occurredAt: new Date().toISOString(),
+    failureReason: status === 'FAILED' ? String(object.failure_message || object.status || 'payment failed') : null,
+    notes: event.type,
   });
 }

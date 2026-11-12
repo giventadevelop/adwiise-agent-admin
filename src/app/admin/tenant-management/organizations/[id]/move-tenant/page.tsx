@@ -4,6 +4,7 @@ import AdminRecordMissing from '@/components/admin/AdminRecordMissing';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { assertPlatformSuperAdmin } from '@/app/admin/adminAccessServer';
 import MoveTenantClient from './MoveTenantClient';
+import { organizationMoveLabel } from '@/app/admin/tenant-management/organizations/organizationMoveLabel';
 
 interface PageProps {
   params: { id: string };
@@ -41,11 +42,11 @@ export default async function MoveTenantPage({ params }: PageProps) {
         href={`/admin/tenant-management/organizations/${organization.id}`}
         className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 mb-6"
       >
-        Back to {organization.organizationName}
+        Back to {organizationMoveLabel(organization.organizationName, organization.id)}
       </Link>
       <h1 className="text-3xl font-bold text-gray-900 mb-2">Move a tenant ID</h1>
       <p className="text-sm text-gray-600 mb-6">
-        This sets the tenant settings row&apos;s organization to {organization.organizationName}. It does not change a parent organization link.
+        This sets the tenant settings row&apos;s organization to {organizationMoveLabel(organization.organizationName, organization.id)}. It does not change a parent organization link.
       </p>
       <MoveTenantClient organizationId={organization.id} organizationName={organization.organizationName} />
     </div>

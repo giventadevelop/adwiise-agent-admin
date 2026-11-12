@@ -24,7 +24,7 @@ Steps:
 1. Add a platform-plan record: name, product (`EVENT_SITE` or `GAS_STATION`), allowed modes (recurring, one-time, or both), interval (month or year), list price, published flag, feature summary, and for gas stations an optional graduated tier definition.
 2. Add a tenant-product billing record, one row per tenant per product: switch (default off), status (`COMPLIMENTARY`), catalog plan id, custom fee (empty), review-by date, grace days (default 14), notes.
 3. Keep using `tenant_organization.stripeCustomerId` for the Stripe customer. Leave it empty until phase 2.
-4. Super-admin screens: plan list and plan form; on the tenant organization page, a billing section with the switch, custom fee, review-by date, and status. The switch can be saved as off or on in the database in this phase, but turning it on must not create a Checkout session yet. Show the words “charging is not live yet” if the switch is on before phase 2 ships.
+4. Super-admin screens: plan list and plan form; on the tenant organization page, a billing section with the switch, custom fee, review-by date, and status. Turning the switch on sets payment due and a grace end. The payer still has to open Pay. Checkout is live in phase 2.
 5. Seed nothing that charges. Placeholder catalog rows are fine if they are unpublished.
 6. Do not add Stripe env vars in this phase beyond what ticket and membership flows already use.
 
@@ -64,7 +64,7 @@ Done when: adding a fourth included location changes the preview from 3 × tier-
 
 ## Phase 4 — Grace and lock
 
-Goal: a tenant who was told to pay, and did not, loses paid admin tools. A complimentary tenant never does.
+Goal: a tenant who was told to pay, and did not, loses paid admin tools. A complimentary tenant never does. This check is implemented on billing-page load and in the platform billing webhook.
 
 Steps:
 

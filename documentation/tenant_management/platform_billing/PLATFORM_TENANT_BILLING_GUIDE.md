@@ -1,8 +1,8 @@
 # Tenant platform billing guide
 
-This guide explains, in plain English, how event-site tenants and gas-station tenants will pay to use this platform. It is the reference for the build described in [BUILD_PLAN.md](BUILD_PLAN.md). The payment-system choice is explained in [STRIPE_VS_ZOHO_ANALYSIS.md](STRIPE_VS_ZOHO_ANALYSIS.md).
+This guide explains, in plain English, how event-site tenants and gas-station tenants pay to use this platform. It is the reference for the build described in [BUILD_PLAN.md](BUILD_PLAN.md). The payment-system choice is explained in [STRIPE_VS_ZOHO_ANALYSIS.md](STRIPE_VS_ZOHO_ANALYSIS.md).
 
-Nothing in this folder charges a card yet. These pages are the rules the next build must follow.
+Charging is live. A platform super-admin turns the charge switch on, and the paying admin opens Pay on `/admin/billing`. Stripe Checkout collects the card. The charge ledger is `/admin/platform-billing`.
 
 ## 1. Two different kinds of money
 

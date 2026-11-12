@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="How to test platform software billing in Stripe test mode with daily and monthly unpublished plans.">
+    <title>Platform billing Stripe test guide</title>
+    <style>
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; line-height: 1.65; color: #1a1a1a; background: #f4f8fb; max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+        h1, h2 { color: #0d3b66; }
+        h2 { margin-top: 0; }
+        a { color: #0052a3; }
+        a:focus-visible, button:focus-visible { outline: 3px solid #0066cc; outline-offset: 2px; }
+        .section-container, .section-intro, .warning, .info { border-radius: 8px; margin: 16px 0; }
+        .section-container { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; padding: 20px; }
+        .section-container.parameters { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left-color: #ff9800; }
+        .section-container.output { background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%); border-left-color: #28a745; }
+        .section-container.usage { background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%); border-left-color: #9c27b0; }
+        .section-header { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #ffffff; padding: 12px 20px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0; font-weight: bold; }
+        .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+        .section-intro { background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%); border-left: 4px solid #0066cc; padding: 16px 20px; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 14px 16px; }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 14px 16px; }
+        code, .code-highlight, .command-single-line code { background: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; border-radius: 3px; padding: 2px 6px; font-family: "Courier New", monospace; }
+        .script-name { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); color: #4a148c; border: 1px solid #ce93d8; border-radius: 3px; padding: 2px 6px; font-family: "Courier New", monospace; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #ffffff; }
+        th, td { border: 1px solid #b8d4e3; padding: 12px; text-align: left; vertical-align: top; }
+        th { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #ffffff; text-transform: uppercase; font-size: 0.85em; }
+        tr:nth-child(even) { background: #f7fbff; }
+        tr:hover { background: #e3f2fd; }
+        .command-block { border: 2px solid #2196f3; border-radius: 8px; overflow: hidden; margin: 16px 0; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+        .command-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; font-weight: 700; }
+        .command-header-buttons { display: flex; gap: 8px; }
+        .copy-button, .copy-button-template { background: #ffffff; color: #0d3b66; border: 1px solid #b8d4e3; border-radius: 6px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+        .command-content, .command-single-line { margin: 0 14px 14px; }
+        .command-single-line { background: #e8f4f8; border: 1px solid #b8d4e3; border-radius: 4px; padding: 12px 15px; }
+        .command-single-line-label { color: #555555; font-size: 0.85em; margin-bottom: 6px; }
+        ol.steps li { margin: 0.45rem 0; }
+    </style>
+</head>
+<body>
+    <h1>Platform billing Stripe test guide</h1>
+    <p>Use Stripe test mode. Day and week intervals are rejected unless the secret key starts with <code class="code-highlight">sk_test_</code>. Production catalog plans stay month or year.</p>
+    <div class="section-intro">
+        <p>Create a new billing-test organization. Do not use organizations 18, 19, or 20. Do not click Make inactive, Make active, or Cascade Delete on an existing organization.</p>
+    </div>
+    <div class="section-container usage">
+        <div class="section-header usage">1. Listen for webhooks</div>
+        <p>Forward Stripe test events to this app with <code class="script-name">stripe.exe</code>. The admin app in local development is port 3001.</p>
+        <div class="command-block setup" data-command-type="setup" data-command-base="stripe listen --forward-to" data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe">
+            <div class="command-header">
+                <span class="command-type">Setup</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'stripe-listen')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="stripe-listen">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</div>
+            <div class="command-single-line" id="stripe-listen-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="stripe-listen-single-code">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</code>
+            </div>
+        </div>
+        <div class="info">The success card is <code class="code-highlight">4242 4242 4242 4242</code>, any future expiry, any CVC. The failure card is <code class="code-highlight">4000 0000 0000 0341</code>.</div>
+    </div>
+    <div class="section-container parameters">
+        <div class="section-header parameters">2. Unpublished test plans</div>
+        <p>The schema seeds these unpublished event-site plans at $1.00. They do not appear to a tenant until a super-admin selects one on that website.</p>
+        <table>
+            <thead><tr><th scope="col">Code</th><th scope="col">Interval</th><th scope="col">Count</th></tr></thead>
+            <tbody>
+                <tr><td>test-every-day</td><td>DAY</td><td>1</td></tr>
+                <tr><td>test-every-2-days</td><td>DAY</td><td>2</td></tr>
+                <tr><td>test-every-15-days</td><td>DAY</td><td>15</td></tr>
+                <tr><td>test-monthly</td><td>MONTH</td><td>1</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="section-container output">
+        <div class="section-header output">3. What to confirm</div>
+        <ol class="steps">
+            <li>Create the billing-test organization and its home website. Leave organizations 18, 19, and 20 unchanged.</li>
+            <li>On the website billing page, turn the event-site switch on and choose <code class="code-highlight">test-every-day</code>.</li>
+            <li>Open Pay and complete Checkout with the 4242 card.</li>
+            <li>In <code class="code-highlight">/admin/platform-billing</code>, search the organization. The ledger export shows a PAID row and the Stripe invoice id. The same invoice is in the Stripe test dashboard.</li>
+            <li>Start a second subscription attempt with the failing card. The ledger status is FAILED. After grace ends with no paid period, the website status becomes LOCKED and admin tools redirect to billing. The public event page stays up.</li>
+            <li>Cancel at period end as the paying admin. Cancel now is only on the super-admin website page.</li>
+            <li>On the organization, switch from per website to one organization charge, then back. Covered websites show the organization name and hide Pay. Switching back does not charge a website by itself.</li>
+            <li>Buy a ticket in the same Stripe test account. That payment must not insert a platform charge. Ticket money stays on the ticket transaction.</li>
+        </ol>
+        <div class="warning">A retried Stripe event with the same event id does not insert a second ledger row.</div>
+    </div>
+    <script>
+        function flash(button) {
+            var original = button.textContent;
+            button.textContent = "Copied";
+            setTimeout(function () { button.textContent = original; }, 2000);
+        }
+        function copyCommand(button, id) {
+            var el = document.getElementById(id + "-single-code");
+            if (!el) return;
+            navigator.clipboard.writeText(el.textContent || "").then(function () { flash(button); });
+        }
+        function copyTemplateCommand(button) {
+            var block = button.closest(".command-block");
+            if (!block) return;
+            navigator.clipboard.writeText(block.getAttribute("data-template-command") || "").then(function () { flash(button); });
+        }
+    </script>
+</body>
+</html>

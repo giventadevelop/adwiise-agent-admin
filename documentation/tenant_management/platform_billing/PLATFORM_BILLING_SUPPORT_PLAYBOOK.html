@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Support answers for platform software billing, with the screen and ledger status to read.">
+    <title>Platform billing support playbook</title>
+    <style>
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; line-height: 1.65; color: #1a1a1a; background: #f4f8fb; max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+        h1, h2 { color: #0d3b66; }
+        h2 { margin-top: 0; }
+        a { color: #0052a3; }
+        a:focus-visible { outline: 3px solid #0066cc; outline-offset: 2px; }
+        .section-container, .section-intro { border-radius: 8px; margin: 16px 0; }
+        .section-container { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; padding: 20px; }
+        .section-header { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #ffffff; padding: 12px 20px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0; font-weight: bold; }
+        .section-intro { background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%); border-left: 4px solid #0066cc; padding: 16px 20px; }
+        code, .code-highlight { background: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; border-radius: 3px; padding: 2px 6px; font-family: "Courier New", monospace; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #ffffff; }
+        th, td { border: 1px solid #b8d4e3; padding: 12px; text-align: left; vertical-align: top; }
+        th { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #ffffff; text-transform: uppercase; font-size: 0.85em; }
+        tr:nth-child(even) { background: #f7fbff; }
+        tr:hover { background: #e3f2fd; }
+    </style>
+</head>
+<body>
+    <h1>Platform billing support playbook</h1>
+    <div class="section-intro">
+        <p>Search <code class="code-highlight">/admin/platform-billing</code> by organization name, website tenant id, contact email, Stripe customer id (<code class="code-highlight">cus_</code>), subscription id (<code class="code-highlight">sub_</code>), or invoice id (<code class="code-highlight">in_</code>). Export ledger includes Stripe ids. Organization search Excel does not.</p>
+    </div>
+    <div class="section-container">
+        <div class="section-header">Answers</div>
+        <table>
+            <thead>
+                <tr><th scope="col">Question</th><th scope="col">Screen</th><th scope="col">Ledger status</th><th scope="col">What to say</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>I was charged twice</td>
+                    <td>Billing area, Export ledger, filtered by the organization</td>
+                    <td>Two PAID rows with different invoice ids are two real invoices. Two rows with the same Stripe event id should not exist.</td>
+                    <td>Read the invoice ids. A ticket purchase in the same Stripe account is not a platform charge. Compare the period start and period end.</td>
+                </tr>
+                <tr>
+                    <td>I cannot pay</td>
+                    <td><code class="code-highlight">/admin/billing</code> for that website</td>
+                    <td>No OPEN or PAID row yet</td>
+                    <td>If the page says the organization pays, this website has no Pay button. If the switch is off, a super-admin must turn it on. Then the payer opens Pay.</td>
+                </tr>
+                <tr>
+                    <td>This site is free</td>
+                    <td>Website billing page, status line</td>
+                    <td>No charge, or only VOID after a cancel</td>
+                    <td>Status COMPLIMENTARY means the charge switch is off. A covered note means the organization subscription pays for it. Neither one should be locked.</td>
+                </tr>
+                <tr>
+                    <td>Cancel</td>
+                    <td>Billing page for the payer. Covered websites have no cancel button.</td>
+                    <td>VOID on the subscription-deleted event</td>
+                    <td>Cancel at period end keeps access until the period ends. Cancel now is a super-admin action and returns the row to complimentary immediately.</td>
+                </tr>
+                <tr>
+                    <td>Payment failed</td>
+                    <td>Billing page and the Customer Portal button</td>
+                    <td>FAILED</td>
+                    <td>The payer updates the card in the portal and opens Pay again. After grace with no paid period, status is LOCKED and admin tools redirect to billing. The public site stays up.</td>
+                </tr>
+                <tr>
+                    <td>We moved a website</td>
+                    <td>Organization page, billing scope, and the website billing page</td>
+                    <td>Unchanged until the new payer is invoiced</td>
+                    <td>An organization billed once covers the moved website and cancels that website’s own subscription at period end. Per-website mode removes the covered note and does not start a charge.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

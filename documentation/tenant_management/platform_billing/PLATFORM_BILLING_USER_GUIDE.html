@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Who turns platform software billing on, how an organization pays once or per website, and how a tenant admin pays or cancels.">
+    <title>Platform billing user guide</title>
+    <style>
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; line-height: 1.65; color: #1a1a1a; background: #f4f8fb; max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+        h1, h2, h3 { color: #0d3b66; }
+        h2 { margin-top: 0; }
+        a { color: #0052a3; }
+        a:focus-visible, button:focus-visible { outline: 3px solid #0066cc; outline-offset: 2px; }
+        .toc, .section-container, .section-intro, .info, .warning, .success { border-radius: 8px; margin: 16px 0; }
+        .toc { background: #ffffff; border: 1px solid #b8d4e3; padding: 16px 20px; }
+        .section-container { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; padding: 20px; box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1); }
+        .section-container.parameters { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left-color: #ff9800; }
+        .section-container.output { background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%); border-left-color: #28a745; }
+        .section-container.usage { background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%); border-left-color: #9c27b0; }
+        .section-header { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #ffffff; padding: 12px 20px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0; font-size: 1.2em; font-weight: bold; }
+        .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+        .section-intro { background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%); border-left: 4px solid #0066cc; padding: 16px 20px; }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 14px 16px; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 14px 16px; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; padding: 14px 16px; }
+        code, .code-highlight { background: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; border-radius: 3px; padding: 2px 6px; font-family: "Courier New", monospace; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #ffffff; }
+        th, td { border: 1px solid #b8d4e3; padding: 12px; text-align: left; vertical-align: top; }
+        th { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #ffffff; text-transform: uppercase; font-size: 0.85em; }
+        tr:nth-child(even) { background: #f7fbff; }
+        tr:hover { background: #e3f2fd; }
+        ol.steps li { margin: 0.4rem 0; }
+    </style>
+</head>
+<body>
+    <h1>Platform billing user guide</h1>
+    <p>Software fees for a website are separate from ticket sales, memberships, school fees, and marketplace settlements. This page says who turns a charge on and what each person sees.</p>
+    <p>Related: <a href="PLATFORM_BILLING_TEST_GUIDE.html">test guide</a>, <a href="PLATFORM_BILLING_SUPPORT_PLAYBOOK.html">support playbook</a>, <a href="PLATFORM_TENANT_BILLING_GUIDE.html">product rules</a>.</p>
+    <nav class="toc" aria-label="Table of contents">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#who">Who can turn a charge on</a></li>
+            <li><a href="#scope">Organization or each website</a></li>
+            <li><a href="#tenant">What the paying admin sees</a></li>
+            <li><a href="#cancel">Cancel and lock</a></li>
+            <li><a href="#move">Moving a website</a></li>
+        </ol>
+    </nav>
+    <div class="section-intro">
+        <p>A platform super-admin opens <code class="code-highlight">/admin/platform-billing</code>. A tenant admin of the website that pays opens <code class="code-highlight">/admin/billing</code>.</p>
+    </div>
+    <div class="section-container usage" id="who">
+        <div class="section-header usage">1. Who can turn a charge on</div>
+        <p>Only a platform super-admin can turn the charge switch on, set a custom fee, or change grace days. While the switch is off, the website is complimentary and Stripe is not called.</p>
+        <p>Turning the switch on sets the status to payment due and starts the grace window (today plus the grace days). The payer still has to open <strong>Pay</strong>. The switch does not charge the card by itself.</p>
+    </div>
+    <div class="section-container parameters" id="scope">
+        <div class="section-header parameters">2. Organization or each website</div>
+        <p>On the organization page, Billing scope has two choices.</p>
+        <table>
+            <thead><tr><th scope="col">Choice</th><th scope="col">What happens</th></tr></thead>
+            <tbody>
+                <tr><td>Bill the organization once</td><td>One monthly amount. One retail subscription on the organization’s home website, noted <code class="code-highlight">organization-flat</code>. Every other website is covered, its switch is off, and a website subscription is canceled at period end.</td></tr>
+                <tr><td>Bill each website separately</td><td>The organization amount is cleared and the organization subscription is canceled at period end. Covered notes are removed. Each website stays complimentary until a super-admin turns that website’s switch on. Nothing is auto-charged.</td></tr>
+            </tbody>
+        </table>
+        <div class="info">The Stripe customer stays on the organization in both modes, so the card belongs to the client.</div>
+    </div>
+    <div class="section-container" id="tenant">
+        <div class="section-header">3. What the paying admin sees</div>
+        <ul>
+            <li>If the website is covered, the page names the organization that pays. Pay and Cancel are hidden.</li>
+            <li>If this website pays, the page shows the plan, any custom amount, status, grace, and the local charge list.</li>
+            <li><strong>Pay</strong> opens Stripe Checkout. <strong>Payment methods</strong> opens the Stripe Customer Portal. There is no card form inside this app.</li>
+        </ul>
+        <div class="success">Money is shown with two decimal places, for example $1.00.</div>
+    </div>
+    <div class="section-container output" id="cancel">
+        <div class="section-header output">4. Cancel and lock</div>
+        <table>
+            <thead><tr><th scope="col">Action</th><th scope="col">Who</th><th scope="col">Result</th></tr></thead>
+            <tbody>
+                <tr><td>Cancel at period end</td><td>The tenant admin who pays for that website, or a super-admin</td><td>Access continues until the period ends. Stripe then sends subscription deleted and the ledger records the close.</td></tr>
+                <tr><td>Cancel now</td><td>Super-admin only</td><td>The subscription stops now and the row returns to complimentary.</td></tr>
+                <tr><td>Lock</td><td>Automatic</td><td>When grace has ended, or Stripe reports a failed payment, paid admin tools for that tenant redirect to the billing page. The public site stays up. A complimentary or covered website is not locked for another website’s unpaid invoice.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="section-container" id="move">
+        <div class="section-header">5. Moving a website</div>
+        <p>Moving a website into an organization that is billed once covers that website and turns its own charge switch off. Moving it to an organization that bills each website separately removes the covered note. The website does not start paying until a super-admin turns its switch on.</p>
+        <div class="warning">Do not use organizations 18, 19, or 20 for a billing experiment. Create a new billing-test organization.</div>
+    </div>
+</body>
+</html>

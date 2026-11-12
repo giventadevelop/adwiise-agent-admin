@@ -5,8 +5,9 @@ import { fetchAdminAccessForClerkUser } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { isComplimentarySubscriptionPlan, isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
+import { appendAssignmentEvent, fetchPlatformCharges, lockBillingIfGraceEnded } from '@/lib/platformBilling/chargeLedger';
 import { cancelPlatformSubscription, loadOrganization } from '@/lib/platformBilling/stripeCheckout';
-import type { PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
+import type { PlatformBillingChargeDTO, PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 function apiBase() {
   return getApiBaseUrl();
@@ -179,17 +180,24 @@ export async function applyComplimentaryPlatformBilling(tenantId: string): Promi
 export async function prepareTenantBillingDesk(tenantId: string): Promise<{
   rows: TenantProductBillingDTO[];
   complimentaryPlan: boolean;
+  charges: PlatformBillingChargeDTO[];
 }> {
   const org = await loadOrganization(tenantId);
   const complimentaryPlan = isComplimentarySubscriptionPlan(org?.subscriptionPlan);
+  const charges = await fetchPlatformCharges({ tenantId, size: 50 }).catch(() => []);
+  const settle = async (rows: TenantProductBillingDTO[]) => {
+    const next: TenantProductBillingDTO[] = [];
+    for (const row of rows) next.push(await lockBillingIfGraceEnded(row));
+    return next;
+  };
   if (!complimentaryPlan) {
-    return { rows: await fetchTenantProductBillings(tenantId), complimentaryPlan: false };
+    return { rows: await settle(await fetchTenantProductBillings(tenantId)), complimentaryPlan: false, charges };
   }
   try {
-    return { rows: await applyComplimentaryPlatformBilling(tenantId), complimentaryPlan: true };
+    return { rows: await settle(await applyComplimentaryPlatformBilling(tenantId)), complimentaryPlan: true, charges };
   } catch (error) {
     console.error('[platform-billing] complimentary apply skipped', error);
-    return { rows: await fetchTenantProductBillings(tenantId).catch(() => []), complimentaryPlan: true };
+    return { rows: await settle(await fetchTenantProductBillings(tenantId).catch(() => [])), complimentaryPlan: true, charges };
   }
 }
 
@@ -197,32 +205,65 @@ export async function saveTenantProductBilling(row: TenantProductBillingDTO): Pr
   await assertPlatformSuperAdmin();
   await refuseSeparateCharge(row);
   const now = new Date().toISOString();
+  const previous = row.id
+    ? (await fetchTenantProductBillings(row.tenantId).catch(() => [])).find((entry) => entry.id === row.id) || null
+    : null;
   const headers = {
     ...tenantHeaders(row.tenantId),
     'Content-Type': row.id ? 'application/merge-patch+json' : 'application/json',
   };
-  if (row.id) {
-    const response = await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings/${row.id}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ ...row, id: row.id, updatedAt: now }),
-    });
-    return readJson(response);
+  const saved = row.id
+    ? await readJson<TenantProductBillingDTO>(
+        await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings/${row.id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ ...row, id: row.id, updatedAt: now }),
+        })
+      )
+    : await readJson<TenantProductBillingDTO>(
+        await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings`, {
+          method: 'POST',
+          headers: tenantHeaders(row.tenantId),
+          body: JSON.stringify({
+            ...row,
+            id: null,
+            chargeEnabled: row.chargeEnabled ?? false,
+            status: row.status ?? 'COMPLIMENTARY',
+            graceDays: row.graceDays ?? 14,
+            intervalCount: row.intervalCount ?? 1,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        })
+      );
+  const changed =
+    !previous ||
+    previous.platformPlanId !== saved.platformPlanId ||
+    Number(previous.customFeeUsd || 0) !== Number(saved.customFeeUsd || 0) ||
+    Boolean(previous.chargeEnabled) !== Boolean(saved.chargeEnabled) ||
+    Number(previous.graceDays || 0) !== Number(saved.graceDays || 0);
+  if (changed) {
+    const { userId } = await auth();
+    const org = saved.organizationId ? { id: saved.organizationId } : await loadOrganization(saved.tenantId);
+    await appendAssignmentEvent({
+      organizationId: org?.id ?? null,
+      tenantId: saved.tenantId,
+      product: saved.product,
+      previousPlanCode: previous?.platformPlanId != null ? String(previous.platformPlanId) : null,
+      newPlanCode: saved.platformPlanId != null ? String(saved.platformPlanId) : null,
+      previousAmountUsd: previous?.customFeeUsd ?? null,
+      newAmountUsd: saved.customFeeUsd ?? null,
+      actorUserId: userId,
+      reason: !previous
+        ? 'Created the billing row'
+        : Boolean(previous.chargeEnabled) !== Boolean(saved.chargeEnabled)
+          ? saved.chargeEnabled
+            ? 'Turned the charge switch on'
+            : 'Turned the charge switch off'
+          : 'Changed the plan, custom fee, or grace days',
+    }).catch((error) => console.error('[platform-billing] assignment event skipped', error));
   }
-  const response = await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings`, {
-    method: 'POST',
-    headers: tenantHeaders(row.tenantId),
-    body: JSON.stringify({
-      ...row,
-      id: null,
-      chargeEnabled: row.chargeEnabled ?? false,
-      status: row.status ?? 'COMPLIMENTARY',
-      graceDays: row.graceDays ?? 14,
-      createdAt: now,
-      updatedAt: now,
-    }),
-  });
-  return readJson(response);
+  return saved;
 }
 
 export async function patchTenantProductBillingFromWebhook(

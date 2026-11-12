@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { organizationMoveLabel } from '@/app/admin/tenant-management/organizations/organizationMoveLabel';
 import {
   lookupTenantForMove,
   reassignTenantToOrganization,
@@ -83,10 +85,14 @@ export default function MoveTenantClient({
       {preview ? (
         <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950">
           <p>
-            <span className="font-mono font-semibold">{preview.tenantId}</span> is on{' '}
-            <span className="font-semibold">{preview.organizationName}</span>.
+            <span className="font-mono font-semibold">{preview.tenantId}</span>
           </p>
-          <p className="mt-2">Moving it sets its organization to {organizationName}.</p>
+          <p className="mt-2">
+            Source organization: {organizationMoveLabel(preview.organizationName, preview.organizationId)}
+          </p>
+          <p className="mt-2">
+            Target organization: {organizationMoveLabel(organizationName, organizationId)}
+          </p>
         </div>
       ) : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -106,6 +112,20 @@ export default function MoveTenantClient({
         </div>
         <span className="font-semibold text-indigo-700">{busy && preview ? 'Moving...' : 'Move to this organization'}</span>
       </button>
+
+      <Link
+        href={`/admin/tenant-management/organizations/move-between?left=${organizationId}`}
+        className="w-full flex-shrink-0 h-14 rounded-xl bg-violet-100 hover:bg-violet-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+        title="Move tenant IDs between two organizations"
+        aria-label="Move tenant IDs between two organizations"
+      >
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-200 flex items-center justify-center">
+          <svg className="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        </div>
+        <span className="font-semibold text-violet-700">Move tenant IDs between two organizations</span>
+      </Link>
     </div>
   );
 }

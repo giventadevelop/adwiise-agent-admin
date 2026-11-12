@@ -42,7 +42,7 @@ export default async function TenantPlatformBillingPage({
   const locationData = locationResponse.ok ? await locationResponse.json() : [];
   const locations: RetailLocationDTO[] = Array.isArray(locationData) ? locationData : locationData?.content ?? [];
   const [desk, plans] = await Promise.all([
-    prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false })),
+    prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false, charges: [] })),
     fetchPlatformBillingPlans().catch(() => []),
   ]);
   return (
@@ -53,6 +53,7 @@ export default async function TenantPlatformBillingPage({
       plans={plans}
       locations={locations}
       complimentaryPlan={desk.complimentaryPlan}
+      charges={desk.charges || []}
       lockedNotice={desk.rows.some((row) => row.status === 'LOCKED')}
     />
   );

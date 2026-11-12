@@ -337,12 +337,16 @@ export default function TenantOrganizationList({
                       maximumFractionDigits: 2,
                     }).format(enabled ? amount : 0);
                     return enabled ? (
-                      <span className="inline-flex flex-col items-start gap-1">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Enabled</span>
+                      <Link href={`/admin/platform-billing?organizationId=${org.id}`} className="inline-flex flex-col items-start gap-1" title="Open billing area">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          {org.billingScope === 'PER_TENANT' ? 'Per website' : 'Organization'}
+                        </span>
                         <span className="font-semibold text-gray-900 dark:text-white">{formatted}</span>
-                      </span>
+                      </Link>
                     ) : (
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Not enabled</span>
+                      <Link href={`/admin/platform-billing?organizationId=${org.id}`} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800" title="Open billing area">
+                        {org.billingScope === 'ORGANIZATION' ? 'Organization' : 'Per website'}
+                      </Link>
                     );
                   })()}
                 </td>

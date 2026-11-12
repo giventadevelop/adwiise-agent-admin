@@ -122,6 +122,8 @@ That ends with `coverage-global-latest.html` automatically.
 
 Use `&` between Node steps in the manual ladder so CRUD/smoke continue if comprehensive exits non-zero.
 
+How the ladder runs (Playwright Chromium, clicks, and live data): [documentation/e2e_testing/ADMIN_PUBLIC_TEST_LADDER_HOW_IT_WORKS.html](../documentation/e2e_testing/ADMIN_PUBLIC_TEST_LADDER_HOW_IT_WORKS.html).
+
 ## Safety
 
 - Mutations only on entities named with `[E2E]` when possible

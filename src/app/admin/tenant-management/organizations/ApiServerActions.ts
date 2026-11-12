@@ -62,6 +62,18 @@ function normalizeTenantOrganizationPayload<T extends Partial<TenantOrganization
   return normalized;
 }
 
+type OrganizationBillingScope = 'ORGANIZATION' | 'PER_TENANT';
+
+/** Form PUTs omit billing fields. A missing scope must still be a non-null enum the backend accepts. */
+function resolveBillingScope(
+  incoming: TenantOrganizationFormDTO['billingScope'] | undefined,
+  existing?: TenantOrganizationDTO['billingScope'],
+): OrganizationBillingScope {
+  if (incoming === 'ORGANIZATION' || incoming === 'PER_TENANT') return incoming;
+  if (existing === 'ORGANIZATION' || existing === 'PER_TENANT') return existing;
+  return 'PER_TENANT';
+}
+
 function organizationIsVisible(
   organization: TenantOrganizationDTO,
   access: Awaited<ReturnType<typeof getCurrentAdminAccess>>,
@@ -253,8 +265,10 @@ export async function fetchTenantOrganizationByTenantId(tenantId: string): Promi
 export async function createTenantOrganization(data: TenantOrganizationFormDTO): Promise<TenantOrganizationDTO> {
   await assertPlatformSuperAdmin();
   try {
+    const normalized = normalizeTenantOrganizationPayload(data);
     const payload = withTenantId({
-      ...normalizeTenantOrganizationPayload(data),
+      ...normalized,
+      billingScope: resolveBillingScope(normalized.billingScope),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -298,8 +312,18 @@ export async function updateTenantOrganization(
       throw new Error('Organization not found');
     }
 
+    const normalized = normalizeTenantOrganizationPayload(data);
     const payload = withTenantId({
-      ...normalizeTenantOrganizationPayload(data),
+      ...normalized,
+      billingScope: resolveBillingScope(normalized.billingScope, existingOrganization.billingScope),
+      stripeSubscriptionId:
+        normalized.stripeSubscriptionId !== undefined
+          ? normalized.stripeSubscriptionId
+          : existingOrganization.stripeSubscriptionId ?? null,
+      parentOrganizationId:
+        normalized.parentOrganizationId !== undefined
+          ? normalized.parentOrganizationId
+          : existingOrganization.parentOrganizationId ?? null,
       id,
       createdAt: existingOrganization.createdAt, // Preserve original createdAt
       updatedAt: new Date().toISOString(),
@@ -337,7 +361,9 @@ const ORGANIZATION_SUBSCRIPTION_FIELDS = [
   'subscriptionStartDate',
   'subscriptionEndDate',
   'monthlyFeeUsd',
+  'billingScope',
   'stripeCustomerId',
+  'stripeSubscriptionId',
 ] as const;
 
 export async function patchTenantOrganization(
