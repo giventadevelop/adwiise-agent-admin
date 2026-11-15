@@ -9,6 +9,7 @@ import { TenantSettingsDTO, TenantOrganizationDTO } from '@/app/admin/tenant-man
 import TenantDefaultHeroView from '@/app/admin/tenant-management/components/TenantDefaultHeroView';
 import TenantSubscriptionPanel from '@/app/admin/tenant-management/components/TenantSubscriptionPanel';
 import { tenantSettingsTabQuery, type TenantSettingsTab } from '@/lib/tenantSettingsTabs';
+import { REGISTRAR_NOTES_PROMPT } from '@/lib/onboarding/onboardingShared';
 
 interface TenantSettingsViewClientProps {
   settings: TenantSettingsDTO;
@@ -153,6 +154,16 @@ export default function TenantSettingsViewClient({ settings, settingsId, organiz
                   </a>
                 ) : (
                   <span className="text-gray-500">No dedicated repository</span>
+                )}
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-sm font-medium text-gray-500">Registrar details</dt>
+              <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
+                {settings?.registrarNotes?.trim() ? (
+                  settings.registrarNotes
+                ) : (
+                  <span className="text-gray-500">{REGISTRAR_NOTES_PROMPT}</span>
                 )}
               </dd>
             </div>

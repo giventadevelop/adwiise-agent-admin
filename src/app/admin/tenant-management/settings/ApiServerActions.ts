@@ -360,6 +360,19 @@ async function repositoryUrlForSave(
   return trimmed;
 }
 
+function omitBlankRegistrarNotes(payload: Record<string, unknown>, existingNotes?: string | null) {
+  const notes = payload.registrarNotes;
+  if (typeof notes === 'string' && notes.trim().length > 0) {
+    payload.registrarNotes = notes.trim();
+    return;
+  }
+  if (existingNotes && existingNotes.trim().length > 0) {
+    payload.registrarNotes = existingNotes.trim();
+    return;
+  }
+  delete payload.registrarNotes;
+}
+
 export async function createTenantSetting(data: TenantSettingsFormDTO): Promise<TenantSettingsDTO> {
   try {
     const access = await getCurrentAdminAccess();
@@ -387,6 +400,7 @@ export async function createTenantSetting(data: TenantSettingsFormDTO): Promise<
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+    omitBlankRegistrarNotes(payload);
 
     console.log('[createTenantSetting] Payload with tenantOrganization:', {
       tenantId: payload.tenantId,
@@ -464,6 +478,7 @@ export async function updateTenantSetting(
         payload.defaultHeroImageUrlsJson as string | null | undefined,
       );
     }
+    omitBlankRegistrarNotes(payload, existingSetting.registrarNotes);
 
     console.log('[updateTenantSetting] Final payload with tenantOrganization:', {
       tenantId: payload.tenantId,
@@ -537,6 +552,7 @@ export async function patchTenantSetting(
         payload.defaultHeroImageUrlsJson as string | null | undefined,
       );
     }
+    omitBlankRegistrarNotes(payload);
 
     console.log('[patchTenantSetting] Final payload with tenantOrganization:', {
       tenantId: payload.tenantId,

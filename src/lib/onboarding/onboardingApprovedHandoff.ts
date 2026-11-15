@@ -7,19 +7,30 @@ import { extractTenantIdSequence, getTenantIdPrefix } from '@/lib/tenantIdGenera
 import type { DomainOwnership, TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 
-export function siteTypeLabel(value: string | null | undefined): string {
-  const match = ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === value);
+export type CatalogChoice = { value: string; label: string; hint?: string };
+
+export function siteTypeLabel(
+  value: string | null | undefined,
+  options: CatalogChoice[] = ONBOARDING_SITE_TYPE_OPTIONS
+): string {
+  const match = options.find((o) => o.value === value);
   if (match) return `${match.label} (${match.value})`;
   return value || 'Not set';
 }
 
-export function domainOwnershipLabel(value: string | null | undefined): string {
-  const match = DOMAIN_OWNERSHIP_OPTIONS.find((o) => o.value === value);
+export function domainOwnershipLabel(
+  value: string | null | undefined,
+  options: CatalogChoice[] = DOMAIN_OWNERSHIP_OPTIONS
+): string {
+  const match = options.find((o) => o.value === value);
   if (match) return `${match.label} (${match.value})`;
   return value || 'Not set';
 }
 
-function domainOwnershipGuidance(ownership: DomainOwnership | string | null | undefined): string {
+function domainOwnershipGuidance(
+  ownership: DomainOwnership | string | null | undefined,
+  hint?: string
+): string {
   switch (ownership) {
     case 'PLATFORM_REGISTERS':
       return (
@@ -37,8 +48,10 @@ function domainOwnershipGuidance(ownership: DomainOwnership | string | null | un
         'Domain ownership: ALREADY_IN_PLATFORM — confirm the existing Route 53 hosted zone ' +
         'and Amplify custom-domain mapping before changing DNS.'
       );
-    default:
-      return `Domain ownership: ${ownership || 'not specified'}.`;
+    default: {
+      const named = ownership || 'not specified';
+      return hint ? `Domain ownership: ${named}. ${hint}` : `Domain ownership: ${named}.`;
+    }
   }
 }
 
@@ -215,19 +228,25 @@ export function manualReminderSteps(
 export function buildManualStepsText(
   request: TenantOnboardingRequestDTO,
   tenantId?: string | null,
-  hubDatabase: HubDatabase = 'local'
+  hubDatabase: HubDatabase = 'local',
+  catalogs?: { siteTypes?: CatalogChoice[]; ownerships?: CatalogChoice[] }
 ): string {
-  const site = siteTypeLabel(request.siteType as TenantSiteType | undefined);
-  const ownership = domainOwnershipLabel(request.domainOwnership as DomainOwnership | undefined);
+  const siteTypes = catalogs?.siteTypes;
+  const ownerships = catalogs?.ownerships;
+  const siteMatch = siteTypes?.find((option) => option.value === request.siteType);
+  const ownershipMatch = ownerships?.find((option) => option.value === request.domainOwnership);
+  const site = siteTypeLabel(request.siteType as TenantSiteType | undefined, siteTypes);
+  const ownership = domainOwnershipLabel(request.domainOwnership as DomainOwnership | undefined, ownerships);
+  const siteHint = siteMatch?.hint?.trim();
   const steps = manualReminderSteps(request, tenantId, hubDatabase).map((step, index) => `${index + 1}. ${step}`);
 
   return [
     `Remaining manual steps for ${request.organizationName || 'organization'}`,
     `Request code: ${request.requestCode || '—'}`,
-    `Site type: ${site}`,
+    `Site type: ${site}${siteHint ? ` — ${siteHint}` : ''}`,
     `Domain ownership: ${ownership}`,
     '',
-    domainOwnershipGuidance(request.domainOwnership),
+    domainOwnershipGuidance(request.domainOwnership, ownershipMatch?.hint),
     ...(request.registrarNotes?.trim() ? ['', 'Registrar notes:', request.registrarNotes.trim()] : []),
     '',
     ...steps,

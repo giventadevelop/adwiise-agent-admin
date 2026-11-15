@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FaUpload, FaImage, FaTimes, FaSpinner, FaCheck, FaUsers } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import ErrorDialog from '@/components/ErrorDialog';
 
 interface FocusGroupCoverImageUploadProps {
@@ -184,6 +184,14 @@ export default function FocusGroupCoverImageUpload({
 
       console.log('📸 FocusGroupCoverImageUpload: Upload success, image URL:', imageUrl);
       onImageUploaded(imageUrl);
+      try {
+        const { persistFocusGroupCoverOcrServer } = await import(
+          '@/app/admin/focus-groups/ApiServerActions'
+        );
+        await persistFocusGroupCoverOcrServer(focusGroupId, file);
+      } catch (ocrError) {
+        console.error('[FocusGroupCoverOCR] post-upload failed:', ocrError);
+      }
 
       // Show success message
       setShowSuccess(true);
@@ -294,81 +302,106 @@ export default function FocusGroupCoverImageUpload({
         message={errorDialog.message}
       />
 
-      <div className={`relative ${className}`}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileInputChange}
-          className="hidden"
-          disabled={disabled || isUploading}
-        />
+      <div className={`rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 ${className}`}>
+        <div className="flex items-start gap-3 mb-3">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-sky-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-sky-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="font-heading font-semibold text-base text-sky-800">Cover image</h4>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-200 text-sky-800">Shown to visitors</span>
+            </div>
+            <p className="text-sm mt-1 text-sky-700">This cover is what visitors see on the focus group.</p>
+          </div>
+        </div>
 
-      <div
-        onClick={handleClick}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`
-          relative border-2 border-dashed rounded-lg p-6 cursor-pointer transition-all
-          ${showSuccess ? 'border-green-500 bg-green-50' :
-            dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-          ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}
-        `}
-      >
-        {isUploading ? (
-          <div className="flex flex-col items-center justify-center text-gray-500">
-            <FaSpinner className="animate-spin text-2xl mb-2" />
-            <p className="text-sm">Uploading cover image...</p>
-          </div>
-        ) : showSuccess ? (
-          <div className="flex flex-col items-center justify-center text-green-600">
-            <FaCheck className="text-2xl mb-2" />
-            <p className="text-sm font-medium">Upload successful!</p>
-            <p className="text-xs text-gray-500">Cover image updated</p>
-          </div>
-        ) : currentImageUrl ? (
-          <div className="flex flex-col items-center">
-            <div className="relative mb-3">
-              <img
-                src={currentImageUrl}
-                alt="Focus group cover preview"
-                className="w-full max-w-md h-auto object-contain rounded-lg border border-gray-200 shadow-sm"
-                style={{ maxHeight: '200px' }}
-              />
-              {deferUpload && onFileCleared && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFileCleared();
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center"
-                  title="Remove image"
-                  aria-label="Remove image"
-                >
-                  <FaTimes className="w-3 h-3 text-red-600" />
-                </button>
+        <div
+          onClick={handleClick}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-300 cursor-pointer ${
+            dragActive
+              ? 'border-sky-500 bg-sky-100'
+              : currentImageUrl
+                ? 'border-sky-400 bg-sky-50'
+                : 'border-sky-200 hover:border-sky-400 hover:bg-sky-100/70'
+          } ${disabled || isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileInputChange}
+            className="hidden"
+            disabled={disabled || isUploading}
+          />
+
+          {currentImageUrl ? (
+            <div className="space-y-3">
+              <div className="relative inline-block">
+                <img
+                  src={currentImageUrl}
+                  alt="Focus group cover preview"
+                  className="mx-auto h-48 w-auto max-w-full rounded-xl object-contain border-2 border-sky-300 bg-white"
+                />
+                {deferUpload && onFileCleared && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFileCleared();
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center"
+                    title="Remove image"
+                    aria-label="Remove image"
+                  >
+                    <FaTimes className="w-3 h-3 text-red-600" />
+                  </button>
+                )}
+              </div>
+              {isUploading ? (
+                <p className="text-sm text-sky-800">Reading the image and uploading...</p>
+              ) : (
+                <div className="space-y-1 pt-1">
+                  <svg className="mx-auto h-10 w-10 text-sky-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p className="text-sm font-medium text-sky-800">
+                    {deferUpload
+                      ? 'This image uploads after the focus group is created.'
+                      : 'Upload another image to replace this cover.'}
+                  </p>
+                  <p className="text-xs text-sky-700">Click to upload or drag and drop</p>
+                  {showSuccess && !deferUpload && (
+                    <p className="text-xs font-semibold text-green-700">Cover image saved.</p>
+                  )}
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FaUsers className="text-blue-500" />
-              <span>Click to change cover image</span>
+          ) : (
+            <div className="space-y-2 py-4">
+              {isUploading ? (
+                <p className="text-sm text-sky-800">Reading the image and uploading...</p>
+              ) : (
+                <>
+                  <svg className="mx-auto h-10 w-10 text-sky-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p className="text-sm text-sky-800">
+                    <span className="font-semibold">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-sky-700">This area is a placeholder until you upload a cover.</p>
+                  <p className="text-xs text-sky-700">PNG, JPG, GIF up to 10MB. Recommended 800×480.</p>
+                </>
+              )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">or drag and drop a new image</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center text-gray-500">
-            <FaUsers className="text-4xl mb-3 text-blue-500" />
-            <p className="text-sm font-medium mb-1">Upload Focus Group Cover Image</p>
-            <p className="text-xs text-gray-400 mb-2">This image will be displayed as the cover for the focus group</p>
-            <p className="text-xs text-gray-400">Click to upload or drag and drop</p>
-            <p className="text-xs text-gray-400 mt-1">Image should be 800 pixels wide by 480 pixels tall, aspect ratio 5:3.</p>
-            <p className="text-xs text-gray-400 mt-1">(JPEG, PNG, GIF - Max 10MB)</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       </div>
     </>
   );

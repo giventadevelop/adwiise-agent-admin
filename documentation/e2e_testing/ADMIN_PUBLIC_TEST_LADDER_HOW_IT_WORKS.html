@@ -329,11 +329,12 @@
         <li><a href="#answer">Direct answers</a></li>
         <li><a href="#command">The command and how Windows runs it</a></li>
         <li><a href="#stack">Libraries and technique</a></li>
-        <li><a href="#flow">The four steps</a></li>
+        <li><a href="#flow">The five steps</a></li>
         <li><a href="#inventory">1. Route inventory (no browser)</a></li>
         <li><a href="#comprehensive">2. Comprehensive admin pages</a></li>
         <li><a href="#crud">3. CRUD on the demo tenant</a></li>
-        <li><a href="#smoke">4. Inventory smoke crawl</a></li>
+        <li><a href="#retail">4. Retail demo tenant</a></li>
+        <li><a href="#smoke">5. Inventory smoke crawl</a></li>
         <li><a href="#login">How login works</a></li>
         <li><a href="#data">How test data is created</a></li>
         <li><a href="#reports">Reports</a></li>
@@ -384,10 +385,10 @@
     <h2 id="command">The command and how Windows runs it</h2>
     <div class="section-intro">
       <p>
-        One <code>cmd /c</code> process sets three tenant variables and the app URL, then runs four <code>node</code> scripts one after another.
+        One <code>cmd /c</code> process sets three tenant variables and the app URL, then runs five <code>node</code> scripts one after another.
         In Windows CMD, <code>&amp;&amp;</code> runs the next command only if the previous one succeeded.
         A single <code>&amp;</code> always runs the next command, even when the previous Node process exits with a failure.
-        That is why inventory, comprehensive admin, CRUD, and smoke are separated with <code>&amp;</code>: a failed page in the comprehensive suite does not skip CRUD or the smoke crawl.
+        That is why inventory, comprehensive admin, CRUD, retail, and smoke are separated with <code>&amp;</code>: a failed page in the comprehensive suite does not skip CRUD, retail, or the smoke crawl.
         The variables from <code>set</code> stay in that same CMD process, so every Node script sees them.
       </p>
     </div>
@@ -407,9 +408,9 @@
       <div class="command-block advance"
            data-command-type="advance"
            data-command-base="cmd /c"
-           data-template-command="cmd /c &quot;set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001&quot;">
+           data-template-command="cmd /c &quot;set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001&quot;">
         <div class="command-header">
-          <span class="command-type">Full ladder (inventory, comprehensive, CRUD, smoke)</span>
+          <span class="command-type">Full ladder (inventory, comprehensive, CRUD, retail, smoke)</span>
           <div class="command-header-buttons">
             <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this, 'ladder')" title="Copy template command">📄 Template</button>
             <button type="button" class="copy-button" onclick="copyCommand(this, 'ladder')" title="Copy customized command">📋 Copy</button>
@@ -428,10 +429,10 @@
             </div>
           </div>
         </div>
-        <div class="command-content" id="ladder">cmd /c "set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</div>
+        <div class="command-content" id="ladder">cmd /c "set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</div>
         <div class="command-single-line" id="ladder-single">
           <div class="command-single-line-label">Windows Single-Line:</div>
-          <code id="ladder-single-code">cmd /c "set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</code>
+          <code id="ladder-single-code">cmd /c "set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</code>
         </div>
       </div>
 
@@ -508,7 +509,7 @@
       </div>
     </div>
 
-    <h2 id="flow">The four steps</h2>
+    <h2 id="flow">The five steps</h2>
     <div class="section-container usage">
       <div class="section-header usage">Order of the command</div>
       <div class="flow">
@@ -524,12 +525,16 @@
           <strong>3. CRUD</strong>
           Chromium clicks Create/Add, types an <code>[E2E]</code> name, saves, then tries to delete that row.
         </div>
+        <div class="flow-step pages">
+          <strong>4. Retail</strong>
+          Chromium seeds durable gas, liquor, Dunkin, and 7-Eleven shops, then opens the retail pages.
+        </div>
         <div class="flow-step smoke">
-          <strong>4. Smoke</strong>
+          <strong>5. Smoke</strong>
           Chromium opens every admin and public inventory route, plus admin-home tile clicks.
         </div>
       </div>
-      <p>Steps 2–4 each launch their own Chromium process. They can reuse the saved Clerk storage state in <code class="script-name">TestSprite/admin-tests/.auth-state.json</code> so they do not type the password on every script when the cookie is still valid.</p>
+      <p>Steps 2–5 each launch their own Chromium process. They can reuse the saved Clerk storage state in <code class="script-name">TestSprite/admin-tests/.auth-state.json</code> so they do not type the password on every script when the cookie is still valid.</p>
     </div>
 
     <h2 id="inventory">1. Route inventory (no browser)</h2>
@@ -626,7 +631,25 @@
       </table>
     </div>
 
-    <h2 id="smoke">4. Inventory smoke crawl</h2>
+    <h2 id="retail">4. Retail demo tenant</h2>
+    <div class="section-container parameters">
+      <div class="section-header parameters">retail-demo-tenant-suite.js</div>
+      <div class="section-intro">
+        <p>
+          <code class="script-name">retail-demo-tenant-suite.js</code> runs after CRUD and before the smoke crawl.
+          It keeps four shops on <code>tenant_demo_002</code> (<code>E2E-GAS</code>, <code>E2E-LIQUOR</code>, <code>E2E-DUNKIN</code>, <code>E2E-711</code>) and, when the signed-in user is a platform super-admin, sets that organization’s site type to <code>RETAIL</code>.
+          It does not apply homepage presets, so the event site stays visible.
+        </p>
+      </div>
+      <ul>
+        <li>Opens the retail morning page and checks the gas and liquor shop codes.</li>
+        <li>Opens locations, upload, integrations, compare, and access, and checks the gas station and liquor store pack labels.</li>
+        <li>Opens <code>/admin/gas-station</code> and expects a landing on <code>/admin/retail</code>.</li>
+        <li>Creates one extra shop tagged <code>[E2E]</code>, edits it, and deletes only that copy.</li>
+      </ul>
+    </div>
+
+    <h2 id="smoke">5. Inventory smoke crawl</h2>
     <div class="section-container output">
       <div class="section-header output">run-inventory-smoke-crawl.js</div>
       <div class="section-intro">
@@ -786,6 +809,7 @@
           '&& node TestSprite\\tools\\generate-route-inventory.js' +
           ' & node TestSprite\\admin-tests\\comprehensive-admin-test-suite.js --port=' + port +
           ' & node TestSprite\\admin-tests\\admin-crud-demo-tenant-suite.js --tenant=' + tenant + ' --port=' + port +
+          ' & node TestSprite\\admin-tests\\retail-demo-tenant-suite.js --tenant=' + tenant + ' --port=' + port +
           ' & node TestSprite\\sanity-tests\\run-inventory-smoke-crawl.js --kind=admin,public --tenant=' + tenant + ' --port=' + port + '"';
       } else if (commandId === 'install-pw') {
         const browser = getParam(commandId, 'browser', 'chromium');

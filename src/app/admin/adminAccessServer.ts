@@ -21,6 +21,11 @@ import {
 import { isAdminRole } from '@/lib/utils';
 import type { UserProfileDTO } from '@/types';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
+import { websiteTenantIdsOf } from '@/app/admin/tenant-management/organizations/websiteTenantIds';
+import {
+  attachWebsiteTenantIds,
+  loadOrganizationIdsForTenantIds,
+} from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 
 function mergeProfilesById(...lists: UserProfileDTO[][]): UserProfileDTO[] {
   const byKey = new Map<string, UserProfileDTO>();
@@ -260,28 +265,39 @@ export const fetchAdminWorkspaceTenants = cache(async (): Promise<{
     }
   }
 
-  const orgParams = new URLSearchParams();
-  orgParams.set('page', '0');
-  orgParams.set('size', '200');
-  orgParams.set('sort', 'organizationName,asc');
-  if (!access.canQueryAllTenants) {
-    if (access.allowedTenantIds.length === 1) {
-      orgParams.set('tenantId.equals', access.allowedTenantIds[0]);
-    } else if (access.allowedTenantIds.length > 1) {
-      orgParams.set('tenantId.in', access.allowedTenantIds.join(','));
-    } else {
-      orgParams.set('tenantId.equals', '__unauthorized__');
-    }
-  }
-
   let orgs: TenantOrganizationDTO[] = [];
   try {
-    const orgRes = await fetchWithJwtRetry(
-      `${getBackendApiUrl()}/api/tenant-organizations?${orgParams.toString()}`,
-      unscopedListOptions,
-    );
-    if (orgRes.ok) {
-      orgs = parseTenantOrganizations(await orgRes.json());
+    if (access.canQueryAllTenants) {
+      const orgParams = new URLSearchParams({
+        page: '0',
+        size: '200',
+        sort: 'organizationName,asc',
+      });
+      const orgRes = await fetchWithJwtRetry(
+        `${getBackendApiUrl()}/api/tenant-organizations?${orgParams.toString()}`,
+        unscopedListOptions,
+      );
+      if (orgRes.ok) {
+        orgs = await attachWebsiteTenantIds(parseTenantOrganizations(await orgRes.json()));
+      }
+    } else if (access.allowedTenantIds.length > 0) {
+      const organizationIds = await loadOrganizationIdsForTenantIds(access.allowedTenantIds);
+      const loaded: TenantOrganizationDTO[] = [];
+      for (let start = 0; start < organizationIds.length; start += 40) {
+        const chunk = organizationIds.slice(start, start + 40);
+        const orgParams = new URLSearchParams({
+          page: '0',
+          size: '200',
+          sort: 'organizationName,asc',
+        });
+        for (const id of chunk) orgParams.append('id.in', String(id));
+        const orgRes = await fetchWithJwtRetry(
+          `${getBackendApiUrl()}/api/tenant-organizations?${orgParams.toString()}`,
+          unscopedListOptions,
+        );
+        if (orgRes.ok) loaded.push(...parseTenantOrganizations(await orgRes.json()));
+      }
+      orgs = await attachWebsiteTenantIds(loaded);
     }
   } catch (error) {
     console.error('[adminAccessServer] tenant-organizations for workspace failed', error);
@@ -289,17 +305,17 @@ export const fetchAdminWorkspaceTenants = cache(async (): Promise<{
 
   const byTenant = new Map<string, AdminWorkspaceTenant>();
   for (const org of orgs) {
-    const tenantId = org.tenantId?.trim();
-    if (!tenantId) continue;
-    if (!access.canQueryAllTenants && !access.allowedTenantIds.includes(tenantId)) continue;
-    byTenant.set(tenantId, {
-      tenantId,
-      organizationName: org.organizationName?.trim() || tenantId,
-      domain: org.domain?.trim() || undefined,
-      isActive: org.isActive,
-      role: roleByTenant.get(tenantId) || (access.isPlatformSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN'),
-      mappedToUser: roleByTenant.has(tenantId),
-    });
+    for (const tenantId of websiteTenantIdsOf(org)) {
+      if (!access.canQueryAllTenants && !access.allowedTenantIds.includes(tenantId)) continue;
+      byTenant.set(tenantId, {
+        tenantId,
+        organizationName: org.organizationName?.trim() || tenantId,
+        domain: org.domain?.trim() || undefined,
+        isActive: org.isActive,
+        role: roleByTenant.get(tenantId) || (access.isPlatformSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN'),
+        mappedToUser: roleByTenant.has(tenantId),
+      });
+    }
   }
 
   for (const tenantId of access.allowedTenantIds) {

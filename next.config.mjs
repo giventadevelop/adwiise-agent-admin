@@ -117,7 +117,7 @@ const nextConfig = {
   },
 
   // Server external packages (moved from experimental in Next.js 15)
-  serverExternalPackages: [],
+  serverExternalPackages: ['tesseract.js', 'tesseract.js-core'],
 
   env: {
     // Clerk environment variables

@@ -178,6 +178,13 @@ export default function NewFocusGroupPage() {
       const errorText = await response.text();
       throw new Error(errorText || `Cover image upload failed (${response.status})`);
     }
+
+    try {
+      const { persistFocusGroupCoverOcrServer } = await import('../ApiServerActions');
+      await persistFocusGroupCoverOcrServer(focusGroupId, file, tenantId);
+    } catch (ocrError) {
+      console.error('[FocusGroupCoverOCR] post-create failed:', ocrError);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

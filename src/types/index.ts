@@ -100,6 +100,10 @@ export interface EventDetailsDTO {
   timezone: string;
   /** Event location */
   location?: string;
+  /** OCR text extracted from flyer/hero images */
+  ocrText?: string;
+  /** Denormalized search blob (title, caption, description, location, ocrText) */
+  searchText?: string;
   /** Directions to venue */
   directionsToVenue?: string;
   /** Event capacity */
@@ -323,6 +327,10 @@ export interface GalleryAlbumDTO {
   tenantId?: string;
   title: string;
   description?: string;
+  /** OCR text extracted from cover image */
+  ocrText?: string;
+  /** Denormalized search blob (title, description, eventLocation, ocrText) */
+  searchText?: string;
   coverImageUrl?: string;
   /** When true, album is visible on the public gallery. */
   isPublic?: boolean;
@@ -811,6 +819,8 @@ export interface TenantSettingsDTO {
   /** @deprecated v2.0 — canonical source is tenant_organization; read fallback only */
   stateProvince?: string;
   email?: string;
+  /** Registrar name, domain, name servers, and URL or domain forwarding notes. */
+  registrarNotes?: string | null;
   facebookUrl?: string;
   instagramUrl?: string;
   twitterUrl?: string;
@@ -932,6 +942,10 @@ export interface FocusGroupDTO {
   name: string;
   slug: string;
   description?: string;
+  /** OCR text extracted from cover image */
+  ocrText?: string;
+  /** Denormalized search blob (name, slug, description, ocrText) */
+  searchText?: string;
   coverImageUrl?: string;
   isActive?: boolean;
   createdAt: string;
@@ -1205,6 +1219,10 @@ export interface EventSponsorsDTO {
   companyName?: string;
   tagline?: string;
   description?: string;
+  /** OCR text extracted from logo/hero/banner images */
+  ocrText?: string;
+  /** Denormalized search blob (name, company, tagline, description, type, ocrText) */
+  searchText?: string;
   websiteUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -1217,6 +1235,7 @@ export interface EventSponsorsDTO {
   twitterUrl?: string;
   linkedinUrl?: string;
   instagramUrl?: string;
+  tiktokUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

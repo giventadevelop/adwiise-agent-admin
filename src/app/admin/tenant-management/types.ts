@@ -182,6 +182,8 @@ export interface TenantSettingsDTO {
   /** @deprecated v2.0 — canonical source is tenant_organization; read fallback only */
   stateProvince?: string;
   email?: string;
+  /** Registrar name, domain, name servers, and URL or domain forwarding notes. */
+  registrarNotes?: string | null;
   createdAt: string; // ISO date-time
   updatedAt: string; // ISO date-time
   tenantOrganization?: TenantOrganizationDTO;

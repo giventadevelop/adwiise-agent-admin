@@ -70,8 +70,15 @@ export async function createAlbumServer(
 ): Promise<GalleryAlbumDTO> {
   try {
     const tid = await resolveAdminMutationTenantId(tenantId ?? album.tenantId);
+    const { buildGalleryAlbumSearchText } = await import('@/lib/search/buildSearchText');
     const payload = withTenantId({
       ...album,
+      searchText: buildGalleryAlbumSearchText({
+        title: album.title,
+        description: album.description,
+        eventLocation: album.eventLocation,
+        ocrText: album.ocrText,
+      }),
       ...(tid ? { tenantId: tid } : {}),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -210,12 +217,39 @@ export async function updateAlbumServer(
 ): Promise<GalleryAlbumDTO> {
   try {
     const tid = await resolveAdminMutationTenantId(tenantId ?? updates.tenantId);
+    const incomingOcr =
+      typeof updates.ocrText === 'string' && updates.ocrText.trim()
+        ? updates.ocrText.trim()
+        : undefined;
+    const touchesSearch =
+      updates.title !== undefined ||
+      updates.description !== undefined ||
+      updates.eventLocation !== undefined ||
+      incomingOcr !== undefined ||
+      updates.searchText !== undefined;
+    let searchText = updates.searchText;
+    if (touchesSearch && searchText === undefined) {
+      const { buildGalleryAlbumSearchText } = await import('@/lib/search/buildSearchText');
+      const existing = await fetchAlbumServer(albumId, tid);
+      searchText = buildGalleryAlbumSearchText({
+        title: updates.title ?? existing?.title,
+        description: updates.description ?? existing?.description,
+        eventLocation: updates.eventLocation ?? existing?.eventLocation,
+        ocrText: incomingOcr ?? existing?.ocrText,
+      });
+    }
     const payload = withTenantId({
       ...updates,
+      ...(searchText !== undefined ? { searchText } : {}),
       id: albumId,
       ...(tid ? { tenantId: tid } : {}),
       updatedAt: new Date().toISOString(),
     });
+    if (incomingOcr) {
+      payload.ocrText = incomingOcr;
+    } else {
+      delete payload.ocrText;
+    }
 
     const url = `${API_BASE_URL}/api/gallery-albums/${albumId}`;
     const res = await fetchWithJwtRetry(url, {
@@ -527,4 +561,30 @@ export async function createAlbumYoutubeMediaServer(input: {
   }
 
   return (await res.json()) as EventMediaDTO;
+}
+
+/**
+ * Read text from a just-uploaded album cover and store it on the album.
+ * A failed read leaves the uploaded image in place.
+ */
+export async function persistGalleryCoverOcrServer(
+  albumId: number,
+  file: File,
+  tenantId?: string,
+): Promise<number> {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const { extractTextFromImageBytes } = await import('@/lib/search/extractImageText');
+  const { mergeOcrText, buildGalleryAlbumSearchText } = await import('@/lib/search/buildSearchText');
+  const extracted = await extractTextFromImageBytes(bytes, `gallery-album-${albumId}-cover`);
+  if (!extracted.trim()) return 0;
+  const existing = await fetchAlbumServer(albumId, tenantId);
+  const ocrText = mergeOcrText(existing?.ocrText, extracted);
+  const searchText = buildGalleryAlbumSearchText({
+    title: existing?.title,
+    description: existing?.description,
+    eventLocation: existing?.eventLocation,
+    ocrText,
+  });
+  await updateAlbumServer(albumId, { ocrText, searchText }, tenantId ?? existing?.tenantId);
+  return extracted.length;
 }

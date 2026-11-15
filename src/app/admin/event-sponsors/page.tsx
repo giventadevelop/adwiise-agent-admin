@@ -10,6 +10,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import ImageUpload from '@/components/ui/ImageUpload';
 import AdminNavigation from '@/components/AdminNavigation';
 import SponsorImageUploadDialog from '@/components/sponsors/SponsorImageUploadDialog';
+import SponsorImageUploadArea from '@/components/sponsors/SponsorImageUploadArea';
 import SponsorMediaGallery from '@/components/sponsors/SponsorMediaGallery';
 import type { EventSponsorsDTO } from '@/types';
 import {
@@ -17,6 +18,7 @@ import {
   createEventSponsorServer,
   updateEventSponsorServer,
   deleteEventSponsorServer,
+  uploadSponsorImageServer,
 } from './ApiServerActions';
 import { fetchAdminProfileServer } from '../manage-usage/ApiServerActions';
 import { useAdminTenantId } from '../AdminTenantContext';
@@ -63,12 +65,18 @@ export default function EventSponsorsPage() {
     twitterUrl: '',
     linkedinUrl: '',
     instagramUrl: '',
+    tiktokUrl: '',
   });
 
-  // Upload dialog states
+  // Upload dialog states (edit mode — immediate upload)
   const [logoUploadOpen, setLogoUploadOpen] = useState(false);
   const [heroUploadOpen, setHeroUploadOpen] = useState(false);
   const [bannerUploadOpen, setBannerUploadOpen] = useState(false);
+
+  // Pending images for create (defer-upload until sponsor exists)
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [pendingHeroFile, setPendingHeroFile] = useState<File | null>(null);
+  const [pendingBannerFile, setPendingBannerFile] = useState<File | null>(null);
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -141,22 +149,69 @@ export default function EventSponsorsPage() {
         websiteUrl: formData.websiteUrl?.trim() || undefined,
         contactEmail: formData.contactEmail?.trim() || undefined,
         contactPhone: formData.contactPhone?.trim() || undefined,
-        logoUrl: formData.logoUrl?.trim() || undefined,
-        heroImageUrl: formData.heroImageUrl?.trim() || undefined,
-        bannerImageUrl: formData.bannerImageUrl?.trim() || undefined,
+        logoUrl:
+          formData.logoUrl?.trim() && !formData.logoUrl.startsWith('blob:')
+            ? formData.logoUrl.trim()
+            : undefined,
+        heroImageUrl:
+          formData.heroImageUrl?.trim() && !formData.heroImageUrl.startsWith('blob:')
+            ? formData.heroImageUrl.trim()
+            : undefined,
+        bannerImageUrl:
+          formData.bannerImageUrl?.trim() && !formData.bannerImageUrl.startsWith('blob:')
+            ? formData.bannerImageUrl.trim()
+            : undefined,
         isActive: formData.isActive !== undefined ? formData.isActive : true,
         priorityRanking: formData.priorityRanking || 1,
         facebookUrl: formData.facebookUrl?.trim() || undefined,
         twitterUrl: formData.twitterUrl?.trim() || undefined,
         linkedinUrl: formData.linkedinUrl?.trim() || undefined,
         instagramUrl: formData.instagramUrl?.trim() || undefined,
+        tiktokUrl: formData.tiktokUrl?.trim() || undefined,
       };
 
       const newSponsor = await createEventSponsorServer(sponsorData, tenantId);
+      const createdId = newSponsor?.id;
+
+      const pendingUploads: Array<{ type: 'logo' | 'hero' | 'banner'; file: File }> = [];
+      if (createdId && pendingLogoFile) pendingUploads.push({ type: 'logo', file: pendingLogoFile });
+      if (createdId && pendingHeroFile) pendingUploads.push({ type: 'hero', file: pendingHeroFile });
+      if (createdId && pendingBannerFile) pendingUploads.push({ type: 'banner', file: pendingBannerFile });
+
+      let uploadedCount = 0;
+      let uploadFailed = false;
+      for (const item of pendingUploads) {
+        try {
+          await uploadSponsorImageServer(createdId!, 0, item.type, item.file, tenantId);
+          uploadedCount += 1;
+        } catch (uploadErr) {
+          console.error(`[CreateSponsor] ${item.type} upload failed:`, uploadErr);
+          uploadFailed = true;
+        }
+      }
+
       setIsCreateModalOpen(false);
       resetForm();
-      setToastMessage({ type: 'success', message: 'Sponsor created successfully. You can now upload images when editing the sponsor.' });
-      // Reload sponsors to ensure fresh data
+      setPendingLogoFile(null);
+      setPendingHeroFile(null);
+      setPendingBannerFile(null);
+
+      if (pendingUploads.length === 0) {
+        setToastMessage({ type: 'success', message: 'Sponsor created successfully' });
+      } else if (!uploadFailed) {
+        setToastMessage({
+          type: 'success',
+          message: `Sponsor created and ${uploadedCount} image${uploadedCount === 1 ? '' : 's'} uploaded`,
+        });
+      } else {
+        setToastMessage({
+          type: 'error',
+          message:
+            uploadedCount > 0
+              ? `Sponsor created; ${uploadedCount} image(s) uploaded, some failed — edit the sponsor to retry.`
+              : 'Sponsor created, but image upload failed. Edit the sponsor to upload images.',
+        });
+      }
       await loadSponsors();
     } catch (err: any) {
       setToastMessage({ type: 'error', message: err.message || 'Failed to create sponsor' });
@@ -219,7 +274,11 @@ export default function EventSponsorsPage() {
       twitterUrl: '',
       linkedinUrl: '',
       instagramUrl: '',
+      tiktokUrl: '',
     });
+    setPendingLogoFile(null);
+    setPendingHeroFile(null);
+    setPendingBannerFile(null);
   };
 
   const openEditModal = (sponsor: EventSponsorsDTO) => {
@@ -239,12 +298,16 @@ export default function EventSponsorsPage() {
 
   // Filter sponsors based on search and filters
   const filteredSponsors = sponsors.filter(sponsor => {
+    const q = searchTerm.toLowerCase();
     const matchesSearch = !searchTerm ||
-      sponsor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sponsor.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sponsor.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sponsor.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sponsor.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+      sponsor.name?.toLowerCase().includes(q) ||
+      sponsor.companyName?.toLowerCase().includes(q) ||
+      sponsor.type?.toLowerCase().includes(q) ||
+      sponsor.description?.toLowerCase().includes(q) ||
+      sponsor.tagline?.toLowerCase().includes(q) ||
+      sponsor.searchText?.toLowerCase().includes(q) ||
+      sponsor.ocrText?.toLowerCase().includes(q) ||
+      sponsor.contactEmail?.toLowerCase().includes(q);
 
     const matchesType = !filterType || sponsor.type === filterType;
     const matchesActive = filterActive === 'all' ||
@@ -501,9 +564,31 @@ export default function EventSponsorsPage() {
           onSubmit={handleCreate}
           loading={loading}
           submitText="Create Sponsor"
-          onLogoUploadClick={() => setLogoUploadOpen(true)}
-          onHeroUploadClick={() => setHeroUploadOpen(true)}
-          onBannerUploadClick={() => setBannerUploadOpen(true)}
+          deferImages
+          onPendingLogoSelected={(file, preview) => {
+            setPendingLogoFile(file);
+            setFormData((prev) => ({ ...prev, logoUrl: preview }));
+          }}
+          onPendingLogoCleared={() => {
+            setPendingLogoFile(null);
+            setFormData((prev) => ({ ...prev, logoUrl: '' }));
+          }}
+          onPendingHeroSelected={(file, preview) => {
+            setPendingHeroFile(file);
+            setFormData((prev) => ({ ...prev, heroImageUrl: preview }));
+          }}
+          onPendingHeroCleared={() => {
+            setPendingHeroFile(null);
+            setFormData((prev) => ({ ...prev, heroImageUrl: '' }));
+          }}
+          onPendingBannerSelected={(file, preview) => {
+            setPendingBannerFile(file);
+            setFormData((prev) => ({ ...prev, bannerImageUrl: preview }));
+          }}
+          onPendingBannerCleared={() => {
+            setPendingBannerFile(null);
+            setFormData((prev) => ({ ...prev, bannerImageUrl: '' }));
+          }}
         />
       </Modal>
 
@@ -599,9 +684,32 @@ interface SponsorFormProps {
   onLogoUploadClick?: () => void;
   onHeroUploadClick?: () => void;
   onBannerUploadClick?: () => void;
+  deferImages?: boolean;
+  onPendingLogoSelected?: (file: File, previewUrl: string) => void;
+  onPendingLogoCleared?: () => void;
+  onPendingHeroSelected?: (file: File, previewUrl: string) => void;
+  onPendingHeroCleared?: () => void;
+  onPendingBannerSelected?: (file: File, previewUrl: string) => void;
+  onPendingBannerCleared?: () => void;
 }
 
-function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onLogoUploadClick, onHeroUploadClick, onBannerUploadClick }: SponsorFormProps) {
+function SponsorForm({
+  formData,
+  setFormData,
+  onSubmit,
+  loading,
+  submitText,
+  onLogoUploadClick,
+  onHeroUploadClick,
+  onBannerUploadClick,
+  deferImages = false,
+  onPendingLogoSelected,
+  onPendingLogoCleared,
+  onPendingHeroSelected,
+  onPendingHeroCleared,
+  onPendingBannerSelected,
+  onPendingBannerCleared,
+}: SponsorFormProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
@@ -632,14 +740,20 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
     'Other'
   ];
 
-  // Note: ImageUpload requires eventId. For main sponsors page, we'll use a default eventId of 0
-  // or only show image uploads after sponsor is created (when formData.id exists)
-  // For now, we'll show image uploads only when editing (formData.id exists)
   const canUploadImages = !!formData.id;
+  const showImageSection = canUploadImages || deferImages;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Information */}
+      <section className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h3 className="font-heading font-semibold text-lg text-blue-800">Sponsor details</h3>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
@@ -762,9 +876,19 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
           </label>
         </div>
       </div>
+      </section>
 
+      <section className="rounded-2xl border-2 border-teal-200 bg-teal-50 p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h10" />
+            </svg>
+          </div>
+          <h3 className="font-heading font-semibold text-lg text-teal-800">Description</h3>
+        </div>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label className="block text-sm font-medium text-teal-800 mb-1">
           Tagline
         </label>
         <input
@@ -791,11 +915,23 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
           placeholder="Enter detailed description about the sponsor"
         />
       </div>
+      </section>
 
-      {/* Social Media Links */}
+      <section className="rounded-2xl border-2 border-sky-200 bg-sky-50 p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-sky-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-sky-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </div>
+          <h3 className="font-heading font-semibold text-lg text-sky-800">Social links</h3>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-1">
+            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-200 flex items-center justify-center">
+              <svg className="w-4 h-4 text-blue-700" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H8v3h2v7h3v-7h2.6l.4-3H13v-2c0-.6.4-1 1-1z" /></svg>
+            </span>
             Facebook URL
           </label>
           <input
@@ -809,7 +945,10 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="flex items-center gap-2 text-sm font-medium text-sky-800 mb-1">
+            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-sky-200 flex items-center justify-center">
+              <svg className="w-4 h-4 text-sky-700" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7.5c-.6.3-1.2.4-1.9.5.7-.4 1.2-1 1.4-1.8-.6.4-1.3.6-2.1.8A3.3 3.3 0 0012 9.3c0 .3 0 .5.1.8-2.7-.1-5.1-1.4-6.7-3.4-.3.5-.4 1-.4 1.6 0 1.1.6 2.1 1.5 2.7-.5 0-1-.2-1.5-.4 0 1.6 1.1 2.9 2.6 3.2-.3.1-.6.1-.9.1-.2 0-.4 0-.6-.1.4 1.3 1.6 2.2 3 2.3A6.6 6.6 0 014 17.6 9.3 9.3 0 009.1 19c6.1 0 9.5-5.1 9.5-9.5v-.4c.6-.5 1.2-1 1.4-1.6z" /></svg>
+            </span>
             Twitter URL
           </label>
           <input
@@ -823,7 +962,10 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-1">
+            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-200 flex items-center justify-center">
+              <svg className="w-4 h-4 text-blue-800" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9H4V20h2.5V9zM5.2 4C4.3 4 3.6 4.7 3.6 5.6S4.3 7.2 5.2 7.2 6.9 6.5 6.9 5.6 6.2 4 5.2 4zM20 20h-2.5v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9V20H11V9h2.4v1.5h.1c.3-.6 1.2-1.3 2.5-1.3 2.6 0 3.1 1.7 3.1 4V20z" /></svg>
+            </span>
             LinkedIn URL
           </label>
           <input
@@ -837,7 +979,10 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="flex items-center gap-2 text-sm font-medium text-pink-800 mb-1">
+            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-pink-200 flex items-center justify-center">
+              <svg className="w-4 h-4 text-pink-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" strokeWidth={2} /><circle cx="12" cy="12" r="3.5" strokeWidth={2} /><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" /></svg>
+            </span>
             Instagram URL
           </label>
           <input
@@ -849,90 +994,96 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
             placeholder="https://instagram.com/sponsor"
           />
         </div>
-      </div>
 
-      {/* Image Upload Section - Only show when editing (sponsor ID exists) */}
-      {canUploadImages && (
-        <div className="border-t border-border pt-6">
-          <h3 className="text-lg font-heading font-medium text-foreground mb-4">Images</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Logo Image
-              </label>
-              {formData.logoUrl && (
-                <div className="mb-2">
-                  <img
-                    src={formData.logoUrl}
-                    alt="Logo"
-                    className="h-20 w-auto rounded border border-border"
-                  />
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={onLogoUploadClick}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md reverent-transition text-sm"
-                disabled={loading || !formData.id}
-              >
-                {formData.logoUrl ? 'Change Logo' : 'Upload Logo'}
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Hero Image
-              </label>
-              {formData.heroImageUrl && (
-                <div className="mb-2">
-                  <img
-                    src={formData.heroImageUrl}
-                    alt="Hero"
-                    className="h-20 w-auto rounded border border-border"
-                  />
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={onHeroUploadClick}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md reverent-transition text-sm"
-                disabled={loading || !formData.id}
-              >
-                {formData.heroImageUrl ? 'Change Hero Image' : 'Upload Hero Image'}
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Banner Image
-              </label>
-              {formData.bannerImageUrl && (
-                <div className="mb-2">
-                  <img
-                    src={formData.bannerImageUrl}
-                    alt="Banner"
-                    className="h-20 w-auto rounded border border-border"
-                  />
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={onBannerUploadClick}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md reverent-transition text-sm"
-                disabled={loading || !formData.id}
-              >
-                {formData.bannerImageUrl ? 'Change Banner' : 'Upload Banner'}
-              </button>
-            </div>
-          </div>
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-fuchsia-800 mb-1">
+            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-fuchsia-200 flex items-center justify-center">
+              <svg className="w-4 h-4 text-fuchsia-700" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h2.2c.2 1.4 1 2.6 2.2 3.4 0 .6 1.4 1.2 2.1 1.3v2.3a6.3 6.3 0 01-3.6-1.1v6.4A5.4 5.4 0 1111 10.1v2.5a2.9 2.9 0 102 2.7V3z" /></svg>
+            </span>
+            TikTok URL
+          </label>
+          <input
+            type="url"
+            name="tiktokUrl"
+            value={formData.tiktokUrl || ''}
+            onChange={handleChange}
+            className="w-full border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:ring-2 focus:ring-ring focus:border-ring reverent-transition"
+            placeholder="https://www.tiktok.com/@sponsor"
+          />
         </div>
-      )}
+      </div>
+      </section>
 
-      {!canUploadImages && (
-        <div className="bg-muted/50 border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">
-            <strong>Note:</strong> Image uploads will be available after the sponsor is created. Save the sponsor first, then edit it to upload images.
-          </p>
+      {showImageSection && (
+        <div className="space-y-4">
+          {deferImages ? (
+            <>
+              <SponsorImageUploadArea
+                imageType="banner"
+                deferUpload
+                currentImageUrl={formData.bannerImageUrl}
+                disabled={loading}
+                onUploadSuccess={(url) => setFormData((prev) => ({ ...prev, bannerImageUrl: url }))}
+                onFileSelected={onPendingBannerSelected}
+                onFileCleared={onPendingBannerCleared}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SponsorImageUploadArea
+                  imageType="logo"
+                  deferUpload
+                  currentImageUrl={formData.logoUrl}
+                  disabled={loading}
+                  onUploadSuccess={(url) => setFormData((prev) => ({ ...prev, logoUrl: url }))}
+                  onFileSelected={onPendingLogoSelected}
+                  onFileCleared={onPendingLogoCleared}
+                />
+                <SponsorImageUploadArea
+                  imageType="hero"
+                  deferUpload
+                  currentImageUrl={formData.heroImageUrl}
+                  disabled={loading}
+                  onUploadSuccess={(url) => setFormData((prev) => ({ ...prev, heroImageUrl: url }))}
+                  onFileSelected={onPendingHeroSelected}
+                  onFileCleared={onPendingHeroCleared}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-800 mb-1">Banner poster</p>
+                <p className="text-sm text-amber-700 mb-3">This poster is what visitors see on the sponsor page and on event sponsor cards.</p>
+                {formData.bannerImageUrl && (
+                  <img src={formData.bannerImageUrl} alt="Banner" className="mb-3 h-32 w-auto rounded-xl border-2 border-amber-200 bg-white object-contain" />
+                )}
+                <button type="button" onClick={onBannerUploadClick} className="h-10 rounded-xl bg-amber-100 hover:bg-amber-200 px-4 font-semibold text-amber-800" disabled={loading || !formData.id}>
+                  {formData.bannerImageUrl ? 'Change banner poster' : 'Upload banner poster'}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-2xl border-2 border-indigo-300 bg-indigo-50 p-4">
+                  <p className="text-sm font-semibold text-indigo-800 mb-1">Logo</p>
+                  <p className="text-sm text-indigo-700 mb-3">Saved with the sponsor. Visitors do not see this image.</p>
+                  {formData.logoUrl && (
+                    <img src={formData.logoUrl} alt="Logo" className="mb-3 h-24 w-auto rounded-xl border-2 border-indigo-200 bg-white object-contain" />
+                  )}
+                  <button type="button" onClick={onLogoUploadClick} className="h-10 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-4 font-semibold text-indigo-800" disabled={loading || !formData.id}>
+                    {formData.logoUrl ? 'Change logo' : 'Upload logo'}
+                  </button>
+                </div>
+                <div className="rounded-2xl border-2 border-purple-300 bg-purple-50 p-4">
+                  <p className="text-sm font-semibold text-purple-800 mb-1">Hero image</p>
+                  <p className="text-sm text-purple-700 mb-3">Saved with the sponsor. Visitors do not see this image.</p>
+                  {formData.heroImageUrl && (
+                    <img src={formData.heroImageUrl} alt="Hero" className="mb-3 h-24 w-auto rounded-xl border-2 border-purple-200 bg-white object-contain" />
+                  )}
+                  <button type="button" onClick={onHeroUploadClick} className="h-10 rounded-xl bg-purple-100 hover:bg-purple-200 px-4 font-semibold text-purple-800" disabled={loading || !formData.id}>
+                    {formData.heroImageUrl ? 'Change hero image' : 'Upload hero image'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -954,20 +1105,42 @@ function SponsorForm({ formData, setFormData, onSubmit, loading, submitText, onL
         </div>
       )}
 
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex justify-end gap-3 pt-4">
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring reverent-transition"
+          className="flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+          title="Cancel"
+          aria-label="Cancel"
         >
-          Cancel
+          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </span>
+          <span className="font-semibold text-red-700">Cancel</span>
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary border border-transparent rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring reverent-transition disabled:opacity-50"
+          className={`flex-shrink-0 h-14 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+            submitText.toLowerCase().includes('create')
+              ? 'bg-green-100 hover:bg-green-200'
+              : 'bg-blue-100 hover:bg-blue-200'
+          }`}
+          title={loading ? 'Saving...' : submitText}
+          aria-label={loading ? 'Saving...' : submitText}
         >
-          {loading ? 'Saving...' : submitText}
+          <span className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+            submitText.toLowerCase().includes('create') ? 'bg-green-200' : 'bg-blue-200'
+          }`}>
+            <svg className={`w-6 h-6 ${submitText.toLowerCase().includes('create') ? 'text-green-700' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </span>
+          <span className={`font-semibold ${submitText.toLowerCase().includes('create') ? 'text-green-700' : 'text-blue-700'}`}>
+            {loading ? 'Saving...' : submitText}
+          </span>
         </button>
       </div>
     </form>

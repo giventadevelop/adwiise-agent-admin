@@ -1233,6 +1233,7 @@ export const ADMIN_HOME_BUTTONS = [
   { label: 'Tenant Settings', href: '/admin/tenant-management/settings' },
   { label: 'Personal Profile', href: '/admin/profile-site' },
   { label: 'Gas Stations', href: '/admin/gas-station' },
+  { label: 'Retail', href: '/admin/retail' },
   { label: 'Test CRUD', href: '/admin/tenant-management/test' },
   { label: 'Global Performers', href: '/admin/event-featured-performers' },
   { label: 'Global Contacts', href: '/admin/event-contacts' },

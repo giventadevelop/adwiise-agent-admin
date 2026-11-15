@@ -1,6 +1,7 @@
 'use server';
 import { appendAdminTenantFilter, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 
+import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl, getTenantId } from '@/lib/env';
 import { getAdminProxyBaseUrl } from '@/lib/adminProxyBaseUrl';
@@ -61,7 +62,23 @@ export async function fetchEventSponsorServer(id: number) {
 
 export async function createEventSponsorServer(sponsor: Omit<EventSponsorsDTO, 'id' | 'createdAt' | 'updatedAt'>, tenantId?: string) {
   const tid = await resolveAdminMutationTenantId(tenantId);
-  const payload: Record<string, unknown> = { ...sponsor };
+  const tiktokUrl = typeof sponsor.tiktokUrl === 'string' ? sponsor.tiktokUrl.trim() : sponsor.tiktokUrl;
+  const { buildSponsorSearchText } = await import('@/lib/search/buildSearchText');
+  const searchText =
+    sponsor.searchText ??
+    buildSponsorSearchText({
+      name: sponsor.name,
+      companyName: sponsor.companyName,
+      tagline: sponsor.tagline,
+      description: sponsor.description,
+      type: sponsor.type,
+      ocrText: sponsor.ocrText,
+    });
+  const payload: Record<string, unknown> = stampCreateTimestamps({
+    ...sponsor,
+    searchText,
+    tiktokUrl: tiktokUrl ? tiktokUrl : null,
+  });
   if (tid != null) (payload as Record<string, unknown>).tenantId = tid;
 
   const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-sponsors`, {
@@ -80,7 +97,47 @@ export async function createEventSponsorServer(sponsor: Omit<EventSponsorsDTO, '
 
 export async function updateEventSponsorServer(id: number, sponsor: Partial<EventSponsorsDTO>, tenantId?: string) {
   const tid = await resolveAdminMutationTenantId(tenantId);
-  const payload: Record<string, unknown> = { ...sponsor, id };
+  const tiktokUrl = typeof sponsor.tiktokUrl === 'string' ? sponsor.tiktokUrl.trim() : sponsor.tiktokUrl;
+
+  const touchesSearchFields =
+    sponsor.name !== undefined ||
+    sponsor.companyName !== undefined ||
+    sponsor.tagline !== undefined ||
+    sponsor.description !== undefined ||
+    sponsor.type !== undefined ||
+    sponsor.ocrText !== undefined ||
+    sponsor.searchText !== undefined;
+
+  const incomingOcr =
+    typeof sponsor.ocrText === 'string' && sponsor.ocrText.trim()
+      ? sponsor.ocrText.trim()
+      : undefined;
+
+  let searchText = sponsor.searchText;
+  if (touchesSearchFields && searchText === undefined) {
+    const { buildSponsorSearchText } = await import('@/lib/search/buildSearchText');
+    const existing = (await fetchEventSponsorServer(id)) as EventSponsorsDTO;
+    searchText = buildSponsorSearchText({
+      name: sponsor.name ?? existing?.name,
+      companyName: sponsor.companyName ?? existing?.companyName,
+      tagline: sponsor.tagline ?? existing?.tagline,
+      description: sponsor.description ?? existing?.description,
+      type: sponsor.type ?? existing?.type,
+      ocrText: incomingOcr ?? existing?.ocrText,
+    });
+  }
+
+  const payload: Record<string, unknown> = {
+    ...sponsor,
+    id,
+    ...(searchText !== undefined ? { searchText } : {}),
+    ...(sponsor.tiktokUrl !== undefined ? { tiktokUrl: tiktokUrl ? tiktokUrl : null } : {}),
+  };
+  if (incomingOcr) {
+    payload.ocrText = incomingOcr;
+  } else {
+    delete payload.ocrText;
+  }
   if (tid != null) (payload as Record<string, unknown>).tenantId = tid;
 
   const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-sponsors/${id}`, {
@@ -131,7 +188,7 @@ export async function fetchEventSponsorsJoinServer(eventId?: number, tenantId?: 
 
 export async function createEventSponsorJoinServer(sponsorJoin: Omit<EventSponsorsJoinDTO, 'id' | 'createdAt' | 'updatedAt'>, tenantId?: string) {
   const tid = await resolveAdminMutationTenantId(tenantId);
-  const payload: Record<string, unknown> = { ...sponsorJoin };
+  const payload: Record<string, unknown> = stampCreateTimestamps({ ...sponsorJoin });
   if (tid != null) (payload as Record<string, unknown>).tenantId = tid;
 
   const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-sponsors-join`, {
@@ -191,16 +248,23 @@ export async function deleteEventSponsorJoinServer(id: number) {
  * (same pattern as executive team members) to support sponsor images without event ID.
  * When eventId is 0 or not provided, the image is associated only with the sponsor.
  */
+export type SponsorImageUploadResult = EventMediaDTO & { ocrChars?: number };
+
 export async function uploadSponsorImageServer(
   sponsorId: number,
   eventId: number,
   imageType: 'logo' | 'hero' | 'banner',
   file: File,
   tenantId?: string
-): Promise<EventMediaDTO> {
+): Promise<SponsorImageUploadResult> {
   try {
+    const bytes = Buffer.from(await file.arrayBuffer());
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append(
+      'file',
+      new Blob([new Uint8Array(bytes)], { type: file.type || 'application/octet-stream' }),
+      file.name || `sponsor-${imageType}`,
+    );
 
     // Convert frontend imageType to backend format: logo -> LOGO_IMAGE, hero -> HERO_IMAGE, banner -> BANNER_IMAGE
     const backendImageType = imageType.toUpperCase() + '_IMAGE';
@@ -265,7 +329,35 @@ export async function uploadSponsorImageServer(
 
       try {
         const result = await response.json();
-        return result;
+        let ocrChars = 0;
+
+        try {
+          const { extractTextFromImageBytes } = await import('@/lib/search/extractImageText');
+          const { mergeOcrText, buildSponsorSearchText } = await import('@/lib/search/buildSearchText');
+          const extracted = await extractTextFromImageBytes(bytes, `sponsor-${sponsorId}-${imageType}`);
+          ocrChars = extracted.length;
+          if (extracted) {
+            const sponsor = (await fetchEventSponsorServer(sponsorId)) as EventSponsorsDTO;
+            const ocrText = mergeOcrText(sponsor?.ocrText, extracted);
+            const searchText = buildSponsorSearchText({
+              name: sponsor?.name,
+              companyName: sponsor?.companyName,
+              tagline: sponsor?.tagline,
+              description: sponsor?.description,
+              type: sponsor?.type,
+              ocrText,
+            });
+            await updateEventSponsorServer(sponsorId, {
+              ocrText,
+              searchText,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        } catch (ocrError) {
+          console.error('[SponsorOCR] post-upload failed:', ocrError);
+        }
+
+        return { ...result, ocrChars };
       } catch (parseError) {
         console.error('❌ Failed to parse successful upload response:', parseError);
         throw new Error('Upload succeeded but response parsing failed');

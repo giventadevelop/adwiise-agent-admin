@@ -491,9 +491,9 @@
         <div class="command-block advance"
              data-command-type="advance"
              data-command-base="cmd /c"
-             data-template-command="cmd /c &quot;set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001&quot;">
+             data-template-command="cmd /c &quot;set TEST_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_TENANT_ID=tenant_demo_002&amp;&amp; set E2E_EXPECTED_TENANT=tenant_demo_002&amp;&amp; set TEST_BASE_URL=http://localhost:3001&amp;&amp; node TestSprite\tools\generate-route-inventory.js &amp; node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 &amp; node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 &amp; node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001&quot;">
           <div class="command-header">
-            <span class="command-type">Full ladder (inventory → comprehensive → CRUD → smoke)</span>
+            <span class="command-type">Full ladder (inventory → comprehensive → CRUD → retail → smoke)</span>
             <div class="command-header-buttons">
               <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this, 'e2e-ladder-full')" title="Copy template command">📄 Template</button>
               <button type="button" class="copy-button" onclick="copyCommand(this, 'e2e-ladder-full')" title="Copy customized command">📋 Copy</button>
@@ -512,10 +512,10 @@
               </div>
             </div>
           </div>
-          <div class="command-content" id="e2e-ladder-full">cmd /c "set TEST_TENANT_ID=tenant_demo_002&& set E2E_TENANT_ID=tenant_demo_002&& set E2E_EXPECTED_TENANT=tenant_demo_002&& set TEST_BASE_URL=http://localhost:3001&& node TestSprite\tools\generate-route-inventory.js & node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 & node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</div>
+          <div class="command-content" id="e2e-ladder-full">cmd /c "set TEST_TENANT_ID=tenant_demo_002&& set E2E_TENANT_ID=tenant_demo_002&& set E2E_EXPECTED_TENANT=tenant_demo_002&& set TEST_BASE_URL=http://localhost:3001&& node TestSprite\tools\generate-route-inventory.js & node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 & node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</div>
           <div class="command-single-line" id="e2e-ladder-full-single">
             <div class="command-single-line-label">Windows Single-Line:</div>
-            <code id="e2e-ladder-full-single-code">cmd /c "set TEST_TENANT_ID=tenant_demo_002&& set E2E_TENANT_ID=tenant_demo_002&& set E2E_EXPECTED_TENANT=tenant_demo_002&& set TEST_BASE_URL=http://localhost:3001&& node TestSprite\tools\generate-route-inventory.js & node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 & node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</code>
+            <code id="e2e-ladder-full-single-code">cmd /c "set TEST_TENANT_ID=tenant_demo_002&& set E2E_TENANT_ID=tenant_demo_002&& set E2E_EXPECTED_TENANT=tenant_demo_002&& set TEST_BASE_URL=http://localhost:3001&& node TestSprite\tools\generate-route-inventory.js & node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 & node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001"</code>
           </div>
         </div>
 
@@ -675,6 +675,7 @@
           '&& node TestSprite\\tools\\generate-route-inventory.js' +
           ' & node TestSprite\\admin-tests\\comprehensive-admin-test-suite.js --port=' + port +
           ' & node TestSprite\\admin-tests\\admin-crud-demo-tenant-suite.js --tenant=' + tenant + ' --port=' + port +
+          ' & node TestSprite\\admin-tests\\retail-demo-tenant-suite.js --tenant=' + tenant + ' --port=' + port +
           ' & node TestSprite\\sanity-tests\\run-inventory-smoke-crawl.js --kind=admin,public --tenant=' + tenant + ' --port=' + port + '"';
       } else if (commandId === 'e2e-quick-3001' || commandId === 'e2e-quick-3000') {
         const tenant = getParam(commandId, 'tenant', 'tenant_demo_002');

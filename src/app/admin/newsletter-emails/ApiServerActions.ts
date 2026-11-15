@@ -1,5 +1,6 @@
 'use server';
 import { appendAdminTenantFilter, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { getApiBaseUrl, getAppUrl } from '@/lib/env';
 import { appendTenantIfPresent, effectiveTenantId } from '@/lib/env';
 import type {
@@ -112,7 +113,7 @@ export async function createNewsletterEmailTemplateServer(
     throw new Error('fromEmail is required and cannot be empty');
   }
 
-  const payload: Record<string, unknown> = {
+  const payload: Record<string, unknown> = stampCreateTimestamps({
     eventId: formData.eventId ?? null,
     templateName: formData.templateName,
     templateType: formData.templateType || 'NEWS_LETTER',
@@ -124,7 +125,7 @@ export async function createNewsletterEmailTemplateServer(
     footerImageUrl: formData.footerImageUrl || '',
     discountCodeId: formData.discountCodeId,
     isActive: formData.isActive !== undefined ? formData.isActive : true,
-  };
+  });
   if (tid != null) (payload as any).tenantId = tid;
 
   const response = await fetch(url, {

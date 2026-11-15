@@ -96,6 +96,7 @@ export default function EventSponsorsPage() {
     twitterUrl: '',
     linkedinUrl: '',
     instagramUrl: '',
+    tiktokUrl: '',
   });
 
   // Search and filter state
@@ -196,6 +197,7 @@ export default function EventSponsorsPage() {
         twitterUrl: sponsorFormData.twitterUrl?.trim() || undefined,
         linkedinUrl: sponsorFormData.linkedinUrl?.trim() || undefined,
         instagramUrl: sponsorFormData.instagramUrl?.trim() || undefined,
+        tiktokUrl: sponsorFormData.tiktokUrl?.trim() || undefined,
       };
 
       console.log('🔍 Creating new sponsor:', sponsorData);
@@ -423,6 +425,7 @@ export default function EventSponsorsPage() {
       twitterUrl: '',
       linkedinUrl: '',
       instagramUrl: '',
+      tiktokUrl: '',
     });
   };
 
@@ -708,6 +711,7 @@ export default function EventSponsorsPage() {
       { label: 'Twitter URL', value: sponsor.twitterUrl },
       { label: 'LinkedIn URL', value: sponsor.linkedinUrl },
       { label: 'Instagram URL', value: sponsor.instagramUrl },
+      { label: 'TikTok URL', value: sponsor.tiktokUrl },
       { label: 'Assigned Date', value: sponsorJoin.createdAt ? new Date(sponsorJoin.createdAt).toLocaleDateString() : null },
     ].filter(detail => detail.value !== null && detail.value !== undefined && detail.value !== '');
 
@@ -1864,6 +1868,20 @@ function SponsorForm({ formData, setFormData, onSubmit, onCancel, loading, submi
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="https://instagram.com/sponsor"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            TikTok URL
+          </label>
+          <input
+            type="url"
+            name="tiktokUrl"
+            value={formData.tiktokUrl || ''}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="https://www.tiktok.com/@sponsor"
           />
         </div>
       </div>

@@ -117,6 +117,7 @@ export async function createEventSponsorServer(sponsor: Omit<EventSponsorsDTO, '
     twitterUrl: cleanUrlField(sponsor.twitterUrl),
     linkedinUrl: cleanUrlField(sponsor.linkedinUrl),
     instagramUrl: cleanUrlField(sponsor.instagramUrl),
+    tiktokUrl: cleanUrlField(sponsor.tiktokUrl),
   };
 
   // Don't apply withTenantId here since the proxy will handle it
@@ -162,6 +163,7 @@ export async function updateEventSponsorServer(id: number, sponsor: Partial<Even
     twitterUrl: sponsor.twitterUrl ? cleanUrlField(sponsor.twitterUrl) : undefined,
     linkedinUrl: sponsor.linkedinUrl ? cleanUrlField(sponsor.linkedinUrl) : undefined,
     instagramUrl: sponsor.instagramUrl ? cleanUrlField(sponsor.instagramUrl) : undefined,
+    tiktokUrl: sponsor.tiktokUrl ? cleanUrlField(sponsor.tiktokUrl) : undefined,
   });
 
   console.log('🔍 PATCH payload being sent:', JSON.stringify(payload, null, 2));

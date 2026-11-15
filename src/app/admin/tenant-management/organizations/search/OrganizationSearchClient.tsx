@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ONBOARDING_SITE_TYPE_OPTIONS } from '@/lib/onboarding/onboardingShared';
+import { useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 import TenantOrganizationDetailsTooltip from '@/app/admin/tenant-management/components/TenantOrganizationDetailsTooltip';
 import AdminTableActionButtons from '@/components/admin/AdminTableActionButtons';
 import { useAdminHoverTooltip } from '@/lib/admin/useAdminHoverTooltip';
@@ -124,6 +124,7 @@ function fileStamp(): string {
 }
 
 export default function OrganizationSearchClient() {
+  const siteTypeOptions = useRetailerTypeOptions('server');
   const [draft, setDraft] = useState<OrganizationSearchFilters>(emptyOrganizationSearchFilters);
   const [applied, setApplied] = useState<OrganizationSearchFilters>(emptyOrganizationSearchFilters);
   const [page, setPage] = useState(0);
@@ -169,6 +170,10 @@ export default function OrganizationSearchClient() {
     };
   }, [applied, page]);
 
+  const siteTypeChoices =
+    draft.siteType && !siteTypeOptions.some((option) => option.value === draft.siteType)
+      ? [{ value: draft.siteType, label: draft.siteType, hint: '' }, ...siteTypeOptions]
+      : siteTypeOptions;
   const totalPages = Math.ceil(totalCount / ORGANIZATION_SEARCH_PAGE_SIZE) || 1;
   const startItem = totalCount > 0 ? page * ORGANIZATION_SEARCH_PAGE_SIZE + 1 : 0;
   const endItem = totalCount > 0 ? page * ORGANIZATION_SEARCH_PAGE_SIZE + rows.length : 0;
@@ -240,7 +245,7 @@ export default function OrganizationSearchClient() {
               className={inputClass}
             >
               <option value="">Any site type</option>
-              {ONBOARDING_SITE_TYPE_OPTIONS.map((option) => (
+              {siteTypeChoices.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

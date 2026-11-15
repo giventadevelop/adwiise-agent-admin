@@ -884,6 +884,267 @@ const adminTestPages = [
       'Pagination footer item count/empty state is visible',
       'Add/edit/delete dialog states are available from category actions'
     ]
+  },
+  {
+    id: 'admin-032',
+    name: 'Retail Morning Brief',
+    url: '/admin/retail',
+    category: 'retail',
+    priority: 'high',
+    expectedElements: ['h1:has-text("Retail morning brief")'],
+    validation: ['Retail morning page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-033',
+    name: 'Retail Locations',
+    url: '/admin/retail/locations',
+    category: 'retail',
+    priority: 'high',
+    expectedElements: ['h1:has-text("Retail locations")'],
+    validation: ['Retail locations page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-034',
+    name: 'Retail Upload Day',
+    url: '/admin/retail/upload',
+    category: 'retail',
+    priority: 'high',
+    expectedElements: ['h1:has-text("Upload day")'],
+    validation: ['Retail upload page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-035',
+    name: 'Retail Integrations',
+    url: '/admin/retail/integrations',
+    category: 'retail',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Retail integrations")'],
+    validation: ['Retail integrations page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-036',
+    name: 'Retail Compare Stores',
+    url: '/admin/retail/compare',
+    category: 'retail',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Compare stores")'],
+    validation: ['Retail compare page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-037',
+    name: 'Retail Assignments',
+    url: '/admin/retail/access',
+    category: 'retail',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Retail assignments")'],
+    validation: ['Retail access page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-038',
+    name: 'Access and Retailer Catalogs',
+    url: '/admin/access-catalogs',
+    category: 'access',
+    priority: 'high',
+    expectedElements: ['h1:has-text("Access and retailer catalogs")'],
+    validation: ['Access catalogs page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-039',
+    name: 'Access Roles Catalog',
+    url: '/admin/access-catalogs/access-roles',
+    category: 'access',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Access roles")'],
+    validation: ['Access roles page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-040',
+    name: 'Site Types Catalog',
+    url: '/admin/access-catalogs/site-types',
+    category: 'access',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Site types")'],
+    validation: ['Site types page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-041',
+    name: 'Retailer Packs Catalog',
+    url: '/admin/access-catalogs/retailer-types',
+    category: 'access',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Retailer packs")'],
+    validation: ['Retailer types page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-042',
+    name: 'Retailer Size Bands Catalog',
+    url: '/admin/access-catalogs/retailer-size-bands',
+    category: 'access',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Size bands")'],
+    validation: ['Size bands page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-043',
+    name: 'Recommendation Categories Catalog',
+    url: '/admin/access-catalogs/recommendation-categories',
+    category: 'access',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Recommendation categories")'],
+    validation: ['Recommendation categories page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-044',
+    name: 'Billing Desk',
+    url: '/admin/billing',
+    category: 'billing',
+    priority: 'high',
+    expectedElements: ['h1:has-text("Platform billing")'],
+    validation: ['Billing desk page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-045',
+    name: 'Platform Billing',
+    url: '/admin/platform-billing',
+    category: 'billing',
+    priority: 'high',
+    expectedElements: ['h1:has-text("Platform billing")'],
+    validation: ['Platform billing page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-046',
+    name: 'Platform Billing Plans',
+    url: '/admin/platform-billing/plans',
+    category: 'billing',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Platform billing plans")'],
+    validation: ['Platform billing plans page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-047',
+    name: 'School Site',
+    url: '/admin/school',
+    category: 'roster',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("School site")'],
+    validation: ['School page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-048',
+    name: 'Team Groups',
+    url: '/admin/team-groups',
+    category: 'roster',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Team groups")'],
+    validation: ['Squad groups page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-049',
+    name: 'Team Roster Members',
+    url: '/admin/team-members',
+    category: 'roster',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Team roster members")'],
+    validation: ['Squad roster page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-050',
+    name: 'Roster Catalogs',
+    url: '/admin/roster-catalogs',
+    category: 'roster',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Roster catalogs")'],
+    validation: ['Roster catalogs page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-051',
+    name: 'Leagues',
+    url: '/admin/leagues',
+    category: 'roster',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Leagues")'],
+    validation: ['Leagues page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-052',
+    name: 'Squads',
+    url: '/admin/squads',
+    category: 'roster',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Squads")'],
+    validation: ['Squads page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-053',
+    name: 'Personal Profile Site',
+    url: '/admin/profile-site',
+    category: 'platform',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Personal Profile Site")'],
+    validation: ['Profile site page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-054',
+    name: 'Onboarding Requests',
+    url: '/admin/onboarding-requests',
+    category: 'platform',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Onboarding Requests")'],
+    validation: ['Onboarding requests page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-055',
+    name: 'Satellite Domains',
+    url: '/admin/satellite-domains',
+    category: 'platform',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Satellite Domains")'],
+    validation: ['Satellite domains page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-056',
+    name: 'Batch Job Dashboard',
+    url: '/admin/batch-jobs',
+    category: 'platform',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Batch Job Dashboard")'],
+    validation: ['Batch jobs page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-057',
+    name: 'News Advertisements',
+    url: '/admin/news-advertisements',
+    category: 'content',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("News advertisements")'],
+    validation: ['News advertisements page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-058',
+    name: 'Promotional Emails',
+    url: '/admin/promotion-emails',
+    category: 'content',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Promotional Emails for Events")'],
+    validation: ['Promotion emails page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-059',
+    name: 'Homepage YouTube Live',
+    url: '/admin/homepage-youtube-live',
+    category: 'content',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Homepage YouTube live")'],
+    validation: ['Homepage YouTube live page loads', 'Page is not a sign-in redirect']
+  },
+  {
+    id: 'admin-060',
+    name: 'Gallery YouTube Videos',
+    url: '/admin/gallery-youtube-videos',
+    category: 'content',
+    priority: 'medium',
+    expectedElements: ['h1:has-text("Gallery YouTube videos")'],
+    validation: ['Gallery YouTube videos page loads', 'Page is not a sign-in redirect']
   }
 ];
 

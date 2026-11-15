@@ -48,7 +48,6 @@ export default function Modal({
   }, [isOpen, onClose]);
 
   if (!isOpen) {
-    console.log('🔍 Modal not open, returning null');
     return null;
   }
 
@@ -114,10 +113,7 @@ export function ConfirmModal({
   cancelText = 'Cancel',
   variant = 'danger',
 }: ConfirmModalProps) {
-  console.log('🔍 ConfirmModal render:', { isOpen, title, message, variant });
-
   if (!isOpen) {
-    console.log('🔍 ConfirmModal not open, returning null');
     return null;
   }
 

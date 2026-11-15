@@ -109,7 +109,7 @@ Console prints `[harness] HTML report: …`.
 ## Recommended ladder (admin + public)
 
 ```bat
-cmd /c "set TEST_TENANT_ID=tenant_demo_002&& set E2E_TENANT_ID=tenant_demo_002&& set E2E_EXPECTED_TENANT=tenant_demo_002&& set TEST_BASE_URL=http://localhost:3001&& node TestSprite\tools\generate-route-inventory.js & node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 & node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001 & node TestSprite\tools\write-consolidated-coverage-report.js"
+cmd /c "set TEST_TENANT_ID=tenant_demo_002&& set E2E_TENANT_ID=tenant_demo_002&& set E2E_EXPECTED_TENANT=tenant_demo_002&& set TEST_BASE_URL=http://localhost:3001&& node TestSprite\tools\generate-route-inventory.js & node TestSprite\admin-tests\comprehensive-admin-test-suite.js --port=3001 & node TestSprite\admin-tests\admin-crud-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\admin-tests\retail-demo-tenant-suite.js --tenant=tenant_demo_002 --port=3001 & node TestSprite\sanity-tests\run-inventory-smoke-crawl.js --kind=admin,public --tenant=tenant_demo_002 --port=3001 & node TestSprite\tools\write-consolidated-coverage-report.js"
 ```
 
 Or the quick orchestrator (default port **3001**):

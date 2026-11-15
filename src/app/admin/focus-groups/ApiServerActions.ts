@@ -73,12 +73,17 @@ export async function createFocusGroupServer(
 ): Promise<CreateFocusGroupResult> {
   const now = new Date().toISOString();
   const tid = await resolveAdminMutationTenantId(input.tenantId);
+  const { buildFocusGroupSearchText } = await import('@/lib/search/buildSearchText');
+  const name = input.name.trim();
+  const slug = input.slug.trim();
+  const description = input.description ?? '';
   const payload = withTenantId({
-    name: input.name.trim(),
-    slug: input.slug.trim(),
-    description: input.description ?? '',
+    name,
+    slug,
+    description,
     coverImageUrl: input.coverImageUrl ?? '',
     isActive: input.isActive ?? true,
+    searchText: buildFocusGroupSearchText({ name, slug, description }),
     createdAt: now,
     updatedAt: now,
     ...(tid ? { tenantId: tid } : {}),
@@ -135,6 +140,97 @@ export async function createFocusGroupServer(
   }
 
   return { ok: false, error: lastError };
+}
+
+/**
+ * Read text from a just-uploaded focus-group cover and store it on the group.
+ * A failed read leaves the uploaded image in place.
+ */
+export async function persistFocusGroupCoverOcrServer(
+  focusGroupId: number,
+  file: File,
+  tenantId?: string,
+): Promise<number> {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const { extractTextFromImageBytes } = await import('@/lib/search/extractImageText');
+  const { mergeOcrText, buildFocusGroupSearchText } = await import('@/lib/search/buildSearchText');
+  const extracted = await extractTextFromImageBytes(bytes, `focus-group-${focusGroupId}-cover`);
+  if (!extracted.trim()) return 0;
+
+  const tid = await resolveAdminMutationTenantId(tenantId);
+  const existingRes = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups/${focusGroupId}`, {
+    cache: 'no-store',
+    headers: await headersForTenantScope(tid),
+  });
+  if (!existingRes.ok) {
+    throw new Error(`Failed to load focus group ${focusGroupId}`);
+  }
+  const existing = (await existingRes.json()) as FocusGroupDTO;
+  const ocrText = mergeOcrText(existing.ocrText, extracted);
+  const searchText = buildFocusGroupSearchText({
+    name: existing.name,
+    slug: existing.slug,
+    description: existing.description,
+    ocrText,
+  });
+  const payload = withTenantId({
+    id: focusGroupId,
+    ocrText,
+    searchText,
+    updatedAt: new Date().toISOString(),
+    ...(tid ? { tenantId: tid } : {}),
+  });
+  const patch = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups/${focusGroupId}`, {
+    method: 'PATCH',
+    headers: await headersForTenantScope(tid, { 'Content-Type': 'application/merge-patch+json' }),
+    body: JSON.stringify(payload),
+  });
+  if (!patch.ok) {
+    throw new Error(await patch.text());
+  }
+  return extracted.length;
+}
+
+export async function updateFocusGroupDetailsServer(input: {
+  id: number;
+  name?: string;
+  slug?: string;
+  description?: string;
+  coverImageUrl?: string;
+  isActive?: boolean;
+  tenantId?: string;
+}): Promise<void> {
+  const tid = await resolveAdminMutationTenantId(input.tenantId);
+  const existingRes = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups/${input.id}`, {
+    cache: 'no-store',
+    headers: await headersForTenantScope(tid),
+  });
+  const existing = existingRes.ok ? ((await existingRes.json()) as FocusGroupDTO) : null;
+  const { buildFocusGroupSearchText } = await import('@/lib/search/buildSearchText');
+  const payload = withTenantId({
+    id: input.id,
+    name: input.name,
+    slug: input.slug,
+    description: input.description,
+    coverImageUrl: input.coverImageUrl,
+    isActive: input.isActive,
+    searchText: buildFocusGroupSearchText({
+      name: input.name ?? existing?.name,
+      slug: input.slug ?? existing?.slug,
+      description: input.description ?? existing?.description,
+      ocrText: existing?.ocrText,
+    }),
+    updatedAt: new Date().toISOString(),
+    ...(tid ? { tenantId: tid } : {}),
+  });
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups/${input.id}`, {
+    method: 'PATCH',
+    headers: await headersForTenantScope(tid, { 'Content-Type': 'application/merge-patch+json' }),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
 }
 
 export type DeleteFocusGroupResult = { ok: true } | { ok: false; error: string };

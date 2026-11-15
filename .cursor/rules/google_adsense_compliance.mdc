@@ -1,0 +1,109 @@
+---
+description: Google AdSense compliance checklist — ads.txt, ownership snippet, privacy, terms, footer links, public routes, cookie consent, and the live HTML a crawler actually reads
+globs: public/ads.txt,src/middleware.ts,src/app/privacy/**,src/app/terms/**,src/components/Footer.tsx,src/components/ads/**,src/lib/adsense/**
+alwaysApply: false
+---
+
+# Google AdSense compliance checklist
+
+Use this when asked whether a site is ready for Google AdSense review, or when AdSense reports **Getting ready**, **Needs attention**, **Couldn't verify your site**, **Ads.txt Not found**, or **Low value content**. Open that site's repo and its live host. Mark each item pass or fail with the file or URL that proves it. A passing file in the repo does not count until the published page shows it. Do not treat a copied template page as compliant.
+
+Each domain is judged on its own published HTML. Another property's rejection does not change this checklist.
+
+**Getting ready** for a few days, and sometimes two to four weeks, is normal. **Needs attention** means the review finished. Do not delete the site and add it again. **Ads.txt Authorized** does not prove ownership. Request another review only after the corrected pages are on the live host and a signed-out visitor can read them.
+
+## Publisher ID
+
+- Use the publisher ID registered for this site in AdSense.
+- The `ads.txt` line uses the numeric form: drop the `ca-` prefix from `ca-pub-…`.
+- The line is `google.com, pub-NUMERIC, DIRECT, f08c47fec0942fa0`.
+- Sites that share one owner account must all use that account's publisher ID. A site on its own AdSense account must not keep another account's `pub-` line.
+- The shared Giventa owner account uses `ca-pub-1016198353275904` (`pub-1016198353275904` in `ads.txt`). That default applies only when this site is on that account.
+
+## Checklist
+
+- **ads.txt matches the publisher ID**
+  - `public/ads.txt` is served at `https://DOMAIN/ads.txt` and returns HTTP 200 with `Content-Type: text/plain`.
+  - Fetch the live URL. A file in the repo does not count until that URL returns the line.
+  - If the bare host redirects to `www`, follow that one hop and confirm the same path still returns the file. Google treats "Not found" as the crawler's last fetch, which can lag behind a file that is already live. Use **Check for updates** in the sites table after the file is correct.
+
+- **Account meta tag and verification script**
+  - `src/app/layout.tsx` includes `<meta name="google-adsense-account" content="ca-pub-...">`.
+  - The same head includes the AdSense code snippet: `adsbygoogle.js?client=ca-pub-...` with `crossorigin="anonymous"`.
+  - Both must be in the server-rendered HTML of the live homepage. Loading the script only after cookie Accept fails the **AdSense code snippet** check.
+  - Ad units (`ins.adsbygoogle` and `push`) still wait for Accept.
+
+- **Tenant settings**
+  - `enableGoogleAdsense` is true.
+  - `googleAdsensePublisherId` is `ca-pub-` plus digits and matches the live snippet.
+  - `googleAdsensePlacementsJson` maps at least one region (`footer_strip`, `sidebar`, `between_sections`, `article_inline`) to a numeric slot ID.
+  - The public footer or page actually renders `GoogleAdSenseRegion` for that region.
+
+- **About and contact**
+  - `/about` and `/contact` exist, name this organization, and are public without sign-in.
+  - They include this organization's legal name, a real location, a real phone, and a real email. No placeholder and no other tenant's contact.
+
+- **Privacy policy**
+  - Route is `/privacy`.
+  - It names this organization, a real contact email, and a real location.
+  - It states that the site uses Google AdSense and that Google may use cookies to serve and measure ads.
+  - It links to Google's privacy policy and to an opt-out (`https://adssettings.google.com`).
+  - It distinguishes the two loaders: the ownership script in `<head>` may be present before a choice; ad units load only after Accept. A sentence that says the AdSense script never loads until Accept is false once the snippet is in the layout.
+
+- **Terms**
+  - Route is `/terms`.
+  - It names this organization and links to `/privacy`.
+  - It says third-party ads are delivered by Google AdSense and are not the organization's own offers.
+
+- **Footer links on every public page**
+  - The public footer links to `/privacy` and `/terms`.
+  - A registration checkbox is not a substitute. The crawler must reach both pages from the site chrome.
+
+- **Public routes**
+  - `src/middleware.ts` keeps `/`, `/ads.txt`, `/privacy(.*)`, `/terms(.*)`, `/about(.*)`, and `/contact(.*)` off the sign-in wall.
+  - A signed-out request must not be sent to sign-in. `auth.protect()` must not run for these paths. A crawler that lands on the sign-in page fails ownership and ads.txt.
+
+- **Cookie choice before ad units**
+  - A banner offers Accept and Reject and links to the privacy policy and terms.
+  - `GoogleAdSenseSlot` renders `ins.adsbygoogle` and calls `adsbygoogle.push` only when the stored choice is `accepted`.
+  - Reject leaves the ad unit unloaded. The ownership script in `<head>` stays in the HTML either way.
+  - The footer offers a way to open the choice again.
+  - This is the required gate before ads in the EU/UK. It is not a full IAB TCF CMP.
+
+- **One organization, visible in the first HTML response**
+  - Search the repo and the live HTML for a leftover template name or a previous tenant's name. One wrong sentence fails the page even when the legal name appears later.
+  - Check every public surface that can render that name: homepage, About, backup or theme routes, and shared about/header components.
+  - Events, team, sponsors, and other listings that already exist in this tenant's API must be in the server-rendered homepage. A crawler that does not run the later browser fetch sees only the first response. Client-only sections that start empty look unpublished.
+  - Keep an event on the homepage while it is still running. Filter current events with `endDate` on or after today, not `startDate` on or after today.
+  - Do not leave headings that say a section will appear when available. Omit the section until records exist.
+  - Do not add empty routes, doorway pages, or generic paragraphs to pass a low-value review. If news or writings are not published, do not invent them.
+  - A short template plus empty sections is low-value content even when ads.txt and the snippet are correct.
+
+## Verify site ownership
+
+A passing repo checklist does not verify the site. Read the method selected in AdSense (Sites → the domain → Verify site ownership) and prove that method on the published host. The three methods are different checks:
+
+1. **AdSense code snippet.** The published homepage HTML contains, in `<head>`:
+   `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-PUBLISHER" crossorigin="anonymous"></script>`
+2. **Meta tag.** The published homepage HTML contains `<meta name="google-adsense-account" content="ca-pub-PUBLISHER">`.
+3. **Ads.txt snippet.** `https://DOMAIN/ads.txt` returns the publisher line as `text/plain`.
+
+Do these in order before clicking Verify:
+
+1. Fetch the live homepage and `ads.txt` while signed out. Search the raw HTML for the tag that matches the selected method. A local file, an admin form, or a script inserted after Accept does not satisfy the crawler.
+2. Put the code snippet and the meta tag in the server-rendered `<head>` of `src/app/layout.tsx`, using this site's publisher ID. Keep ad units behind Accept.
+3. Release the app that serves that domain. The admin hub and the API are different apps. Verify only after the published HTML contains the selected proof. Until that release, switch the dashboard method to **Meta tag** or **Ads.txt snippet** when that proof is already on the live host.
+4. Confirm `ads.txt` on the host registered in AdSense, including one redirect from the bare host to `www` on the same site. Then use **Check for updates**. "Not found" stays until Google recrawls.
+
+## Before requesting review again
+
+1. Confirm the corrected pages are on the live host, not only in a local working tree. Redeploying the commit already in production republishes the reviewed site.
+2. Open the homepage, `/about`, `/privacy`, and `/terms` while signed out. The legal name, contact details, and any published events, team, or sponsors must be in that HTML.
+3. Use **Verify site ownership** for an ownership failure. Do not delete and re-add the site.
+4. Request a new review only after that signed-out check passes. A new review of the old homepage fails again on low-value content even if ownership then passes.
+
+## How to record a project
+
+Write the pass or fail result in **that project's** `.cursor/rules/google_adsense_compliance.mdc`. One line per checklist item, with the file or live URL. Copy this rule into that repo if it does not have one yet.
+
+Do not add a site's status, domain, contact details, commit, or Amplify app id to this file. This file stays the shared checklist.

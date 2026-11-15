@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { fetchTenantOrganizationsBySiteTypes } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { websiteTenantIdsOf } from '@/app/admin/tenant-management/organizations/websiteTenantIds';
 import { PageFooter } from '@/components/retail/RetailUi';
 
 const PAGE_SIZE = 8;
@@ -21,7 +23,6 @@ interface TenantSiteTypePickerProps {
  * AdminTenantContext top bar picks up, scoping the module page to that tenant.
  */
 export default function TenantSiteTypePicker({ siteTypes, title }: TenantSiteTypePickerProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [organizations, setOrganizations] = useState<TenantOrganizationDTO[]>([]);
@@ -44,19 +45,30 @@ export default function TenantSiteTypePicker({ siteTypes, title }: TenantSiteTyp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteTypes.join(',')]);
 
-  const totalCount = organizations.length;
+  const rows = useMemo(() => {
+    const list: Array<{ tenantId: string; organization: TenantOrganizationDTO }> = [];
+    for (const organization of organizations) {
+      for (const tenantId of websiteTenantIdsOf(organization)) {
+        list.push({ tenantId, organization });
+      }
+    }
+    return list;
+  }, [organizations]);
+
+  const totalCount = rows.length;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
   const currentPage = Math.min(page, totalPages - 1);
   const pageRows = useMemo(
-    () => organizations.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE),
-    [organizations, currentPage]
+    () => rows.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE),
+    [rows, currentPage]
   );
   const showPagination = totalCount > PAGE_SIZE;
 
-  const selectTenant = (tenantId: string) => {
+  const hrefForTenant = (tenantId: string) => {
     const next = new URLSearchParams(searchParams?.toString() ?? '');
     next.set('tenant', tenantId);
-    router.replace(`${pathname}?${next.toString()}`);
+    const qs = next.toString();
+    return `${pathname}${qs ? `?${qs}` : ''}`;
   };
 
   return (
@@ -90,7 +102,7 @@ export default function TenantSiteTypePicker({ siteTypes, title }: TenantSiteTyp
                 </td>
               </tr>
             )}
-            {!loading && organizations.length === 0 && (
+            {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-sm text-gray-500 text-center">
                   No tenants with site type {siteTypes.join(' / ')} yet. Set an organization&apos;s
@@ -99,39 +111,38 @@ export default function TenantSiteTypePicker({ siteTypes, title }: TenantSiteTyp
               </tr>
             )}
             {!loading &&
-              pageRows.map((org) => (
-                <tr key={org.tenantId} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50">
+              pageRows.map((row) => (
+                <tr key={row.tenantId} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50">
                   <td className="px-3 sm:px-4 py-3 text-sm font-mono text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {org.tenantId}
+                    {row.tenantId}
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                    {org.organizationName}
+                    {row.organization.organizationName || row.tenantId}
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-sm">
                     <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800">
-                      {org.siteType ?? '—'}
+                      {row.organization.siteType ?? '—'}
                     </span>
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 dark:text-gray-300 break-all">
-                    {org.contactEmail}
+                    {row.organization.contactEmail}
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-sm">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        org.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                        row.organization.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
                       }`}
                     >
-                      {org.isActive ? 'Active' : 'Inactive'}
+                      {row.organization.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-sm text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => selectTenant(org.tenantId)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-semibold"
+                    <Link
+                      href={hrefForTenant(row.tenantId)}
+                      className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-semibold"
                     >
                       Select →
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}

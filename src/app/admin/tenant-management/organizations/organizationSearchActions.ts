@@ -5,6 +5,7 @@ import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import type { PaginatedResponse, TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import type { OrganizationSearchFilters } from '@/app/admin/tenant-management/organizations/organizationSearch';
+import { attachWebsiteTenantIds } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 
 const EXPORT_PAGE_SIZE = 100;
 const MAX_EXPORT_PAGES = 200;
@@ -144,45 +145,6 @@ export async function searchOrganizations(
   return loadOrganizationPage(filters, safePage, safeSize);
 }
 
-async function websiteTenantIdsByOrganization(organizationIds: number[]): Promise<Map<number, string[]>> {
-  const grouped = new Map<number, string[]>();
-  const chunkSize = 40;
-  for (let start = 0; start < organizationIds.length; start += chunkSize) {
-    const chunk = organizationIds.slice(start, start + chunkSize);
-    let page = 0;
-    let total = 0;
-    do {
-      const params = new URLSearchParams({
-        page: String(page),
-        size: '200',
-        sort: 'tenantId,asc',
-      });
-      for (const id of chunk) params.append('tenantOrganizationId.in', String(id));
-      const response = await fetchWithJwtRetry(
-        `${getApiBaseUrl()}/api/tenant-settings?${params.toString()}`,
-        { cache: 'no-store' },
-      );
-      if (!response.ok) {
-        throw new Error('Could not load website tenant IDs for the export.');
-      }
-      const rows = readArray(await response.json()) as SettingsRow[];
-      for (const row of rows) {
-        const organizationId = organizationIdFromSettings(row);
-        const tenantId = row.tenantId?.trim();
-        if (organizationId == null || !tenantId) continue;
-        const current = grouped.get(organizationId) ?? [];
-        if (!current.includes(tenantId)) current.push(tenantId);
-        grouped.set(organizationId, current);
-      }
-      const headerCount = Number.parseInt(response.headers.get('x-total-count') || '', 10);
-      total = Number.isFinite(headerCount) && headerCount >= 0 ? headerCount : rows.length;
-      page += 1;
-      if (rows.length === 0) break;
-    } while (page * 200 < total && page < 50);
-  }
-  return grouped;
-}
-
 /** Every organization matching the filters, with website tenant IDs filled in for the spreadsheet. */
 export async function listOrganizationsForExport(
   filters: OrganizationSearchFilters,
@@ -199,13 +161,5 @@ export async function listOrganizationsForExport(
     if (result.data.length === 0) break;
   } while (rows.length < total && page < MAX_EXPORT_PAGES);
 
-  const ids = rows.map((row) => row.id).filter((id): id is number => typeof id === 'number');
-  if (ids.length === 0) return rows;
-  const tenantIds = await websiteTenantIdsByOrganization(ids);
-  return rows.map((row) => {
-    if (row.id == null) return row;
-    const fromSettings = tenantIds.get(row.id);
-    if (!fromSettings?.length) return row;
-    return { ...row, websiteTenantIds: fromSettings };
-  });
+  return attachWebsiteTenantIds(rows);
 }

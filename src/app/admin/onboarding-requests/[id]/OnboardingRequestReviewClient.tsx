@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   ONBOARDING_STATUS_STYLES,
-  ONBOARDING_SITE_TYPE_OPTIONS,
   SATELLITE_KEY_PATTERN,
   TENANT_ID_PATTERN,
   normalizeOnboardingHostname,
@@ -36,7 +35,8 @@ import {
   suggestFolderFromHostname,
 } from '@/lib/onboarding/onboardingApprovedHandoff';
 import { suggestTenantIdPrefixFromName } from '@/lib/tenantIdGeneration';
-import { useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
+import { ownershipOptionsWithCurrent, useDomainOwnershipOptions } from '@/lib/onboarding/useDomainOwnershipOptions';
+import { siteTypeOptionsWithCurrent, useRetailerTypeOptions } from '@/lib/onboarding/useRetailerTypeOptions';
 import type { TenantOnboardingRequestDTO, TenantSiteType } from '@/types';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
@@ -190,8 +190,9 @@ export default function OnboardingRequestReviewClient({
 }: {
   initialRequest: TenantOnboardingRequestDTO;
 }) {
-  const ownershipOptions = useDomainOwnershipOptions('server');
   const [request, setRequest] = useState(initialRequest);
+  const siteTypeOptions = siteTypeOptionsWithCurrent(useRetailerTypeOptions('server'), request.siteType);
+  const ownershipOptions = ownershipOptionsWithCurrent(useDomainOwnershipOptions('server'), request.domainOwnership);
   const [savedFields, setSavedFields] = useState(() => toFieldValues(initialRequest));
   const [fields, setFields] = useState(() => toFieldValues(initialRequest));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -642,15 +643,16 @@ export default function OnboardingRequestReviewClient({
       : [];
   const reminderSteps = manualReminderSteps(request, tenantIdForLinks, hubDatabase);
   const clonedAdmins = Array.isArray(result?.clonedAdmins) ? (result?.clonedAdmins as { email?: string; userRole?: string }[]) : [];
-  const siteTypeDisplay = siteTypeLabel(request.siteType);
+  const siteTypeMatch = siteTypeOptions.find((o) => o.value === request.siteType);
+  const siteTypeDisplay = siteTypeLabel(request.siteType, siteTypeOptions);
   const ownershipMatch = ownershipOptions.find((o) => o.value === request.domainOwnership);
-  const domainOwnershipDisplay = ownershipMatch
-    ? `${ownershipMatch.label} (${ownershipMatch.value})`
-    : domainOwnershipLabel(request.domainOwnership);
-  const domainOwnershipHint = ownershipMatch?.label || request.domainOwnership || 'Not set';
-  const siteTypeHint =
-    ONBOARDING_SITE_TYPE_OPTIONS.find((o) => o.value === request.siteType)?.hint || '';
-  const manualStepsText = buildManualStepsText(request, tenantIdForLinks, hubDatabase);
+  const domainOwnershipDisplay = domainOwnershipLabel(request.domainOwnership, ownershipOptions);
+  const domainOwnershipHint = ownershipMatch?.hint || request.domainOwnership || 'Not set';
+  const siteTypeHint = siteTypeMatch?.hint || '';
+  const manualStepsText = buildManualStepsText(request, tenantIdForLinks, hubDatabase, {
+    siteTypes: siteTypeOptions,
+    ownerships: ownershipOptions,
+  });
   const orgDetailsText = detailRows.length > 0 ? formatOrganizationDetailText(detailRows) : '';
   const instructionsText = orgDetailsText ? `${orgDetailsText}\n\n${manualStepsText}` : manualStepsText;
   const cursorEnvText = buildCursorEnvHandoffText(request, tenantIdForLinks);
@@ -788,6 +790,10 @@ export default function OnboardingRequestReviewClient({
                       {request.domainOwnership === 'ALREADY_IN_PLATFORM' && (
                         <>Confirm the existing Route 53 hosted zone and Amplify domain mapping before changing DNS.</>
                       )}
+                      {request.domainOwnership &&
+                        request.domainOwnership !== 'PLATFORM_REGISTERS' &&
+                        request.domainOwnership !== 'CUSTOMER_REGISTRAR' &&
+                        request.domainOwnership !== 'ALREADY_IN_PLATFORM' && <>{domainOwnershipHint}</>}
                       {!request.domainOwnership && <>{domainOwnershipHint}</>}
                       {request.registrarNotes?.trim() && (
                         <p className="mt-2 whitespace-pre-wrap text-sm text-blue-950">{request.registrarNotes}</p>

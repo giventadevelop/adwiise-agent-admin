@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import FocusGroupEditForm from './FocusGroupEditForm';
 import { fetchAssociatedEvents } from './ApiServerActions';
+import { updateFocusGroupDetailsServer } from '../../ApiServerActions';
 import { composeFocusGroupDescription } from '@/lib/focusGroupExtras';
 import type { FocusGroupDTO, EventDetailsDTO } from '@/types';
 
@@ -45,20 +46,14 @@ export default async function EditFocusGroupPage({ params }: { params: { id: str
           ),
       }
     );
-    const payload = {
+    await updateFocusGroupDetailsServer({
       id: focusGroupId,
       name: formData.get('name')?.toString().trim() || undefined,
       slug: formData.get('slug')?.toString().trim() || undefined,
       description,
       coverImageUrl: formData.get('coverImageUrl')?.toString() || undefined,
       isActive: formData.getAll('isActive').some(v => String(v).toLowerCase() === 'true' || String(v).toLowerCase() === 'on'),
-      updatedAt: new Date().toISOString(),
-    } as any;
-    await fetch(`${baseUrl}/api/proxy/focus-groups/${resolvedParams.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/merge-patch+json' },
-      body: JSON.stringify(payload),
-      cache: 'no-store',
+      tenantId: group?.tenantId,
     });
     redirect('/admin/focus-groups');
   }

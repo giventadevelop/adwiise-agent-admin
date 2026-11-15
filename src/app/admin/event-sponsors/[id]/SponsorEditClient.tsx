@@ -91,13 +91,19 @@ export default function SponsorEditClient({
     }
   };
 
-  const handleImageUploadSuccess = (imageUrl: string, imageType: 'logo' | 'hero' | 'banner') => {
-    // Update sponsor with new image URL
+  const handleImageUploadSuccess = (imageUrl: string, imageType: 'logo' | 'hero' | 'banner', ocrChars?: number) => {
     const urlField = imageType === 'logo' ? 'logoUrl' : imageType === 'hero' ? 'heroImageUrl' : 'bannerImageUrl';
+    const label = imageType === 'banner' ? 'Banner poster' : imageType === 'logo' ? 'Logo' : 'Hero image';
     const updatedSponsor = { ...sponsor, [urlField]: imageUrl };
     setSponsor(updatedSponsor);
     setFormData({ ...formData, [urlField]: imageUrl });
-    setToastMessage({ type: 'success', message: `${imageType.charAt(0).toUpperCase() + imageType.slice(1)} image uploaded successfully` });
+    const textNote =
+      typeof ocrChars === 'number'
+        ? ocrChars > 0
+          ? ` Read ${ocrChars} characters of text from the image.`
+          : ' No text was found in the image.'
+        : '';
+    setToastMessage({ type: 'success', message: `${label} uploaded successfully.${textNote}` });
 
     // Refresh media list
     setMediaRefreshKey(prev => prev + 1);
@@ -152,7 +158,15 @@ export default function SponsorEditClient({
       {/* Edit Form */}
       <div className="bg-card rounded-lg sacred-shadow p-6 mb-8">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
+          <section className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <h3 className="font-heading font-semibold text-lg text-blue-800">Sponsor details</h3>
+            </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
@@ -275,9 +289,19 @@ export default function SponsorEditClient({
               </label>
             </div>
           </div>
+          </section>
 
+          <section className="rounded-2xl border-2 border-teal-200 bg-teal-50 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h10" />
+                </svg>
+              </div>
+              <h3 className="font-heading font-semibold text-lg text-teal-800">Description</h3>
+            </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-sm font-medium text-teal-800 mb-1">
               Tagline
             </label>
             <input
@@ -304,11 +328,23 @@ export default function SponsorEditClient({
               placeholder="Enter detailed description about the sponsor"
             />
           </div>
+          </section>
 
-          {/* Social Media Links */}
+          <section className="rounded-2xl border-2 border-sky-200 bg-sky-50 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-sky-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-sky-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <h3 className="font-heading font-semibold text-lg text-sky-800">Social links</h3>
+            </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-1">
+                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-200 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-700" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H8v3h2v7h3v-7h2.6l.4-3H13v-2c0-.6.4-1 1-1z" /></svg>
+                </span>
                 Facebook URL
               </label>
               <input
@@ -322,7 +358,10 @@ export default function SponsorEditClient({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-sky-800 mb-1">
+                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-sky-200 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-sky-700" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7.5c-.6.3-1.2.4-1.9.5.7-.4 1.2-1 1.4-1.8-.6.4-1.3.6-2.1.8A3.3 3.3 0 0012 9.3c0 .3 0 .5.1.8-2.7-.1-5.1-1.4-6.7-3.4-.3.5-.4 1-.4 1.6 0 1.1.6 2.1 1.5 2.7-.5 0-1-.2-1.5-.4 0 1.6 1.1 2.9 2.6 3.2-.3.1-.6.1-.9.1-.2 0-.4 0-.6-.1.4 1.3 1.6 2.2 3 2.3A6.6 6.6 0 014 17.6 9.3 9.3 0 009.1 19c6.1 0 9.5-5.1 9.5-9.5v-.4c.6-.5 1.2-1 1.4-1.6z" /></svg>
+                </span>
                 Twitter URL
               </label>
               <input
@@ -336,7 +375,10 @@ export default function SponsorEditClient({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-1">
+                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-200 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-800" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9H4V20h2.5V9zM5.2 4C4.3 4 3.6 4.7 3.6 5.6S4.3 7.2 5.2 7.2 6.9 6.5 6.9 5.6 6.2 4 5.2 4zM20 20h-2.5v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9V20H11V9h2.4v1.5h.1c.3-.6 1.2-1.3 2.5-1.3 2.6 0 3.1 1.7 3.1 4V20z" /></svg>
+                </span>
                 LinkedIn URL
               </label>
               <input
@@ -350,7 +392,10 @@ export default function SponsorEditClient({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-pink-800 mb-1">
+                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-pink-200 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-pink-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" strokeWidth={2} /><circle cx="12" cy="12" r="3.5" strokeWidth={2} /><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" /></svg>
+                </span>
                 Instagram URL
               </label>
               <input
@@ -362,34 +407,47 @@ export default function SponsorEditClient({
                 placeholder="https://instagram.com/sponsor"
               />
             </div>
-          </div>
 
-          {/* Image Upload Section with Drag-and-Drop */}
-          <div className="border-t border-border pt-6">
-            <h3 className="text-lg font-heading font-medium text-foreground mb-4">Images</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Upload multiple images per type. Drag and drop images directly or click to browse. All images will appear in the Overview section below.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-fuchsia-800 mb-1">
+                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-fuchsia-200 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-fuchsia-700" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h2.2c.2 1.4 1 2.6 2.2 3.4 0 .6 1.4 1.2 2.1 1.3v2.3a6.3 6.3 0 01-3.6-1.1v6.4A5.4 5.4 0 1111 10.1v2.5a2.9 2.9 0 102 2.7V3z" /></svg>
+                </span>
+                TikTok URL
+              </label>
+              <input
+                type="url"
+                name="tiktokUrl"
+                value={formData.tiktokUrl || ''}
+                onChange={handleChange}
+                className="w-full border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:ring-2 focus:ring-ring focus:border-ring reverent-transition"
+                placeholder="https://www.tiktok.com/@sponsor"
+              />
+            </div>
+          </div>
+          </section>
+
+          <div className="space-y-4">
+            <SponsorImageUploadArea
+              sponsorId={sponsor.id!}
+              imageType="banner"
+              currentImageUrl={sponsor.bannerImageUrl}
+              onUploadSuccess={(imageUrl, ocrChars) => handleImageUploadSuccess(imageUrl, 'banner', ocrChars)}
+              disabled={loading || !sponsor.id}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SponsorImageUploadArea
                 sponsorId={sponsor.id!}
                 imageType="logo"
                 currentImageUrl={sponsor.logoUrl}
-                onUploadSuccess={(imageUrl) => handleImageUploadSuccess(imageUrl, 'logo')}
+                onUploadSuccess={(imageUrl, ocrChars) => handleImageUploadSuccess(imageUrl, 'logo', ocrChars)}
                 disabled={loading || !sponsor.id}
               />
               <SponsorImageUploadArea
                 sponsorId={sponsor.id!}
                 imageType="hero"
                 currentImageUrl={sponsor.heroImageUrl}
-                onUploadSuccess={(imageUrl) => handleImageUploadSuccess(imageUrl, 'hero')}
-                disabled={loading || !sponsor.id}
-              />
-              <SponsorImageUploadArea
-                sponsorId={sponsor.id!}
-                imageType="banner"
-                currentImageUrl={sponsor.bannerImageUrl}
-                onUploadSuccess={(imageUrl) => handleImageUploadSuccess(imageUrl, 'banner')}
+                onUploadSuccess={(imageUrl, ocrChars) => handleImageUploadSuccess(imageUrl, 'hero', ocrChars)}
                 disabled={loading || !sponsor.id}
               />
             </div>

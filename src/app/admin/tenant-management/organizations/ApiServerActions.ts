@@ -7,6 +7,7 @@ import { isTenantIdAllowed } from '@/lib/adminTenantAccess';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
+import { attachWebsiteTenantIds } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 import { normalizeTenantDomain } from '@/lib/tenantDomainValidation';
 import { normalizeWebsiteUrl } from '@/lib/websiteUrlValidation';
 import type {
@@ -125,11 +126,29 @@ export async function fetchTenantOrganizations(
       if (!settingsResponse.ok) {
         throw new Error(`Failed to fetch tenant organizations: ${settingsResponse.statusText}`);
       }
-      const settingsRows = (await settingsResponse.json()) as Array<{ tenantOrganization?: { id?: number } }>;
-      const organizationIds = [...new Set(settingsRows.map((row) => row.tenantOrganization?.id).filter((id): id is number => id != null))];
+      const settingsBody = await settingsResponse.json();
+      const settingsRows = (
+        Array.isArray(settingsBody)
+          ? settingsBody
+          : settingsBody && typeof settingsBody === 'object' && Array.isArray((settingsBody as { content?: unknown }).content)
+            ? (settingsBody as { content: unknown[] }).content
+            : []
+      ) as Array<{ tenantOrganization?: { id?: number }; tenantOrganizationId?: number }>;
+      const organizationIds = [
+        ...new Set(
+          settingsRows
+            .map((row) =>
+              typeof row.tenantOrganization?.id === 'number' ? row.tenantOrganization.id : row.tenantOrganizationId,
+            )
+            .filter((id): id is number => typeof id === 'number'),
+        ),
+      ];
       const access = await getCurrentAdminAccess();
-      const organizations = (await Promise.all(organizationIds.map((id) => fetchTenantOrganization(id)))).filter(
-        (organization): organization is TenantOrganizationDTO => organization != null && organizationIsVisible(organization, access)
+      const loaded = (await Promise.all(organizationIds.map((id) => fetchTenantOrganization(id)))).filter(
+        (organization): organization is TenantOrganizationDTO => organization != null,
+      );
+      const organizations = (await attachWebsiteTenantIds(loaded)).filter((organization) =>
+        organizationIsVisible(organization, access),
       );
       return {
         data: organizations,
@@ -183,11 +202,13 @@ export async function fetchTenantOrganizations(
     const data = await response.json();
     const access = await getCurrentAdminAccess();
     const rows = (Array.isArray(data) ? data : []) as TenantOrganizationDTO[];
-    const visible = rows.filter((organization) => organizationIsVisible(organization, access));
     const totalCount = parseInt(response.headers.get('x-total-count') || '0');
+    const withWebsiteIds = (await attachWebsiteTenantIds(rows)).filter((organization) =>
+      organizationIsVisible(organization, access),
+    );
 
     return {
-      data: visible,
+      data: withWebsiteIds,
       totalCount,
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -652,7 +673,8 @@ export async function fetchTenantOrganizationsBySiteTypes(
     );
     if (!response.ok) return [];
     const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    const rows = Array.isArray(data) ? (data as TenantOrganizationDTO[]) : [];
+    return attachWebsiteTenantIds(rows);
   } catch (error) {
     console.error('Error fetching tenant organizations by site type:', error);
     return [];

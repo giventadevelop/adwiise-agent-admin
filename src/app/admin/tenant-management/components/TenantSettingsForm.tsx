@@ -21,6 +21,7 @@ import TenantPaymentGateways from '@/app/admin/tenant-management/components/Tena
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import { buildSiteFooterEmailHtmlFromTenant } from '@/lib/newsletter/siteFooterEmailHtml';
 import { tenantSettingsTabQuery, type TenantSettingsTab } from '@/lib/tenantSettingsTabs';
+import { REGISTRAR_NOTES_PROMPT } from '@/lib/onboarding/onboardingShared';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import GoogleAdsensePlacementsFields from '@/app/admin/tenant-management/components/GoogleAdsensePlacementsFields';
@@ -211,7 +212,8 @@ export default function TenantSettingsForm({
       ),
       displayEventHeroImages: initialData?.displayEventHeroImages ?? true,
       phoneNumber: initialData?.phoneNumber || '',
-      email: initialData?.email || ''
+      email: initialData?.email || '',
+      registrarNotes: initialData?.registrarNotes || ''
     }
   });
 
@@ -951,8 +953,22 @@ export default function TenantSettingsForm({
                   : 'Repository URL can be changed only by a platform super admin.'}
               </p>
               {errors.repositoryUrl && (
-                <p className="mt-1 text-sm text-red-600">{errors.repositoryUrl.message}</p>
-              )}
+                    <p className="mt-1 text-sm text-red-600">{errors.repositoryUrl.message}</p>
+                  )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="registrarNotes">
+                Registrar details
+              </label>
+              <textarea
+                id="registrarNotes"
+                rows={5}
+                {...register('registrarNotes')}
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+                placeholder={REGISTRAR_NOTES_PROMPT}
+              />
+              <p className="mt-1 text-xs text-gray-500">{REGISTRAR_NOTES_PROMPT}</p>
             </div>
 
             {/* Contact Information Section */}

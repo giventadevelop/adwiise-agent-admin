@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import AdminNavigation from '@/components/AdminNavigation';
 import { ActionButton, IconAction, PageFooter, RetailNav, YellowCheckbox, fieldClass, labelClass } from '@/components/retail/RetailUi';
+import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions';
 import { useAdminTenantId } from '../../AdminTenantContext';
 import type { RetailLocationDTO, RetailLocationProfileDTO } from '@/types/retail';
 import {
@@ -15,7 +16,7 @@ import {
 
 const PAGE_SIZE = 20;
 const GAS_PACK = 'GAS_STATION';
-const PACKS = [
+const FALLBACK_PACKS = [
   { code: 'GAS_STATION', label: 'Gas station' },
   { code: 'LIQUOR_STORE', label: 'Liquor store' },
   { code: 'DUNKIN_DONUTS', label: 'Dunkin' },
@@ -63,9 +64,36 @@ export default function RetailLocationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [packs, setPacks] = useState(FALLBACK_PACKS);
   const [isPending, startTransition] = useTransition();
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
   const gasPack = form.retailerTypeCode === GAS_PACK;
+  const packChoices =
+    form.retailerTypeCode && !packs.some((pack) => pack.code === form.retailerTypeCode)
+      ? [{ code: form.retailerTypeCode, label: form.retailerTypeCode }, ...packs]
+      : packs;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRetailerTypes(tenantId)
+      .then((rows) => {
+        const active = rows
+          .filter(
+            (row) =>
+              row.isActive !== false &&
+              row.code &&
+              row.code !== 'RETAIL' &&
+              row.code !== 'GAS_STATION_ENT' &&
+              (row.siteTypeCode || 'RETAIL') === 'RETAIL'
+          )
+          .map((row) => ({ code: row.code, label: row.label || row.code }));
+        if (!cancelled && active.length > 0) setPacks(active);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const reload = async (targetPage: number = page) => {
     setLoading(true);
@@ -199,7 +227,7 @@ export default function RetailLocationsPage() {
             </label>
             <label className={labelClass}>Pack
               <select className={fieldClass} value={form.retailerTypeCode} onChange={event => setForm({ ...form, retailerTypeCode: event.target.value })}>
-                {PACKS.map(pack => <option key={pack.code} value={pack.code}>{pack.label}</option>)}
+                {packChoices.map(pack => <option key={pack.code} value={pack.code}>{pack.label}</option>)}
               </select>
             </label>
             <label className={labelClass}>Name

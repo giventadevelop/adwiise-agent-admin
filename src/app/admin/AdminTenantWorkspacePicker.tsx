@@ -10,6 +10,7 @@ import {
 import { searchTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import { ADMIN_SESSION_ALL_TENANTS, type AdminWorkspaceTenant } from '@/lib/adminSessionTenant';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
+import { websiteTenantIdsOf } from '@/app/admin/tenant-management/organizations/websiteTenantIds';
 
 const CARD_COLORS = [
   { card: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800', icon: 'bg-indigo-100', iconText: 'text-indigo-500', ring: 'ring-indigo-400' },
@@ -36,20 +37,21 @@ function tenantMatchesQuery(tenant: AdminWorkspaceTenant, rawQuery: string): boo
   );
 }
 
-function orgToWorkspaceTenant(
+function orgToWorkspaceTenants(
   org: TenantOrganizationDTO,
-  mapped?: AdminWorkspaceTenant,
-): AdminWorkspaceTenant | null {
-  const tenantId = org.tenantId?.trim();
-  if (!tenantId) return null;
-  return {
-    tenantId,
-    organizationName: org.organizationName?.trim() || tenantId,
-    domain: org.domain?.trim() || mapped?.domain,
-    isActive: org.isActive ?? mapped?.isActive,
-    role: mapped?.role ?? 'SUPER_ADMIN',
-    mappedToUser: Boolean(mapped),
-  };
+  mappedById: Map<string, AdminWorkspaceTenant>,
+): AdminWorkspaceTenant[] {
+  return websiteTenantIdsOf(org).map((tenantId) => {
+    const mapped = mappedById.get(tenantId);
+    return {
+      tenantId,
+      organizationName: org.organizationName?.trim() || mapped?.organizationName || tenantId,
+      domain: org.domain?.trim() || mapped?.domain,
+      isActive: org.isActive ?? mapped?.isActive,
+      role: mapped?.role ?? 'SUPER_ADMIN',
+      mappedToUser: Boolean(mapped),
+    };
+  });
 }
 
 export default function AdminTenantWorkspacePicker({
@@ -160,8 +162,8 @@ export default function AdminTenantWorkspacePicker({
         // Re-check locally so a loose backend contains-match cannot surface unrelated tenants.
         setSearchHits(
           orgs
-            .map((org) => orgToWorkspaceTenant(org, mappedById.get(org.tenantId?.trim() || '')))
-            .filter((t): t is AdminWorkspaceTenant => t != null && tenantMatchesQuery(t, trimmed)),
+            .flatMap((org) => orgToWorkspaceTenants(org, mappedById))
+            .filter((tenant) => tenantMatchesQuery(tenant, trimmed)),
         );
       } catch {
         setSearchHits([]);

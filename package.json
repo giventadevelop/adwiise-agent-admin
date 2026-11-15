@@ -88,6 +88,7 @@
     "remark-gfm": "^4.0.1",
     "superjson": "^2.2.2",
     "svix": "^1.64.1",
+    "tesseract.js": "^7.0.0",
     "tw-animate-css": "^1.3.7",
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FaImage, FaSpinner, FaCheck } from 'react-icons/fa';
 import ErrorDialog from '@/components/ErrorDialog';
 import { uploadGalleryAlbumCoverFile } from '@/lib/gallery/uploadGalleryAlbumCoverClient';
 
@@ -113,6 +112,14 @@ export default function GalleryAlbumCoverImageUpload({
       setPreviewUrl(imageUrl);
       onImageUploaded(imageUrl);
       setShowSuccess(true);
+      try {
+        const { persistGalleryCoverOcrServer } = await import(
+          '@/app/admin/gallery/albums/ApiServerActions'
+        );
+        await persistGalleryCoverOcrServer(albumId, file, tenantId);
+      } catch (ocrError) {
+        console.error('[GalleryCoverOCR] post-upload failed:', ocrError);
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload gallery album cover image';
       const userFriendlyMessage = formatErrorMessage(errorMessage, '', 0);
@@ -164,73 +171,85 @@ export default function GalleryAlbumCoverImageUpload({
         message={errorDialog.message}
       />
 
-      <div className={`relative ${className}`}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileInputChange}
-          className="hidden"
-          disabled={disabled || isUploading}
-        />
+      <div className={`rounded-2xl border-2 border-teal-300 bg-teal-50 p-4 ${className}`}>
+        <div className="flex items-start gap-3 mb-3">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="font-heading font-semibold text-base text-teal-800">Album cover</h4>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-200 text-teal-800">Shown to visitors</span>
+            </div>
+            <p className="text-sm mt-1 text-teal-700">This cover is what visitors see on gallery cards and album listings.</p>
+          </div>
+        </div>
 
         <div
           onClick={handleClick}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          className={`
-            relative border-2 border-dashed rounded-lg p-6 cursor-pointer transition-all
-            ${showSuccess ? 'border-green-500 bg-green-50' :
-              dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-            ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}
-          `}
+          className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-300 cursor-pointer ${
+            dragActive
+              ? 'border-teal-500 bg-teal-100'
+              : previewUrl
+                ? 'border-teal-400 bg-teal-50'
+                : 'border-teal-200 hover:border-teal-400 hover:bg-teal-100/70'
+          } ${disabled || isUploading ? 'opacity-50 pointer-events-none' : ''}`}
         >
-          {isUploading ? (
-            <div className="flex flex-col items-center justify-center text-gray-500">
-              <FaSpinner className="animate-spin text-2xl mb-2" />
-              <p className="text-sm">Uploading cover image...</p>
-            </div>
-          ) : showSuccess ? (
-            <div className="flex flex-col items-center justify-center text-green-600">
-              <FaCheck className="text-2xl mb-2" />
-              <p className="text-sm font-medium">Upload successful!</p>
-              <p className="text-xs text-gray-500">Cover image saved to album</p>
-            </div>
-          ) : previewUrl ? (
-            <div className="flex flex-col items-center w-full">
-              <div className="relative mb-3 w-full max-w-md aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
-                <img
-                  src={previewUrl}
-                  alt="Album cover preview"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FaImage className="text-purple-500" />
-                <span>Click to replace cover image</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">or drag and drop a new image</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileInputChange}
+            className="hidden"
+            disabled={disabled || isUploading}
+          />
+
+          {previewUrl ? (
+            <div className="space-y-3">
+              <img
+                src={previewUrl}
+                alt="Album cover preview"
+                className="mx-auto h-48 w-auto max-w-full rounded-xl object-contain border-2 border-teal-300 bg-white"
+              />
+              {isUploading ? (
+                <p className="text-sm text-teal-800">Reading the image and uploading...</p>
+              ) : (
+                <div className="space-y-1 pt-1">
+                  <svg className="mx-auto h-10 w-10 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm font-medium text-teal-800">Upload another image to replace this cover.</p>
+                  <p className="text-xs text-teal-700">Click to upload or drag and drop</p>
+                  {showSuccess && (
+                    <p className="text-xs font-semibold text-green-700">Cover image saved to the album.</p>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex flex-col items-center text-gray-500">
-              <FaImage className="text-4xl mb-3 text-purple-500" />
-              <p className="text-sm font-medium mb-1">Upload Album Cover Image</p>
-              <p className="text-xs text-gray-400 mb-2 text-center">
-                This image appears on gallery cards and album listings
-              </p>
-              <p className="text-xs text-gray-400">Click to upload or drag and drop</p>
-              <p className="text-xs text-gray-400 mt-1">Recommended: 800×600 or 1200×800 JPG/PNG</p>
-              <p className="text-xs text-gray-400 mt-1">(JPEG, PNG, GIF — Max 10MB)</p>
+            <div className="space-y-2 py-4">
+              {isUploading ? (
+                <p className="text-sm text-teal-800">Reading the image and uploading...</p>
+              ) : (
+                <>
+                  <svg className="mx-auto h-10 w-10 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm text-teal-800">
+                    <span className="font-semibold">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-teal-700">This area is a placeholder until you upload a cover.</p>
+                  <p className="text-xs text-teal-700">PNG, JPG, GIF up to 10MB</p>
+                </>
+              )}
             </div>
           )}
         </div>
-
-        {previewUrl && !isUploading && (
-          <p className="mt-2 text-xs text-gray-500 break-all">
-            Current URL: {previewUrl}
-          </p>
-        )}
       </div>
     </>
   );

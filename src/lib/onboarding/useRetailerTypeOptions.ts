@@ -16,6 +16,16 @@ function toOptions(rows: { code?: string; label?: string; hint?: string | null; 
     .map((row) => ({ value: row.code as string, label: row.label || (row.code as string), hint: row.hint || '' }));
 }
 
+/** Keep a saved code visible after it leaves the active catalog. */
+export function siteTypeOptionsWithCurrent(
+  options: RetailerTypeOption[],
+  current: string | null | undefined
+): RetailerTypeOption[] {
+  const code = current?.trim();
+  if (!code || options.some((option) => option.value === code)) return options;
+  return [{ value: code, label: code, hint: 'Saved on this request' }, ...options];
+}
+
 /**
  * Active site and retailer types. Public pages use the same-origin proxy.
  * Admin pages use the server action so the selected tenant's private rows are included.

@@ -3,6 +3,7 @@
 import { appendAdminTenantFilter, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl, getTenantId } from '@/lib/env';
+import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { withTenantId } from '@/lib/withTenantId';
 import type { EventFeaturedPerformersDTO, EventMediaDTO } from '@/types';
 
@@ -62,7 +63,7 @@ export async function fetchEventFeaturedPerformerServer(id: number) {
 }
 
 export async function createEventFeaturedPerformerServer(performer: Omit<EventFeaturedPerformersDTO, 'id' | 'createdAt' | 'updatedAt'>) {
-  const payload = withTenantId(performer);
+  const payload = stampCreateTimestamps(withTenantId(performer) as Record<string, unknown>);
 
   const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-featured-performers`, {
     method: 'POST',

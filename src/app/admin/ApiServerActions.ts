@@ -1,5 +1,6 @@
 'use server';
 import { appendAdminTenantFilter, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { getAppUrl, effectiveTenantId, appendTenantIfPresent, getDefaultPageSize, getBackendApiUrl } from '@/lib/env';
 import type { EventDetailsDTO, EventTypeDetailsDTO, UserProfileDTO, EventCalendarEntryDTO } from '@/types';
@@ -46,7 +47,20 @@ export async function fetchCalendarEventsServer(tenantId?: string, eventIds?: nu
 export async function createEventServer(event: any, tenantId?: string): Promise<any> {
   const url = `${getBackendApiUrl()}/api/event-details`;
   const tid = await resolveAdminMutationTenantId(tenantId);
-  const payload = tid != null ? { ...event, tenantId: tid } : event;
+  const { buildEventSearchText } = await import('@/lib/search/buildSearchText');
+  const withSearch = {
+    ...event,
+    searchText: buildEventSearchText({
+      title: event.title,
+      caption: event.caption,
+      description: event.description,
+      location: event.location,
+      ocrText: event.ocrText,
+    }),
+  };
+  const payload = stampCreateTimestamps(
+    (tid != null ? { ...withSearch, tenantId: tid } : { ...withSearch }) as Record<string, unknown>
+  );
   const res = await fetchWithJwtRetry(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -60,7 +74,18 @@ export async function updateEventServer(event: any, tenantId?: string): Promise<
   if (!event.id) throw new Error('Event ID required for update');
   const url = `${getBackendApiUrl()}/api/event-details/${event.id}`;
   const tid = await resolveAdminMutationTenantId(tenantId);
-  const payload = tid != null ? { ...event, tenantId: tid, id: event.id } : { ...event, id: event.id };
+  const { buildEventSearchText } = await import('@/lib/search/buildSearchText');
+  const withSearch = {
+    ...event,
+    searchText: buildEventSearchText({
+      title: event.title,
+      caption: event.caption,
+      description: event.description,
+      location: event.location,
+      ocrText: event.ocrText,
+    }),
+  };
+  const payload = tid != null ? { ...withSearch, tenantId: tid, id: event.id } : { ...withSearch, id: event.id };
   const res = await fetchWithJwtRetry(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

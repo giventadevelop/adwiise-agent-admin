@@ -1,6 +1,6 @@
 ---
-description: Smooth multi-field typeahead/combobox for admin filters and public listing search (sponsors, events, gallery, polls)
-globs: src/app/admin/**/*Filter*.tsx, src/app/admin/**/*SearchSelect*.tsx, src/app/admin/**/*Combobox*.tsx, src/components/admin/**/*Search*.tsx, src/app/admin/**/organizationSelectServerActions.ts, src/components/public/PublicListSearchCombobox.tsx, src/lib/publicTypeaheadSearch.ts, src/app/sponsors/page.tsx, src/app/events/page.tsx, src/app/gallery/**/*.tsx, src/components/polls/PollList.tsx, src/app/focus-groups/FocusGroupsGridWithSearch.tsx
+description: Smooth multi-field typeahead for admin filters, and the sponsors catalog search that commits on Enter with a 20-name menu
+globs: src/app/admin/**/*Filter*.tsx, src/app/admin/**/*SearchSelect*.tsx, src/app/admin/**/*Combobox*.tsx, src/components/admin/**/*Search*.tsx, src/app/admin/**/organizationSelectServerActions.ts, src/components/public/PublicListSearchCombobox.tsx, src/lib/publicTypeaheadSearch.ts, src/app/sponsors/page.tsx, src/components/fc-united/FcUnitedSponsorsCatalogClient.tsx, src/components/fc-united/ApiServerActions.ts, src/app/events/page.tsx, src/app/gallery/**/*.tsx, src/components/polls/PollList.tsx, src/app/focus-groups/FocusGroupsGridWithSearch.tsx
 alwaysApply: false
 ---
 
@@ -8,7 +8,7 @@ alwaysApply: false
 
 Use this pattern for **any list search field that should suggest options while typing** — admin filters (Tenant ID, organizations, events, contacts, categories, years) **and** public listing search (`/sponsors`, `/events`, `/gallery`, `/polls`, `/focus-groups`).
 
-Do **not** ship a plain `<input>` plus Search/Enter on those pages. Reuse the shared combobox.
+Admin filters reuse [`AdminListSearchCombobox.tsx`](mdc:src/components/admin/AdminListSearchCombobox.tsx). The public `/sponsors` catalog does **not**: keep the Claude search in [`FcUnitedSponsorsCatalogClient.tsx`](mdc:src/components/fc-united/FcUnitedSponsorsCatalogClient.tsx). `PublicListSearchCombobox` and `publicTypeaheadSearch.ts` are not in this repo. `AdminListSearchCombobox` commits on every keystroke and caps at 8, so it must not replace the sponsors field.
 
 **Shared combobox (admin + public):** [`AdminListSearchCombobox.tsx`](mdc:src/components/admin/AdminListSearchCombobox.tsx)  
 **Public wrapper (organic / `mh-events-search` styles):** [`PublicListSearchCombobox.tsx`](mdc:src/components/public/PublicListSearchCombobox.tsx)  
@@ -28,7 +28,7 @@ Typeahead is **not** a single-column name search. Wherever a user might type an 
 | Event picker / public `/events` | title, caption, event id |
 | User / contact picker | firstName, lastName, email, userId |
 | Settings / resource lists | display name **and** business key / id |
-| Public `/sponsors` | `name`, `companyName`, `type`, `tagline`, id |
+| Public `/sponsors` catalog | `name` only (`name.contains`). Leave company name, type, tagline, and id out of this search |
 | Public `/gallery` | album/event `title`, description/caption, id |
 | Public `/polls` | `title`, `description`, id |
 | Public `/focus-groups` | `name`, `slug`, `description`, id |
@@ -133,8 +133,11 @@ setDisplayOrgs(serverResults); // if empty, user loses cached tenantId hits
 // ❌ DON'T: uncontrolled input bound only to searchParams
 <input value={searchParams.get('tenant') ?? ''} onChange={...} />
 
-// ❌ DON'T: public listing search as a plain input (sponsors/events/gallery/polls)
-<input value={searchDraft} onChange={(e) => setSearchDraft(e.target.value)} />
+// ❌ DON'T: copy the sponsors draft into the catalog while typing
+useEffect(() => {
+  const timer = setTimeout(() => setAppliedName(searchDraft.trim()), 300);
+  return () => clearTimeout(timer);
+}, [searchDraft]);
 
 // ❌ DON'T: public typeahead via getAppUrl() or tenantId.equals on /api/proxy
 fetch(`${getAppUrl()}/api/proxy/event-sponsors?tenantId.equals=...`)
@@ -142,31 +145,64 @@ fetch(`${getAppUrl()}/api/proxy/event-sponsors?tenantId.equals=...`)
 
 ---
 
-## Public listing search (`mh-events-search`)
+## Public `/sponsors` catalog
 
-Public pages share the organic search band (`.mh-events-search`). New or existing **Search by Name/Title** fields on those pages must use the shared combobox, not a raw input.
+The sponsors page keeps its own search. Typing updates the suggestion menu only. The catalog refetches when the search is committed.
+
+[`fetchSponsorSuggestionsServer`](mdc:src/components/fc-united/ApiServerActions.ts) requests `name.contains` with `size=20` and returns `{ suggestions, totalCount }`. `totalCount` comes from `x-total-count`. The client slices to `SUGGESTION_LIMIT` (20) again. Do not export that limit from the `"use server"` file.
+
+Commit with `commitSearch`: trim the value, set `searchDraft` and `appliedName`, `setPage(0)`, and close the menu. Call it from:
+
+- Enter on the input (`preventDefault`, then commit the typed text). Enter does not replace the text with a highlighted suggestion.
+- A suggestion click, which commits that sponsor's `name`.
+- **Click Enter for more**, which commits the typed text the same way Enter does.
+- Clear, which commits `''`.
+
+Every option and the more-row use `onMouseDown={(event) => event.preventDefault()}` so blur does not drop the click. Click-outside still closes the menu. Escape closes it without committing.
+
+When `totalCount` is greater than 20, the menu still lists 20 sponsors and adds one last row, **Click Enter for more**. That row is not `role="option"` and it is not a 21st sponsor.
+
+The catalog pages at 20 (`PAGE_SIZE`) and reads `x-total-count`, so Enter on a query with more than 20 matches shows `Showing 1 to 20 of N` and Next. The homepage strip stays at `HOMEPAGE_SPONSOR_LIMIT` (4), lowest `priorityRanking` first. Extra typeahead fixtures use ranks 5101 and above (`Demo Partner Typeahead 01`–`25` for tenant `md_strikers_10`).
 
 ```tsx
-// ✅ DO: public combobox — draft while typing, commit on select / Enter / Search
-<PublicListSearchCombobox<EventSponsorsDTO & Record<string, unknown>>
-  items={sponsors as (EventSponsorsDTO & Record<string, unknown>)[]}
+// ✅ DO: menu while typing; catalog only after Enter, a suggestion, or the more-row
+onKeyDown={(event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    commitSearch(searchDraft);
+  }
+}}
+```
+
+```tsx
+// ✅ DO: last row when more than 20 names match — not another sponsor
+{suggestionTotal > SUGGESTION_LIMIT ? (
+  <button type="button" className="md-sp-search__more" onMouseDown={(e) => e.preventDefault()} onClick={() => commitSearch(searchDraft)}>
+    Click Enter for more
+  </button>
+) : null}
+```
+
+## Public listing search (`mh-events-search`)
+
+`/sponsors` follows **Public `/sponsors` catalog** above. Other public pages that share the organic search band (`.mh-events-search`) use the shared combobox when `PublicListSearchCombobox` and `publicTypeaheadSearch.ts` are present.
+
+```tsx
+// ✅ DO: other public listings — draft while typing, commit on select / Enter / Search
+<PublicListSearchCombobox<EventDetailsDTO & Record<string, unknown>>
   committedValue={searchTerm}
   onCommit={commitSearch}
   onInputChange={setSearchDraft}
-  inputId="sponsorSearch"
-  placeholder="Enter sponsor name…"
   searchRemote={(query) =>
-    fetchPublicTypeahead<EventSponsorsDTO>({
-      resource: 'event-sponsors',
+    fetchPublicTypeahead<EventDetailsDTO>({
+      resource: 'event-details',
       query,
-      containsFields: ['name', 'companyName'],
-      extraParams: { 'isActive.equals': 'true', sort: 'priorityRanking,asc' },
+      containsFields: ['title', 'caption'],
     })
   }
-  getSearchFields={(s) => [s.name, s.companyName, s.type, s.tagline, s.id]}
-  getCommitValue={(s) => s.name || ''}
-  formatPrimary={(s) => s.name || 'Unnamed sponsor'}
-  formatSecondary={(s) => [s.companyName, s.type].filter(Boolean).join(' · ')}
+  getSearchFields={(event) => [event.title, event.caption, event.id]}
+  getCommitValue={(event) => event.title || ''}
+  formatPrimary={(event) => event.title || 'Untitled event'}
 />
 ```
 
@@ -179,7 +215,7 @@ Public pages share the organic search band (`.mh-events-search`). New or existin
 
 | Public page | Combobox | Remote resource / fields |
 |-------------|----------|--------------------------|
-| [`/sponsors`](mdc:src/app/sponsors/page.tsx) | `PublicListSearchCombobox` | `event-sponsors` — `name`, `companyName`, id |
+| [`/sponsors`](mdc:src/components/fc-united/FcUnitedSponsorsCatalogClient.tsx) | Claude search in the catalog client | `event-sponsors` — `name.contains` only; menu 20; Enter pages the rest |
 | [`/events`](mdc:src/app/events/page.tsx) | `PublicListSearchCombobox` | `event-details` — `title`, `caption`, id |
 | [`/gallery`](mdc:src/app/gallery/components/GallerySearch.tsx) | `PublicListSearchCombobox` | albums via `searchAlbumsForGalleryTypeahead`; events via `searchEventsForGallery` |
 | [`/polls`](mdc:src/components/polls/PollList.tsx) | `PublicListSearchCombobox` | `event-polls` — `title`, `description`, id |
@@ -197,7 +233,8 @@ Public pages share the organic search band (`.mh-events-search`). New or existin
 - Shared search action: [`searchTenantOrganizationsForSelectServer`](mdc:src/app/admin/tenant-management/organizations/organizationSelectServerActions.ts)
 - Event pickers: `EventSearchSelect` under newsletter / promotion emails (extend with id/title multi-field when adding search)
 - Any new admin typeahead / combobox filter — default to **multi-field** match + reuse `AdminTenantFilterField` for tenant
-- **Public listing search** — `/sponsors`, `/events`, `/gallery`, `/polls`, `/focus-groups` (see **Public listing search** above). Any new public `mh-events-search` text field must use `PublicListSearchCombobox` + `fetchPublicTypeahead` (or local items if the full set is already loaded).
+- **Public `/sponsors`** — Claude search in [`FcUnitedSponsorsCatalogClient`](mdc:src/components/fc-united/FcUnitedSponsorsCatalogClient.tsx). See **Public `/sponsors` catalog** above. Do not replace it with `AdminListSearchCombobox`.
+- **Other public listing search** — `/events`, `/gallery`, `/polls`, `/focus-groups` (see **Public listing search** above). A new `mh-events-search` text field uses `PublicListSearchCombobox` + `fetchPublicTypeahead` when those files exist, or local items if the full set is already loaded.
 
 ## Data Loading Checklist
 
@@ -209,3 +246,5 @@ Public pages share the organic search band (`.mh-events-search`). New or existin
 - [ ] Placeholder text mentions what can be typed (e.g. “Search by Tenant ID or organization name…”)
 - [ ] Public pages: relative `/api/proxy/*` via `fetchPublicTypeahead` — no `getAppUrl()`, no `tenantId.equals` in the query
 - [ ] Public `mh-events-search` title/name field is a combobox, not a raw `<input>`
+- [ ] `/sponsors` menu lists at most 20 names, returns `x-total-count`, and shows **Click Enter for more** when the total is above 20
+- [ ] `/sponsors` catalog changes on Enter, a suggestion pick, that more-row, or Clear — never on a typing timer

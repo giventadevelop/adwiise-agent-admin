@@ -1,5 +1,6 @@
 'use server';
 import { appendAdminTenantFilter, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl } from '@/lib/env';
 import type {
   PromotionEmailTemplateDTO,
@@ -108,7 +109,7 @@ export async function createPromotionEmailTemplateServer(
   }
 
   const tid = await resolveAdminMutationTenantId(tenantId);
-  const payload: Record<string, unknown> = {
+  const payload: Record<string, unknown> = stampCreateTimestamps({
     eventId: formData.eventId,
     templateName: formData.templateName,
     templateType: formData.templateType || 'EVENT_PROMOTION',
@@ -120,7 +121,7 @@ export async function createPromotionEmailTemplateServer(
     footerImageUrl: formData.footerImageUrl || '',
     discountCodeId: formData.discountCodeId,
     isActive: formData.isActive !== undefined ? formData.isActive : true,
-  };
+  });
   if (tid != null) (payload as any).tenantId = tid;
 
   console.log('[DEBUG] Creating promotion email template with payload:', payload);

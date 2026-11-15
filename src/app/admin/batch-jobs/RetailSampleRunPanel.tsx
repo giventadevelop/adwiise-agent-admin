@@ -1,12 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions';
 import type { RetailSamplePack, RetailSampleRunResponse } from '@/types/retailSampleRun';
 import { ActionButton, YellowCheckbox, fieldClass, labelClass } from '@/components/retail/RetailUi';
 
 const FUEL_PACKS = new Set<RetailSamplePack>(['GAS_STATION']);
+const SAMPLE_PACKS = new Set<string>([
+  'GAS_STATION',
+  'LIQUOR_STORE',
+  'DUNKIN_DONUTS',
+  'SEVEN_ELEVEN',
+  'RESTAURANT',
+  'CLINIC',
+]);
 
-const PACKS: { value: RetailSamplePack; label: string }[] = [
+const FALLBACK_PACKS: { value: RetailSamplePack; label: string }[] = [
   { value: 'GAS_STATION', label: 'Gas sample (register and fuel)' },
   { value: 'LIQUOR_STORE', label: 'Liquor sample (register only)' },
   { value: 'DUNKIN_DONUTS', label: 'Dunkin sample (register only)' },
@@ -16,6 +25,7 @@ const PACKS: { value: RetailSamplePack; label: string }[] = [
 ];
 
 export default function RetailSampleRunPanel() {
+  const [packs, setPacks] = useState(FALLBACK_PACKS);
   const [retailerType, setRetailerType] = useState<RetailSamplePack>('GAS_STATION');
   const [tenantId, setTenantId] = useState('');
   const [metricDate, setMetricDate] = useState('');
@@ -25,6 +35,30 @@ export default function RetailSampleRunPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RetailSampleRunResponse | null>(null);
+  const packChoices = packs.some((pack) => pack.value === retailerType)
+    ? packs
+    : [{ value: retailerType, label: retailerType }, ...packs];
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRetailerTypes()
+      .then((rows) => {
+        const active = rows
+          .filter(
+            (row) =>
+              row.isActive !== false &&
+              row.code &&
+              SAMPLE_PACKS.has(row.code) &&
+              (row.siteTypeCode || 'RETAIL') === 'RETAIL'
+          )
+          .map((row) => ({ value: row.code as RetailSamplePack, label: row.label || row.code }));
+        if (!cancelled && active.length > 0) setPacks(active);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function runSample() {
     setLoading(true);
@@ -108,7 +142,7 @@ export default function RetailSampleRunPanel() {
             value={retailerType}
             onChange={event => setRetailerType(event.target.value as RetailSamplePack)}
           >
-            {PACKS.map(pack => (
+            {packChoices.map(pack => (
               <option key={pack.value} value={pack.value}>
                 {pack.label}
               </option>

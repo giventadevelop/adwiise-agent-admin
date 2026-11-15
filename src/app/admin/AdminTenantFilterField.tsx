@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import type { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
+import { websiteTenantIdsOf } from '@/app/admin/tenant-management/organizations/websiteTenantIds';
 import {
   fetchRecentTenantOrganizationsForSelectServer,
   searchTenantOrganizationsForSelectServer,
@@ -23,7 +24,7 @@ const MAX_SUGGESTIONS = 20;
 
 function formatOrgLabel(org: TenantOrganizationDTO): string {
   const name = org.organizationName?.trim() || 'Unnamed organization';
-  const tenantId = org.tenantId?.trim() || '—';
+  const tenantId = org.tenantId?.trim() || websiteTenantIdsOf(org)[0] || '—';
   return `${name} (${tenantId})`;
 }
 
@@ -36,10 +37,26 @@ function filterOrganizationsLocally(
 
   return organizations.filter((org) => {
     const name = org.organizationName?.toLowerCase() ?? '';
-    const tenantId = org.tenantId?.toLowerCase() ?? '';
     const domain = org.domain?.toLowerCase() ?? '';
-    return name.includes(q) || tenantId.includes(q) || domain.includes(q);
+    const ids = websiteTenantIdsOf(org).join(' ').toLowerCase();
+    return name.includes(q) || ids.includes(q) || domain.includes(q);
   });
+}
+
+/** One selectable row per website tenant id. Organizations with none are left out. */
+function expandOrganizationsByWebsiteTenant(
+  organizations: TenantOrganizationDTO[],
+  allowedTenantIds: Set<string> | null,
+): TenantOrganizationDTO[] {
+  const expanded: TenantOrganizationDTO[] = [];
+  for (const org of organizations) {
+    const ids = websiteTenantIdsOf(org);
+    for (const tenantId of ids) {
+      if (allowedTenantIds && !allowedTenantIds.has(tenantId)) continue;
+      expanded.push({ ...org, tenantId, websiteTenantIds: ids });
+    }
+  }
+  return expanded;
 }
 
 function mergeOrgs(
@@ -48,7 +65,7 @@ function mergeOrgs(
 ): TenantOrganizationDTO[] {
   const byKey = new Map<string, TenantOrganizationDTO>();
   for (const org of [...incoming, ...prev]) {
-    const key = String(org.id ?? org.tenantId ?? '');
+    const key = org.tenantId?.trim() || (org.id != null ? `id:${org.id}` : '');
     if (!key) continue;
     if (!byKey.has(key)) byKey.set(key, org);
   }
@@ -108,10 +125,9 @@ export default function AdminTenantFilterField({
 
   const filterToAllowlist = useCallback(
     (orgs: TenantOrganizationDTO[]) => {
-      if (canQueryAllTenants) return orgs;
-      if (allowedTenantIds.length === 0) return [];
-      const allowed = new Set(allowedTenantIds);
-      return orgs.filter((org) => org.tenantId && allowed.has(org.tenantId));
+      if (!canQueryAllTenants && allowedTenantIds.length === 0) return [];
+      const allowed = canQueryAllTenants ? null : new Set(allowedTenantIds);
+      return expandOrganizationsByWebsiteTenant(orgs, allowed);
     },
     [canQueryAllTenants, allowedTenantIds],
   );
@@ -138,7 +154,8 @@ export default function AdminTenantFilterField({
   cachedOrgsRef.current = cachedOrgs;
 
   const selectedOrg = useMemo(
-    () => cachedOrgs.find((org) => org.tenantId === selectedTenantId.trim()) ?? null,
+    () =>
+      cachedOrgs.find((org) => websiteTenantIdsOf(org).includes(selectedTenantId.trim())) ?? null,
     [cachedOrgs, selectedTenantId],
   );
 
@@ -219,7 +236,7 @@ export default function AdminTenantFilterField({
       resolveAttemptedRef.current = null;
       return;
     }
-    if (cachedOrgsRef.current.some((org) => org.tenantId === tid)) {
+    if (cachedOrgsRef.current.some((org) => websiteTenantIdsOf(org).includes(tid))) {
       resolveAttemptedRef.current = tid;
       return;
     }
@@ -233,11 +250,12 @@ export default function AdminTenantFilterField({
         const results = filterToAllowlistRef.current(await searchTenantOrganizationsForSelectServer(tid));
         if (cancelled) return;
         // Only accept an exact tenantId match — never results[0] (that caused infinite loops for partial queries like "fa")
-        const match = results.find((org) => org.tenantId === tid);
+        const match = results.find((org) => websiteTenantIdsOf(org).includes(tid));
         if (!match) return;
-        setCachedOrgs((prev) => mergeOrgs(prev, [match]));
+        const labeled = { ...match, tenantId: tid };
+        setCachedOrgs((prev) => mergeOrgs(prev, [labeled]));
         if (!isTypingRef.current) {
-          setInputValue(formatOrgLabel(match));
+          setInputValue(formatOrgLabel(labeled));
         }
       } catch {
         // keep free-text tenant id in the input
@@ -363,10 +381,10 @@ export default function AdminTenantFilterField({
       const parenMatch = typed.match(/\(([^)]+)\)\s*$/);
       const tenantId = parenMatch?.[1]?.trim() || typed;
       const orgMatch =
-        displayOrgs.find((o) => o.tenantId === tenantId) ||
-        cachedOrgsRef.current.find((o) => o.tenantId === tenantId) ||
+        displayOrgs.find((o) => websiteTenantIdsOf(o).includes(tenantId)) ||
+        cachedOrgsRef.current.find((o) => websiteTenantIdsOf(o).includes(tenantId)) ||
         null;
-      applyTenant(tenantId || null, orgMatch);
+      applyTenant(tenantId || null, orgMatch && tenantId ? { ...orgMatch, tenantId } : orgMatch);
     } else if (event.key === 'Escape') {
       setOpen(false);
       isTypingRef.current = false;
@@ -450,14 +468,14 @@ export default function AdminTenantFilterField({
             <li className="px-3 py-2 text-sm text-gray-500">Loading organizations…</li>
           ) : displayOrgs.length > 0 ? (
             displayOrgs.map((org) => {
-              const tid = org.tenantId ?? '';
-              const selected = tid === selectedTenantId.trim();
+              const tid = org.tenantId?.trim() || websiteTenantIdsOf(org)[0] || '';
+              const selected = tid.length > 0 && tid === selectedTenantId.trim();
               return (
-                <li key={org.id ?? tid} role="option" aria-selected={selected}>
+                <li key={tid || `org-${org.id}`} role="option" aria-selected={selected}>
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => applyTenant(tid, org)}
+                    onClick={() => applyTenant(tid, tid ? { ...org, tenantId: tid } : org)}
                     className={`block w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${
                       selected ? 'bg-blue-50 text-blue-800' : 'text-gray-900'
                     }`}
