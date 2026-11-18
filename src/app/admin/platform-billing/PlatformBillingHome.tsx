@@ -1,8 +1,10 @@
 'use client';
 
-import { Fragment, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { FaFileExcel, FaSearch } from 'react-icons/fa';
+import BillingPagination from './BillingPagination';
 import type { PlatformBillingPortfolioRow, PlatformBillingReport } from './reportActions';
 
 const money = new Intl.NumberFormat('en-US', {
@@ -12,10 +14,29 @@ const money = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
 });
 
+const TILE_COLORS = [
+  'bg-blue-50 text-blue-800 border-blue-300',
+  'bg-green-50 text-green-800 border-green-300',
+  'bg-amber-50 text-amber-800 border-amber-300',
+  'bg-purple-50 text-purple-800 border-purple-300',
+  'bg-teal-50 text-teal-800 border-teal-300',
+  'bg-indigo-50 text-indigo-800 border-indigo-300',
+  'bg-rose-50 text-rose-800 border-rose-300',
+];
+
 function when(value: string): string {
   if (!value) return '—';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function statusClass(status: string): string {
+  const key = status.toUpperCase();
+  if (key === 'ACTIVE' || key === 'PAID') return 'bg-green-100 text-green-800';
+  if (key === 'PAYMENT_DUE' || key === 'OPEN') return 'bg-amber-100 text-amber-800';
+  if (key === 'PAST_DUE' || key === 'FAILED' || key === 'LOCKED') return 'bg-red-100 text-red-800';
+  if (key === 'REFUNDED') return 'bg-purple-100 text-purple-800';
+  return 'bg-orange-100 text-orange-800';
 }
 
 async function downloadSheet(name: string, rows: Array<Array<string | number>>) {
@@ -26,6 +47,17 @@ async function downloadSheet(name: string, rows: Array<Array<string | number>>) 
   XLSX.writeFile(workbook, `${name}.xlsx`);
 }
 
+const HEADERS: Array<{ label: string; path: string }> = [
+  { label: 'Organization', path: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+  { label: 'Scope', path: 'M4 6h16M4 12h16M4 18h10' },
+  { label: 'Amount', path: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2' },
+  { label: 'Status', path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { label: 'Stripe customer', path: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+  { label: 'Last payment', path: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { label: 'Next period', path: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { label: 'Covered', path: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0' },
+];
+
 export default function PlatformBillingHome({
   report,
   query,
@@ -35,32 +67,39 @@ export default function PlatformBillingHome({
 }) {
   const router = useRouter();
   const [text, setText] = useState(query);
-  const [openId, setOpenId] = useState<number | null>(null);
-  const start = report.totalCount === 0 ? 0 : report.page * 20 + 1;
-  const end = Math.min(report.totalCount, report.page * 20 + report.rows.length);
+  const tiles = [
+    ...Object.entries(report.statusCounts).map(([status, count]) => ({ label: status, count })),
+    ...Object.entries(report.scopeCounts).map(([scope, count]) => ({
+      label: scope === 'ORGANIZATION' ? 'Organization billing' : 'Per website',
+      count,
+    })),
+  ];
+
+  function searchHref(page: number) {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (page > 0) params.set('page', String(page));
+    const qs = params.toString();
+    return qs ? `/admin/platform-billing?${qs}` : '/admin/platform-billing';
+  }
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {Object.entries(report.statusCounts).map(([status, count]) => (
-          <div key={status} className="bg-card rounded-lg sacred-shadow p-4">
-            <p className="text-sm text-muted-foreground">{status}</p>
-            <p className="text-2xl font-semibold">{count}</p>
-          </div>
-        ))}
-        {Object.entries(report.scopeCounts).map(([scope, count]) => (
-          <div key={scope} className="bg-card rounded-lg sacred-shadow p-4">
-            <p className="text-sm text-muted-foreground">{scope === 'ORGANIZATION' ? 'Organization billing' : 'Per website'}</p>
-            <p className="text-2xl font-semibold">{count}</p>
+        {tiles.map((tile, index) => (
+          <div key={tile.label} className={`rounded-lg border-2 shadow-md p-4 ${TILE_COLORS[index % TILE_COLORS.length]}`}>
+            <p className="text-sm font-semibold">{tile.label}</p>
+            <p className="text-2xl font-bold">{tile.count}</p>
           </div>
         ))}
       </div>
-      {report.notice && <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">{report.notice}</div>}
+      {report.notice && <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 text-sm text-amber-800">{report.notice}</div>}
       <form
-        className="flex flex-wrap gap-3"
+        className="bg-white rounded-lg shadow-md p-6 flex flex-wrap gap-3"
         onSubmit={(event) => {
           event.preventDefault();
-          router.push(`/admin/platform-billing?q=${encodeURIComponent(text.trim())}`);
+          const next = text.trim();
+          router.push(next ? `/admin/platform-billing?q=${encodeURIComponent(next)}` : '/admin/platform-billing');
         }}
       >
         <input
@@ -68,13 +107,19 @@ export default function PlatformBillingHome({
           onChange={(event) => setText(event.target.value)}
           placeholder="Organization, website, email, customer, subscription, or invoice"
           className="flex-1 min-w-[16rem] border border-gray-400 rounded-xl px-4 py-3"
+          aria-label="Search billing"
         />
-        <button type="submit" className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700">Search</button>
+        <button type="submit" className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 inline-flex items-center gap-3 transition-all duration-300 hover:scale-105" title="Search" aria-label="Search">
+          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center"><FaSearch className="w-5 h-5 text-blue-600" /></span>
+          Search
+        </button>
       </form>
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
-          className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-6 font-semibold text-green-700"
+          className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-6 font-semibold text-green-700 inline-flex items-center gap-3 transition-all duration-300 hover:scale-105"
+          title="Export portfolio"
+          aria-label="Export portfolio"
           onClick={() =>
             downloadSheet('billing-portfolio', [
               ['Organization', 'Scope', 'Amount', 'Status', 'Stripe customer', 'Last payment', 'Next period', 'Covered websites', 'Websites'],
@@ -92,11 +137,14 @@ export default function PlatformBillingHome({
             ])
           }
         >
+          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><FaFileExcel className="w-5 h-5 text-green-600" /></span>
           Export portfolio
         </button>
         <button
           type="button"
-          className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-6 font-semibold text-green-700"
+          className="h-14 rounded-xl bg-emerald-100 hover:bg-emerald-200 px-6 font-semibold text-emerald-700 inline-flex items-center gap-3 transition-all duration-300 hover:scale-105"
+          title="Export ledger"
+          aria-label="Export ledger"
           onClick={() =>
             downloadSheet('billing-ledger', [
               ['Organization', 'Website', 'Product', 'Status', 'Amount', 'Invoice', 'Subscription', 'Payment intent', 'Occurred'],
@@ -114,15 +162,23 @@ export default function PlatformBillingHome({
             ])
           }
         >
+          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-200 flex items-center justify-center"><FaFileExcel className="w-5 h-5 text-emerald-600" /></span>
           Export ledger
         </button>
       </div>
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-300 border border-gray-300">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Organization', 'Scope', 'Amount', 'Status', 'Stripe customer', 'Last payment', 'Next period', 'Covered'].map((heading) => (
-                <th key={heading} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{heading}</th>
+      <div className="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
+        <table className="min-w-full border border-blue-200">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+              {HEADERS.map((heading) => (
+                <th key={heading.label} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide">
+                  <span className="inline-flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={heading.path} />
+                    </svg>
+                    {heading.label}
+                  </span>
+                </th>
               ))}
             </tr>
           </thead>
@@ -130,44 +186,41 @@ export default function PlatformBillingHome({
             {report.rows.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">No billing records match this search.</td></tr>
             ) : report.rows.map((row: PlatformBillingPortfolioRow) => (
-              <Fragment key={row.id}>
-                <tr key={row.id} className="cursor-pointer hover:bg-blue-50" onClick={() => setOpenId(openId === row.id ? null : row.id)}>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">{row.name}</td>
-                  <td className="px-4 py-3 text-sm">{row.billingScope === 'ORGANIZATION' ? 'Organization' : 'Per website'}</td>
-                  <td className="px-4 py-3 text-sm">{row.amountUsd != null && row.amountUsd > 0 ? money.format(row.amountUsd) : '—'}</td>
-                  <td className="px-4 py-3 text-sm">{row.status}</td>
-                  <td className="px-4 py-3 text-sm">{row.stripeCustomerId || '—'}</td>
-                  <td className="px-4 py-3 text-sm">{when(row.lastPayment)}</td>
-                  <td className="px-4 py-3 text-sm">{when(row.nextPeriod)}</td>
-                  <td className="px-4 py-3 text-sm">{row.coveredCount}</td>
-                </tr>
-                {openId === row.id && (
-                  <tr key={`${row.id}-sites`}>
-                    <td colSpan={8} className="px-4 py-3 bg-blue-50 text-sm">
-                      <div className="flex flex-wrap gap-3">
-                        {row.websites.length === 0 ? <span>No websites are linked.</span> : row.websites.map((tenantId) => (
-                          <Link key={tenantId} href={`/admin/platform-billing/${encodeURIComponent(tenantId)}`} className="text-indigo-700 font-semibold">{tenantId}</Link>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
+              <tr key={row.id} className="border-t border-blue-100 hover:bg-blue-50">
+                <td className="px-4 py-3 text-sm font-semibold">
+                  <Link
+                    href={`/admin/platform-billing/organization/${row.id}`}
+                    className="text-indigo-700 hover:text-indigo-900 underline"
+                    title={`Open ${row.name}`}
+                    aria-label={`Open ${row.name}`}
+                  >
+                    {row.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${row.billingScope === 'ORGANIZATION' ? 'bg-indigo-100 text-indigo-800' : 'bg-teal-100 text-teal-800'}`}>
+                    {row.billingScope === 'ORGANIZATION' ? 'Organization' : 'Per website'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm">{row.amountUsd != null && row.amountUsd > 0 ? money.format(row.amountUsd) : '—'}</td>
+                <td className="px-4 py-3 text-sm">
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${statusClass(row.status)}`}>{row.status}</span>
+                </td>
+                <td className="px-4 py-3 text-sm">{row.stripeCustomerId || '—'}</td>
+                <td className="px-4 py-3 text-sm">{when(row.lastPayment)}</td>
+                <td className="px-4 py-3 text-sm">{when(row.nextPeriod)}</td>
+                <td className="px-4 py-3 text-sm font-semibold text-blue-700">{row.coveredCount}</td>
+              </tr>
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="mt-8">
-        <div className="flex justify-between items-center">
-          <button type="button" disabled={report.page <= 0} onClick={() => router.push(`/admin/platform-billing?q=${encodeURIComponent(query)}&page=${report.page - 1}`)} className="px-5 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg shadow-sm border-2 border-blue-400 hover:border-blue-500 disabled:bg-blue-100 disabled:border-blue-300 disabled:text-blue-500 disabled:cursor-not-allowed">Previous</button>
-          <div className="px-4 py-2 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm text-sm font-bold text-blue-700">Page <span className="text-blue-600">{report.page + 1}</span> of <span className="text-blue-600">{report.totalPages}</span></div>
-          <button type="button" disabled={report.page + 1 >= report.totalPages} onClick={() => router.push(`/admin/platform-billing?q=${encodeURIComponent(query)}&page=${report.page + 1}`)} className="px-5 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg shadow-sm border-2 border-blue-400 hover:border-blue-500 disabled:bg-blue-100 disabled:border-blue-300 disabled:text-blue-500 disabled:cursor-not-allowed">Next</button>
-        </div>
-        <div className="text-center mt-3">
-          <div className="inline-flex items-center px-4 py-2 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm text-sm text-gray-700">
-            Showing <span className="font-bold text-blue-600 mx-1">{start}</span> to <span className="font-bold text-blue-600 mx-1">{end}</span> of <span className="font-bold text-blue-600 mx-1">{report.totalCount}</span> organizations
-          </div>
-        </div>
+        <BillingPagination
+          page={report.page}
+          totalCount={report.totalCount}
+          pageSize={20}
+          itemLabel="organizations"
+          onPage={(next) => router.push(searchHref(next))}
+        />
       </div>
     </div>
   );

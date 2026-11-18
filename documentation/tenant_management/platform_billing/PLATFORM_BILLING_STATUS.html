@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Plain-English status of platform software billing: site types, catalog plans, custom prices, organization monthly billing, what is built, and what is still not a live price.">
+    <title>Platform billing status</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #fff;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #1a1a1a;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            font-size: 1.8em;
+            color: #0066cc;
+            border-left: 4px solid #0066cc;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        h3 { font-size: 1.4em; color: #333; }
+        h4 { font-size: 1.2em; color: #555; }
+        a { color: #0052a3; }
+        a:focus-visible, button:focus-visible, input:focus-visible {
+            outline: 3px solid #0066cc;
+            outline-offset: 2px;
+        }
+        .toc, .section-container, .section-intro, .info, .warning, .success, .error {
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .toc {
+            background: #ffffff;
+            border: 1px solid #b8d4e3;
+            padding: 16px 20px;
+        }
+        .section-intro {
+            background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%);
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+        }
+        .section-container {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+        }
+        .section-container.parameters {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border-left-color: #ff9800;
+        }
+        .section-container.output {
+            background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%);
+            border-left-color: #28a745;
+        }
+        .section-container.usage {
+            background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%);
+            border-left-color: #9c27b0;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: #ffffff;
+            padding: 12px 20px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 14px 16px; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 14px 16px; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; padding: 14px 16px; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; padding: 14px 16px; }
+        code, .code-highlight,
+        .info code, .info .code-highlight,
+        .warning code, .warning .code-highlight,
+        .success code, .success .code-highlight,
+        .error code, .error .code-highlight,
+        .section-intro code, .parameters-list code, td code {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .script-name {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 5px;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+        }
+        .parameters-list {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border-left: 4px solid #ff9800;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .parameters-list strong { color: #c05600; font-weight: bold; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            background: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            border: 1px solid #b8d4e3;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: #ffffff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+        tr:nth-child(even) { background-color: #f7fbff; }
+        tr:hover { background-color: #e3f2fd; transition: background-color 0.2s ease; }
+        .command-block {
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            margin: 16px 0;
+            overflow: hidden;
+        }
+        .command-block.setup {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-color: #2196f3;
+        }
+        .command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            flex-wrap: wrap;
+        }
+        .command-type { font-weight: bold; color: #0d3b66; }
+        .command-header-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .copy-button, .copy-button-template {
+            color: #ffffff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .copy-button { background-color: #0066cc; }
+        .copy-button:hover { background-color: #0052a3; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .copy-button-template { background-color: #6c757d; }
+        .copy-button-template:hover { background-color: #5a6268; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .copy-button.copied, .copy-button-template.copied { background-color: #28a745; }
+        .command-parameters {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .command-parameters h5 { margin: 0 0 12px 0; font-size: 0.9em; color: #333; font-weight: bold; }
+        .parameter-group { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .parameter-input { display: flex; flex-direction: column; gap: 4px; }
+        .parameter-input label { font-size: 0.8em; color: #555; font-weight: 600; }
+        .parameter-input input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .parameter-input input:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        .command-content, .command-single-line code, pre, pre code, .code-block {
+            background-color: #e8f4f8;
+            color: #0d3b66;
+            border: 1px solid #b8d4e3;
+            font-family: 'Courier New', monospace;
+        }
+        .command-content {
+            margin: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.95em;
+        }
+        .command-single-line { margin: 0 15px 15px; }
+        .command-single-line-label { color: #0d3b66; font-weight: 600; margin-bottom: 6px; }
+        .command-single-line code {
+            display: block;
+            padding: 12px 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        ol.steps li { margin: 0.45rem 0; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.8em; }
+            .command-block { font-size: 0.85em; }
+            .parameter-group { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Platform billing status</h1>
+    <div class="section-intro">
+        <p>This page says what software billing does today, in plain English. It does not replace the longer guides. Charging a tenant organization for the website is separate from a guest buying a ticket and separate from a person paying membership dues.</p>
+        <p>The pay path is built and can be exercised in Stripe test mode. There is no fixed live price list in the application. Dollar amounts in the product guide, such as $49 or $149 a month, are examples until the business publishes real month or year prices.</p>
+    </div>
+
+    <nav class="toc" aria-label="Table of contents">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#guides">Where to read next</a></li>
+            <li><a href="#money">Three kinds of money</a></li>
+            <li><a href="#site-types">Site type is not a price</a></li>
+            <li><a href="#flow">How a charge moves</a></li>
+            <li><a href="#prices">Catalog price, custom price, and one organization amount</a></li>
+            <li><a href="#status">What is built</a></li>
+            <li><a href="#listen">Listen for Stripe test events</a></li>
+        </ol>
+    </nav>
+
+    <div class="section-container usage" id="guides">
+        <div class="section-header usage">Where to read next</div>
+        <table>
+            <thead>
+                <tr><th scope="col">Page</th><th scope="col">Use it when</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><a href="PLATFORM_BILLING_USER_GUIDE.html">User guide</a></td>
+                    <td>You need who turns the switch on, organization-once versus each website, cancel, and lock.</td>
+                </tr>
+                <tr>
+                    <td><a href="PLATFORM_TENANT_BILLING_GUIDE.html">Product rules</a></td>
+                    <td>You need the full rules for the charge switch, grace, gas-station location counts, and custom fees. The matching notes are in <code class="code-highlight">PLATFORM_TENANT_BILLING_GUIDE.md</code>.</td>
+                </tr>
+                <tr>
+                    <td><a href="PLATFORM_BILLING_TEST_GUIDE.html">Test guide</a></td>
+                    <td>You are charging in Stripe test mode with the unpublished $1.00 plans.</td>
+                </tr>
+                <tr>
+                    <td><a href="PLATFORM_BILLING_SUPPORT_PLAYBOOK.html">Support playbook</a></td>
+                    <td>Someone says they were charged twice, cannot pay, or moved a website.</td>
+                </tr>
+                <tr>
+                    <td><a href="BUILD_PLAN.md">Build plan</a></td>
+                    <td>You want the original phase order. What shipped is this status page.</td>
+                </tr>
+                <tr>
+                    <td><a href="STRIPE_VS_ZOHO_ANALYSIS.md">Stripe versus Zoho</a></td>
+                    <td>You want why this stays on the existing Stripe account.</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="parameters-list">
+            <p><strong>Screens in the admin app</strong></p>
+            <ul>
+                <li><code class="code-highlight">/admin/platform-billing</code> — search organizations and export the charge ledger. Open an organization, then open a tenant id to reach that website’s switch.</li>
+                <li><code class="code-highlight">/admin/platform-billing/{tenantId}</code> — platform super-admin turns the charge switch on. <code class="code-highlight">{tenantId}</code> is the website’s tenant id. Check Charge switch under Event site or Gas stations, then save. Saving sets payment due and does not charge the card.</li>
+                <li><code class="code-highlight">/admin/platform-billing/plans</code> — create event-site and gas-station catalog plans.</li>
+                <li><code class="code-highlight">/admin/billing</code> — the paying website admin opens Pay or the Stripe Customer Portal. A regular tenant admin cannot turn the switch on here. A platform super-admin signed into that same tenant also sees the switch.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section-container" id="money">
+        <div class="section-header">Three kinds of money</div>
+        <p>The word “plan” is used in three places. Only one of them creates a software subscription in Stripe.</p>
+        <table>
+            <thead>
+                <tr><th scope="col">Name people see</th><th scope="col">What it really is</th><th scope="col">Who pays</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Site type</td>
+                    <td>A label for the kind of website: events, church, sports, music, personal, hybrid, retail, or school. Stored in the site-type catalog. It does not select a Stripe price.</td>
+                    <td>Nobody. It describes the website.</td>
+                </tr>
+                <tr>
+                    <td>Subscription plan catalog</td>
+                    <td>Access words such as Basic, Professional, or Enterprise on tenant screens. Those words are not a live Stripe subscription.</td>
+                    <td>Nobody, from this catalog.</td>
+                </tr>
+                <tr>
+                    <td>Membership plan</td>
+                    <td>A person joins and renews. That flow keeps its own Stripe subscription id. Do not store a tenant software fee on a membership row.</td>
+                    <td>A person paying dues.</td>
+                </tr>
+                <tr>
+                    <td>Ticket Checkout</td>
+                    <td>A guest buys tickets, including Apple Pay and Google Pay. That payment writes a ticket transaction.</td>
+                    <td>A guest at an event.</td>
+                </tr>
+                <tr>
+                    <td>Platform billing plan</td>
+                    <td>The software fee. Products are <code class="code-highlight">EVENT_SITE</code> and <code class="code-highlight">GAS_STATION</code> only.</td>
+                    <td>The organization that runs the website.</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="info">One Stripe customer stays on the organization. Event-site fees and gas-station fees are separate products, so one website can be free on one product and paying on the other. Ticket and membership webhooks skip events marked <code class="code-highlight">billingScope=platform_tenant</code>.</div>
+    </div>
+
+    <div class="section-container parameters" id="site-types">
+        <div class="section-header parameters">Site type is not a price</div>
+        <p>Church, school, sports, music, liquor, clinic, and the other site types or shop packs do not have their own Stripe products. A church website is still billed as an event site when a super-admin turns that product’s charge switch on. A gas-station chain is billed as the gas-station product. Retail packs such as liquor store, restaurant, and clinic are shop types, not extra software plans.</p>
+        <table>
+            <thead>
+                <tr><th scope="col">If the website is</th><th scope="col">Software product used today</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Events, church, sports, music, personal, hybrid, or school</td><td>Event site, when that product’s switch is on</td></tr>
+                <tr><td>Gas station chain</td><td>Gas station. One subscription for the chain. The quantity is the number of active included locations, unless a custom flat fee is set.</td></tr>
+                <tr><td>Several websites under one organization, billed once</td><td>One monthly amount on the organization’s home website. The billing row is marked <code class="code-highlight">organization-flat</code>. The other websites are covered and do not get their own Pay button.</td></tr>
+            </tbody>
+        </table>
+        <div class="warning">A Stripe price per site type, and a Stripe price per retail pack, are not built. Adding those would be new work.</div>
+    </div>
+
+    <div class="section-container" id="flow">
+        <div class="section-header">How a charge moves</div>
+        <ol class="steps">
+            <li>A new website starts <code class="code-highlight">COMPLIMENTARY</code>. The charge switch is off. Stripe is not called. A review-by date is only a reminder. It never starts a charge.</li>
+            <li>Only a platform super-admin can turn the switch on, at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. Check <strong>Charge switch</strong> under Event site or Gas stations, then save. Turning the switch on sets <code class="code-highlight">PAYMENT_DUE</code> and a grace end (today plus the grace days, default 14). The card is not charged by the switch itself.</li>
+            <li>The paying admin opens <code class="code-highlight">/admin/billing</code> and clicks Pay. Stripe Checkout collects a card or a US bank account. This app does not show its own card form. Payment methods and invoices open in the Stripe Customer Portal.</li>
+            <li>A successful payment sets <code class="code-highlight">ACTIVE</code>. A bank payment that is still processing stays payment due. A renewal that fails becomes <code class="code-highlight">PAST_DUE</code> from Stripe, then <code class="code-highlight">LOCKED</code> when grace has ended with no successful payment.</li>
+            <li>Locked websites can still open the billing page and Pay. Other paid admin tools for that website redirect to billing. The public site stays up. A complimentary website, and a website covered by the organization charge, are not locked because some other website failed to pay.</li>
+            <li>Cancel at period end keeps access until the period ends. Cancel now is a super-admin action and returns the row to complimentary.</li>
+        </ol>
+        <div class="success">Money on these screens is shown with two decimal places, for example $10.00.</div>
+    </div>
+
+    <div class="section-container parameters" id="prices">
+        <div class="section-header parameters">Catalog price, custom price, and one organization amount</div>
+        <h3>Catalog plan for one website</h3>
+        <p>A super-admin keeps plans at <code class="code-highlight">/admin/platform-billing/plans</code>. Each plan belongs to Event site or Gas station. It can be recurring, one-time, or both. A new plan defaults to every month. A published production plan uses month or year. The list price is in US dollars. Gas-station plans can store graduated tiers so the monthly total depends on how many locations are included. Unpublished plans stay hidden until a super-admin assigns one.</p>
+        <p>The seeded test plans are unpublished event-site plans at $1.00: <code class="code-highlight">test-every-day</code>, <code class="code-highlight">test-every-2-days</code>, <code class="code-highlight">test-every-15-days</code>, and <code class="code-highlight">test-monthly</code>. Day and week intervals are rejected unless the Stripe secret starts with <code class="code-highlight">sk_test_</code>.</p>
+        <h3>Custom price for one website</h3>
+        <p>When a website will not pay the catalog price, a super-admin types <code class="code-highlight">customFeeUsd</code> for that website, with cents, plus a short note. Checkout creates a Stripe Price for that website only. The shared catalog price is left unchanged. A custom fee also skips gas-station location quantity: the quantity stays 1.</p>
+        <h3>One monthly amount for the whole organization</h3>
+        <p>On the organization page, Billing scope has two choices.</p>
+        <table>
+            <thead>
+                <tr><th scope="col">Choice</th><th scope="col">What is saved</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Bill the organization once</td>
+                    <td>One monthly dollar amount. One subscription on the home website, noted <code class="code-highlight">organization-flat</code>. Every other website is covered, its switch is off, and a website subscription is canceled at period end.</td>
+                </tr>
+                <tr>
+                    <td>Bill each website separately</td>
+                    <td>The organization amount is cleared and the organization subscription is canceled at period end. Each website stays complimentary until a super-admin turns that website’s switch on. Nothing is auto-charged.</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="warning">The organization amount is monthly only. It is not a yearly organization price, and it is not the sum of each website’s catalog plan. Moving a website into an organization that is billed once covers that website. Moving it to an organization that bills each website separately removes the covered note and does not start a charge.</div>
+        <div class="error">Do not use organizations 18, 19, or 20 for a billing experiment. Create a new billing-test organization.</div>
+    </div>
+
+    <div class="section-container output" id="status">
+        <div class="section-header output">What is built</div>
+        <p>Ready for Stripe test mode means the screen and the webhook path exist. It does not mean a live production charge has been confirmed from this documentation pass. A live charge still needs live Stripe keys, published month or year prices chosen by the business, and a completed test-mode run: success card, failing card, organization scope toggle, and a ticket purchase that must not insert a platform charge.</p>
+        <table>
+            <thead>
+                <tr><th scope="col">Feature</th><th scope="col">Status</th><th scope="col">Notes</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Complimentary until a super-admin turns the switch on</td>
+                    <td>Built</td>
+                    <td>A review-by date does not charge anyone.</td>
+                </tr>
+                <tr>
+                    <td>Event-site catalog plan, monthly or yearly, recurring or one-time</td>
+                    <td>Built</td>
+                    <td>Prices are whatever a super-admin publishes. The $49 and $149 examples in the product guide are not seeded prices.</td>
+                </tr>
+                <tr>
+                    <td>Gas-station plan with location quantity and graduated tiers</td>
+                    <td>Built</td>
+                    <td>One subscription for the chain. A custom flat fee ignores the location count.</td>
+                </tr>
+                <tr>
+                    <td>Custom price for one website</td>
+                    <td>Built</td>
+                    <td>Stripe Price is created for that website at pay time. The shared catalog price stays as it is.</td>
+                </tr>
+                <tr>
+                    <td>Bill each website separately</td>
+                    <td>Built</td>
+                    <td>Each website stays free until its own switch is turned on.</td>
+                </tr>
+                <tr>
+                    <td>Bill the organization once, monthly</td>
+                    <td>Built</td>
+                    <td>One monthly amount on the home website. Covered websites hide Pay.</td>
+                </tr>
+                <tr>
+                    <td>Card and US bank account through Stripe Checkout, plus Customer Portal</td>
+                    <td>Built</td>
+                    <td>No card form inside this app.</td>
+                </tr>
+                <tr>
+                    <td>Charge ledger, grace, past due, and lock</td>
+                    <td>Built</td>
+                    <td>Ledger is <code class="code-highlight">/admin/platform-billing</code>. Public pages stay up when admin tools lock.</td>
+                </tr>
+                <tr>
+                    <td>Day and week test plans at $1.00</td>
+                    <td>Test only</td>
+                    <td>Unpublished. Allowed when the secret key starts with <code class="code-highlight">sk_test_</code>. Production catalog plans stay month or year.</td>
+                </tr>
+                <tr>
+                    <td>A Stripe product for each site type or retail pack</td>
+                    <td>Not built</td>
+                    <td>Church, school, sports, liquor, clinic, and the rest use event site or gas station, or the one organization monthly amount.</td>
+                </tr>
+                <tr>
+                    <td>Yearly organization price, or a bill that adds up every website</td>
+                    <td>Not built</td>
+                    <td>Organization scope is one monthly amount.</td>
+                </tr>
+                <tr>
+                    <td>Sales tax filing, or a Zoho bookkeeper export</td>
+                    <td>Not built</td>
+                    <td>Left for later. Zoho must not turn the charge switch or mark a tenant paid.</td>
+                </tr>
+                <tr>
+                    <td>A percent of ticket sales as this subscription</td>
+                    <td>Out of scope</td>
+                    <td>The platform fee percentage on tenant settings is a different setting. Ticket Checkout stays a ticket payment.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section-container usage" id="listen">
+        <div class="section-header usage">Listen for Stripe test events</div>
+        <div class="section-intro">
+            <p>Forward Stripe test events to this app with <code class="script-name">stripe.exe</code>. Local admin development uses port 3001. Change the port below if this app is listening somewhere else, then use Copy. The full test steps, including the 4242 card and the failing card, are in the <a href="PLATFORM_BILLING_TEST_GUIDE.html">test guide</a>.</p>
+        </div>
+        <div class="command-block setup"
+             data-command-type="setup"
+             data-command-base="stripe listen --forward-to"
+             data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe">
+            <div class="command-header">
+                <span class="command-type">Setup</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this, 'stripe-listen')" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'stripe-listen')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-parameters">
+                <h5>Customize parameters</h5>
+                <div class="parameter-group single">
+                    <div class="parameter-input">
+                        <label for="stripe-listen-port">Local admin port</label>
+                        <input type="number" id="stripe-listen-port" min="1" max="65535" placeholder="3001" value="3001" oninput="updateCommand('stripe-listen', 'port', this.value)">
+                    </div>
+                </div>
+            </div>
+            <div class="command-content" id="stripe-listen">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</div>
+            <div class="command-single-line" id="stripe-listen-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="stripe-listen-single-code">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</code>
+            </div>
+        </div>
+        <div class="info">The success card is <code class="code-highlight">4242 4242 4242 4242</code>, any future expiry, any CVC. The failure card is <code class="code-highlight">4000 0000 0000 0341</code>. A ticket purchase in the same Stripe test account must not insert a platform charge.</div>
+    </div>
+
+    <script>
+        var commandParams = {};
+
+        function updateCommand(commandId, paramName, paramValue) {
+            if (!commandParams[commandId]) {
+                commandParams[commandId] = {};
+            }
+            commandParams[commandId][paramName] = paramValue;
+            updateCommandFromParams(commandId);
+        }
+
+        function updateCommandFromParams(commandId) {
+            var commandElement = document.getElementById(commandId);
+            if (!commandElement) return;
+            var commandBlock = commandElement.closest('.command-block');
+            if (!commandBlock) return;
+            var baseCommand = commandBlock.getAttribute('data-command-base') || 'stripe listen --forward-to';
+            var params = commandParams[commandId] || {};
+            var port = (params.port || '3001').trim();
+            if (!/^\d+$/.test(port)) {
+                port = '3001';
+            }
+            var command = baseCommand + ' http://localhost:' + port + '/api/webhooks/stripe';
+            commandElement.textContent = command;
+            var singleLineCode = document.getElementById(commandId + '-single-code');
+            if (singleLineCode) {
+                singleLineCode.textContent = command;
+            }
+        }
+
+        function flashCopied(button, label) {
+            button.classList.add('copied');
+            button.textContent = 'Copied';
+            setTimeout(function () {
+                button.classList.remove('copied');
+                button.textContent = label;
+            }, 2000);
+        }
+
+        function fallbackCopy(text, button, label) {
+            var area = document.createElement('textarea');
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            try {
+                document.execCommand('copy');
+                flashCopied(button, label);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+            document.body.removeChild(area);
+        }
+
+        function writeClipboard(text, button, label) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    flashCopied(button, label);
+                }).catch(function (err) {
+                    console.error('Failed to copy:', err);
+                    fallbackCopy(text, button, label);
+                });
+            } else {
+                fallbackCopy(text, button, label);
+            }
+        }
+
+        function copyTemplateCommand(button, commandId) {
+            var commandBlock = button.closest('.command-block');
+            if (!commandBlock) return;
+            var templateCommand = commandBlock.getAttribute('data-template-command');
+            if (!templateCommand) {
+                var commandElement = document.getElementById(commandId);
+                if (!commandElement) return;
+                templateCommand = commandElement.textContent.trim();
+            }
+            templateCommand = templateCommand.replace(/&quot;/g, '"');
+            writeClipboard(templateCommand, button, 'Template');
+        }
+
+        function copyCommand(button, commandId) {
+            var commandElement = document.getElementById(commandId);
+            if (!commandElement) return;
+            var commandText = commandElement.textContent.trim();
+            writeClipboard(commandText, button, 'Copy');
+            var singleLineElement = document.getElementById(commandId + '-single');
+            if (singleLineElement) {
+                singleLineElement.classList.add('show');
+            }
+        }
+
+        function initializeCommands() {
+            document.querySelectorAll('.command-block[data-command-base]').forEach(function (block) {
+                var commandContent = block.querySelector('.command-content');
+                if (!commandContent || !commandContent.id) return;
+                var commandId = commandContent.id;
+                block.querySelectorAll('.parameter-input input').forEach(function (input) {
+                    if (!input.id || input.id.indexOf(commandId + '-') !== 0) return;
+                    var paramName = input.id.substring(commandId.length + 1);
+                    if (!commandParams[commandId]) {
+                        commandParams[commandId] = {};
+                    }
+                    commandParams[commandId][paramName] = input.value || '';
+                });
+                updateCommandFromParams(commandId);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeCommands();
+        });
+    </script>
+</body>
+</html>

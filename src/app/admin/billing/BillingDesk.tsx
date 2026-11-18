@@ -1,10 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { FaBan, FaCreditCard, FaSave, FaSyncAlt, FaUniversity } from 'react-icons/fa';
 import AdminNavigation from '@/components/AdminNavigation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { saveTenantProductBilling, setLocationIncludedInBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
-import { YellowCheckbox } from '@/components/retail/RetailUi';
 import type { RetailLocationDTO } from '@/types/retail';
 import type { PlatformBillingChargeDTO, PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
@@ -17,6 +27,119 @@ const money = (amount?: number | null) =>
   }).format(Number(amount || 0));
 
 const PRODUCTS: PlatformProduct[] = ['EVENT_SITE', 'GAS_STATION'];
+
+const dialogButton =
+  'flex-1 flex-shrink-0 h-14 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100';
+
+type ConfirmRequest =
+  | { kind: 'charge'; product: PlatformProduct; enable: boolean }
+  | { kind: 'location'; locationId: number; name: string; include: boolean };
+
+function productLabel(product: PlatformProduct): string {
+  return product === 'EVENT_SITE' ? 'event site' : 'gas stations';
+}
+
+function statusClass(status: string): string {
+  const key = status.toUpperCase();
+  if (key === 'ACTIVE' || key === 'PAID') return 'bg-green-100 text-green-800';
+  if (key === 'PAYMENT_DUE' || key === 'OPEN') return 'bg-amber-100 text-amber-800';
+  if (key === 'PAST_DUE' || key === 'FAILED' || key === 'LOCKED') return 'bg-red-100 text-red-800';
+  if (key === 'REFUNDED') return 'bg-purple-100 text-purple-800';
+  return 'bg-orange-100 text-orange-800';
+}
+
+function BillingSwitch({
+  on,
+  disabled,
+  label,
+  onToggle,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  label: string;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-4">
+      <span className={`text-sm font-semibold ${on ? 'text-purple-300' : 'text-purple-600'}`}>Off</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        disabled={disabled}
+        onClick={onToggle}
+        className={`relative inline-flex h-10 w-16 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+          on ? 'bg-blue-500 focus:ring-blue-500' : 'bg-purple-500 focus:ring-purple-500'
+        }`}
+        title={label}
+        aria-label={label}
+      >
+        <span
+          className={`inline-flex items-center justify-center h-8 w-8 transform rounded-full bg-white transition-transform duration-300 shadow-md ${
+            on ? 'translate-x-7' : 'translate-x-1'
+          }`}
+        >
+          {on ? (
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+        </span>
+      </button>
+      <span className={`text-sm font-semibold ${on ? 'text-blue-600' : 'text-blue-300'}`}>On</span>
+    </div>
+  );
+}
+
+function DeskButton({
+  color,
+  icon,
+  children,
+  disabled,
+  onClick,
+  title,
+}: {
+  color: 'blue' | 'green' | 'emerald' | 'indigo' | 'amber' | 'red';
+  icon: ReactNode;
+  children: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+  title: string;
+}) {
+  const tone = {
+    blue: 'bg-blue-100 hover:bg-blue-200 text-blue-700',
+    green: 'bg-green-100 hover:bg-green-200 text-green-700',
+    emerald: 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700',
+    indigo: 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700',
+    amber: 'bg-amber-100 hover:bg-amber-200 text-amber-700',
+    red: 'bg-red-100 hover:bg-red-200 text-red-700',
+  }[color];
+  const iconTone = {
+    blue: 'bg-blue-200 text-blue-600',
+    green: 'bg-green-200 text-green-600',
+    emerald: 'bg-emerald-200 text-emerald-600',
+    indigo: 'bg-indigo-200 text-indigo-600',
+    amber: 'bg-amber-200 text-amber-600',
+    red: 'bg-red-200 text-red-600',
+  }[color];
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className={`h-14 rounded-xl px-4 font-semibold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${tone}`}
+    >
+      <span className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${iconTone}`}>{icon}</span>
+      {children}
+    </button>
+  );
+}
 
 export default function BillingDesk({
   tenantId,
@@ -39,8 +162,9 @@ export default function BillingDesk({
 }) {
   const [rows, setRows] = useState(initialRows);
   const [locationRows, setLocationRows] = useState(locations);
-  const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   function rowFor(product: PlatformProduct): TenantProductBillingDTO {
     return (
@@ -71,16 +195,15 @@ export default function BillingDesk({
 
   async function persist(next: TenantProductBillingDTO) {
     setBusy(true);
-    setMessage('');
     try {
       const saved = await saveTenantProductBilling(next);
-      setRows((current) => {
-        const without = current.filter((row) => row.product !== saved.product);
-        return [...without, saved];
+      setRows((current) => [...current.filter((row) => row.product !== saved.product), saved]);
+      setResult({
+        ok: true,
+        text: 'Billing saved. Turning the switch on does not charge the card by itself.',
       });
-      setMessage('Billing saved. Turning the switch on does not charge the card by itself.');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Save failed');
+      setResult({ ok: false, text: error instanceof Error ? error.message : 'Save failed' });
     } finally {
       setBusy(false);
     }
@@ -88,7 +211,6 @@ export default function BillingDesk({
 
   async function post(path: string, body: Record<string, unknown>) {
     setBusy(true);
-    setMessage('');
     try {
       const response = await fetch(path, {
         method: 'POST',
@@ -98,14 +220,53 @@ export default function BillingDesk({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Request failed');
       if (data.url) window.location.href = data.url;
-      else setMessage('Done.');
-      return data;
+      else setResult({ ok: true, text: 'Done.' });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Request failed');
+      setResult({ ok: false, text: error instanceof Error ? error.message : 'Request failed' });
     } finally {
       setBusy(false);
     }
   }
+
+  async function applyConfirm(request: ConfirmRequest) {
+    if (request.kind === 'charge') {
+      await persist({ ...rowFor(request.product), chargeEnabled: request.enable });
+      return;
+    }
+    setBusy(true);
+    try {
+      await setLocationIncludedInBilling(tenantId, request.locationId, request.include);
+      setLocationRows((current) =>
+        current.map((item) =>
+          item.id === request.locationId ? { ...item, includedInSubscription: request.include } : item
+        )
+      );
+      setResult({
+        ok: true,
+        text: 'Location inclusion saved. Use Update location count to change the Stripe quantity.',
+      });
+    } catch (error) {
+      setResult({ ok: false, text: error instanceof Error ? error.message : 'Could not update the location' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const turningOff = confirmRequest?.kind === 'charge' ? !confirmRequest.enable : confirmRequest?.kind === 'location' ? !confirmRequest.include : false;
+  const confirmTitle = confirmRequest?.kind === 'charge'
+    ? confirmRequest.enable ? 'Turn charging on' : 'Turn charging off'
+    : confirmRequest?.kind === 'location'
+      ? confirmRequest.include ? 'Include this location' : 'Remove this location'
+      : '';
+  const confirmText = confirmRequest?.kind === 'charge'
+    ? confirmRequest.enable
+      ? `Turn charging on for the ${productLabel(confirmRequest.product)}. This marks the fee due. It does not charge the card.`
+      : `Turn charging off for the ${productLabel(confirmRequest.product)}.`
+    : confirmRequest?.kind === 'location'
+      ? confirmRequest.include
+        ? `Include ${confirmRequest.name} in the location fee.`
+        : `Remove ${confirmRequest.name} from the location fee.`
+      : '';
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6" style={{ paddingTop: '120px' }}>
@@ -113,30 +274,36 @@ export default function BillingDesk({
         tenantId={tenantId}
         contextLine="Platform billing for this tenant — event site and gas station fees."
       />
-      <h1 className="font-heading text-3xl text-foreground">Platform billing</h1>
-      <p className="text-muted-foreground">Tenant {tenantId}. Cards and US bank accounts. Complimentary until the charge switch is on.</p>
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-3xl font-bold text-gray-900">Platform billing</h1>
+        <p className="text-gray-600 mt-2">Tenant {tenantId}. Cards and US bank accounts. Complimentary until the charge switch is on.</p>
+      </div>
       {lockedNotice && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+        <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-red-800">
           Paid admin tools are locked until this platform fee is paid. The site itself stays online.
         </div>
       )}
-      {message && <p className="text-sm text-blue-800">{message}</p>}
       {PRODUCTS.map((product) => {
         const row = rowFor(product);
         const covered = isCoveredByPortfolio(row.notes);
         const productPlans = plans.filter((plan) => plan.product === product && (plan.published !== false || plan.id === row.platformPlanId));
+        const charged = complimentaryPlan ? false : !!row.chargeEnabled;
         return (
-          <section key={product} className="bg-card rounded-lg sacred-shadow p-6 space-y-4">
-            <h2 className="text-xl font-semibold">{product === 'EVENT_SITE' ? 'Event site' : 'Gas stations'}</h2>
-            <p className="text-sm">
-              Status <strong>{row.status || 'COMPLIMENTARY'}</strong>
-              {row.customFeeUsd != null ? ` · custom fee ${money(row.customFeeUsd)}` : ''}
+          <section key={product} className="bg-white rounded-lg shadow-md p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-gray-900">{product === 'EVENT_SITE' ? 'Event site' : 'Gas stations'}</h2>
+              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${statusClass(row.status || 'COMPLIMENTARY')}`}>
+                {row.status || 'COMPLIMENTARY'}
+              </span>
+            </div>
+            <p className="text-sm text-gray-700">
+              {row.customFeeUsd != null ? `Custom fee ${money(row.customFeeUsd)}` : 'Catalog price'}
               {row.graceEndsAt ? ` · grace ends ${new Date(row.graceEndsAt).toLocaleDateString()}` : ''}
               {row.locationQuantity != null ? ` · quantity ${row.locationQuantity}` : ''}
             </p>
             {canEditSwitch && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="text-sm">
+                <label className="text-sm font-medium text-gray-700">
                   Catalog plan
                   <select
                     className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
@@ -151,7 +318,7 @@ export default function BillingDesk({
                     ))}
                   </select>
                 </label>
-                <label className="text-sm">
+                <label className="text-sm font-medium text-gray-700">
                   Custom fee USD (blank uses the catalog)
                   <input
                     className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
@@ -164,7 +331,7 @@ export default function BillingDesk({
                     }}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="text-sm font-medium text-gray-700">
                   Review-by date (reminder only)
                   <input
                     type="date"
@@ -173,7 +340,7 @@ export default function BillingDesk({
                     onChange={(event) => updateRow(product, { reviewByDate: event.target.value })}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="text-sm font-medium text-gray-700">
                   Grace days
                   <input
                     type="number"
@@ -183,25 +350,29 @@ export default function BillingDesk({
                     onChange={(event) => updateRow(product, { graceDays: Number(event.target.value) })}
                   />
                 </label>
-                <YellowCheckbox
-                  checked={complimentaryPlan ? false : !!row.chargeEnabled}
-                  disabled={!canEditSwitch || complimentaryPlan}
-                  onChange={checked => updateRow(product, { chargeEnabled: checked })}
-                  label="Charge switch"
-                />
-                {complimentaryPlan && (
-                  <p className="text-sm text-emerald-800">
-                    This tenant plan is free or demo. The charge switch stays off, so Stripe is not called.
-                  </p>
-                )}
-                <button
-                  type="button"
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Charge switch</p>
+                  <BillingSwitch
+                    on={charged}
+                    disabled={busy || complimentaryPlan}
+                    label={charged ? 'Turn the charge switch off' : 'Turn the charge switch on'}
+                    onToggle={() => setConfirmRequest({ kind: 'charge', product, enable: !charged })}
+                  />
+                  {complimentaryPlan && (
+                    <p className="text-sm text-emerald-800 mt-2">
+                      This tenant plan is free or demo. The charge switch stays off, so Stripe is not called.
+                    </p>
+                  )}
+                </div>
+                <DeskButton
+                  color="blue"
+                  icon={<FaSave className="w-5 h-5" />}
                   disabled={busy}
-                  className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 font-semibold text-blue-700"
+                  title={`Save ${productLabel(product)} billing`}
                   onClick={() => persist(rowFor(product))}
                 >
                   Save {product === 'EVENT_SITE' ? 'event site' : 'gas station'} billing
-                </button>
+                </DeskButton>
               </div>
             )}
             {covered ? (
@@ -209,67 +380,73 @@ export default function BillingDesk({
                 This website is covered by its organization. The organization subscription is the one that is paid and canceled.
               </p>
             ) : (
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
-                className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-4 font-semibold text-green-700 disabled:opacity-50"
-                onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: row.billingMode || 'RECURRING' })}
-              >
-                Pay {row.billingMode === 'ONE_TIME' ? 'once' : 'monthly'}
-              </button>
-              {row.billingMode !== 'ONE_TIME' && (
-                <button
-                  type="button"
+              <div className="flex flex-wrap gap-3">
+                <DeskButton
+                  color="green"
+                  icon={<FaCreditCard className="w-5 h-5" />}
                   disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
-                  className="h-14 rounded-xl bg-emerald-100 hover:bg-emerald-200 px-4 font-semibold text-emerald-700 disabled:opacity-50"
-                  onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'ONE_TIME' })}
+                  title={row.billingMode === 'ONE_TIME' ? 'Pay once' : 'Pay monthly'}
+                  onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: row.billingMode || 'RECURRING' })}
                 >
-                  Pay once
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={busy}
-                className="h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-4 font-semibold text-indigo-700 disabled:opacity-50"
-                onClick={() => post('/api/platform-billing/portal', { tenantId })}
-              >
-                Payment methods
-              </button>
-              {product === 'GAS_STATION' && row.id && (
-                <button
-                  type="button"
+                  Pay {row.billingMode === 'ONE_TIME' ? 'once' : 'monthly'}
+                </DeskButton>
+                {row.billingMode !== 'ONE_TIME' && (
+                  <DeskButton
+                    color="emerald"
+                    icon={<FaCreditCard className="w-5 h-5" />}
+                    disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
+                    title="Pay once"
+                    onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'ONE_TIME' })}
+                  >
+                    Pay once
+                  </DeskButton>
+                )}
+                <DeskButton
+                  color="indigo"
+                  icon={<FaUniversity className="w-5 h-5" />}
                   disabled={busy}
-                  className="h-14 rounded-xl bg-amber-100 hover:bg-amber-200 px-4 font-semibold text-amber-700"
-                  onClick={() => post('/api/platform-billing/sync-quantity', { billingId: row.id, tenantId })}
+                  title="Payment methods"
+                  onClick={() => post('/api/platform-billing/portal', { tenantId })}
                 >
-                  Update location count
-                </button>
-              )}
-              {row.stripeSubscriptionId && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700"
-                  onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}
-                >
-                  Cancel at period end
-                </button>
-              )}
-              {canEditSwitch && row.stripeSubscriptionId && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700"
-                  onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}
-                >
-                  Cancel now
-                </button>
-              )}
-            </div>
+                  Payment methods
+                </DeskButton>
+                {product === 'GAS_STATION' && row.id && (
+                  <DeskButton
+                    color="amber"
+                    icon={<FaSyncAlt className="w-5 h-5" />}
+                    disabled={busy}
+                    title="Update location count"
+                    onClick={() => post('/api/platform-billing/sync-quantity', { billingId: row.id, tenantId })}
+                  >
+                    Update location count
+                  </DeskButton>
+                )}
+                {row.stripeSubscriptionId && (
+                  <DeskButton
+                    color="red"
+                    icon={<FaBan className="w-5 h-5" />}
+                    disabled={busy}
+                    title="Cancel at period end"
+                    onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}
+                  >
+                    Cancel at period end
+                  </DeskButton>
+                )}
+                {canEditSwitch && row.stripeSubscriptionId && (
+                  <DeskButton
+                    color="red"
+                    icon={<FaBan className="w-5 h-5" />}
+                    disabled={busy}
+                    title="Cancel now"
+                    onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}
+                  >
+                    Cancel now
+                  </DeskButton>
+                )}
+              </div>
             )}
-            {!complimentaryPlan && !row.chargeEnabled && <p className="text-sm text-muted-foreground">Switch is off. Stripe is not called.</p>}
-            <p className="text-sm text-muted-foreground">
+            {!complimentaryPlan && !row.chargeEnabled && <p className="text-sm text-gray-600">Switch is off. Stripe is not called.</p>}
+            <p className="text-sm text-gray-600">
               Pay opens Stripe Checkout with a card or a US bank account. Bank debit appears when ACH Direct Debit is active on the Stripe account.
             </p>
             {row.chargeEnabled && row.status !== 'ACTIVE' && (
@@ -281,67 +458,136 @@ export default function BillingDesk({
         );
       })}
       {rows.filter((row) => row.product === 'RETAIL').map((row) => (
-        <section key={row.id || 'retail'} className="bg-card rounded-lg sacred-shadow p-6 space-y-3">
-          <h2 className="text-xl font-semibold">Organization subscription</h2>
-          <p className="text-sm">Status <strong>{row.status || 'COMPLIMENTARY'}</strong> · {money(row.customFeeUsd)} per month</p>
+        <section key={row.id || 'retail'} className="bg-white rounded-lg shadow-md p-6 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-gray-900">Organization subscription</h2>
+            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${statusClass(row.status || 'COMPLIMENTARY')}`}>
+              {row.status || 'COMPLIMENTARY'}
+            </span>
+          </div>
+          <p className="text-sm text-gray-700">{money(row.customFeeUsd)} per month</p>
           <div className="flex flex-wrap gap-3">
-            <button type="button" disabled={busy || !row.id || !row.chargeEnabled} className="h-14 rounded-xl bg-green-100 hover:bg-green-200 px-4 font-semibold text-green-700 disabled:opacity-50" onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'RECURRING' })}>Pay monthly</button>
-            <button type="button" disabled={busy} className="h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-4 font-semibold text-indigo-700" onClick={() => post('/api/platform-billing/portal', { tenantId })}>Payment methods</button>
-            {row.stripeSubscriptionId && <button type="button" disabled={busy} className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}>Cancel at period end</button>}
-            {canEditSwitch && row.stripeSubscriptionId && <button type="button" disabled={busy} className="h-14 rounded-xl bg-red-100 hover:bg-red-200 px-4 font-semibold text-red-700" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}>Cancel now</button>}
+            <DeskButton color="green" icon={<FaCreditCard className="w-5 h-5" />} disabled={busy || !row.id || !row.chargeEnabled} title="Pay monthly" onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'RECURRING' })}>Pay monthly</DeskButton>
+            <DeskButton color="indigo" icon={<FaUniversity className="w-5 h-5" />} disabled={busy} title="Payment methods" onClick={() => post('/api/platform-billing/portal', { tenantId })}>Payment methods</DeskButton>
+            {row.stripeSubscriptionId && <DeskButton color="red" icon={<FaBan className="w-5 h-5" />} disabled={busy} title="Cancel at period end" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}>Cancel at period end</DeskButton>}
+            {canEditSwitch && row.stripeSubscriptionId && <DeskButton color="red" icon={<FaBan className="w-5 h-5" />} disabled={busy} title="Cancel now" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}>Cancel now</DeskButton>}
           </div>
         </section>
       ))}
-      <section className="bg-card rounded-lg sacred-shadow p-6">
-        <h2 className="text-xl font-semibold mb-3">Charges</h2>
-        {charges.length === 0 ? <p className="text-sm text-muted-foreground">No platform charges are recorded for this website yet.</p> : (
-          <ul className="space-y-2 text-sm">
-            {charges.map((charge) => (
-              <li key={charge.id || charge.stripeEventId} className="flex flex-wrap justify-between gap-2 border-b border-gray-200 py-2">
-                <span>{charge.status} · {money(charge.amountUsd)}</span>
-                <span>{charge.occurredAt ? new Date(charge.occurredAt).toLocaleString() : ''}</span>
-                <span className="text-gray-600">{charge.stripeInvoiceId || charge.stripeSubscriptionId || ''}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+      <section className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Charges</h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-blue-200">
+            <thead>
+              <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                {['Status', 'Amount', 'When', 'Invoice'].map((heading) => (
+                  <th key={heading} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide">{heading}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {charges.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-600">No platform charges are recorded for this website yet.</td>
+                </tr>
+              ) : charges.map((charge) => (
+                <tr key={charge.id || charge.stripeEventId} className="border-t border-blue-100">
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${statusClass(charge.status || '')}`}>{charge.status || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm font-semibold">{money(charge.amountUsd)}</td>
+                  <td className="px-4 py-3 text-sm">{charge.occurredAt ? new Date(charge.occurredAt).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-sm">{charge.stripeInvoiceId || charge.stripeSubscriptionId || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
       {locationRows.length > 0 && (
-        <section className="bg-card rounded-lg sacred-shadow p-6">
-          <h2 className="text-xl font-semibold mb-3">Locations counted in the location fee</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {locationRows.map((location) => (
-              <YellowCheckbox
-                key={location.id}
-                checked={location.includedInSubscription !== false}
-                disabled={busy || location.id == null}
-                label={`${location.locationName || 'Location'} ${location.includedInSubscription === false ? '(not included)' : '(included)'}`}
-                onChange={async (included) => {
-                  if (location.id == null) return;
-                  setBusy(true);
-                  setMessage('');
-                  try {
-                    await setLocationIncludedInBilling(tenantId, location.id, included);
-                    setLocationRows((current) =>
-                      current.map((item) =>
-                        item.id === location.id ? { ...item, includedInSubscription: included } : item
-                      )
-                    );
-                    setMessage('Location inclusion saved. Use Update location count to change the Stripe quantity.');
-                  } catch (error) {
-                    setMessage(error instanceof Error ? error.message : 'Could not update the location');
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              />
-            ))}
+        <section className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Locations counted in the location fee</h2>
+          <div className="space-y-3">
+            {locationRows.map((location) => {
+              const included = location.includedInSubscription !== false;
+              const name = location.locationName || 'Location';
+              return (
+                <div key={location.id} className="flex flex-wrap items-center justify-between gap-3 border border-blue-100 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">{name}</p>
+                    <p className="text-sm text-gray-600">{included ? 'Included' : 'Not included'}</p>
+                  </div>
+                  <BillingSwitch
+                    on={included}
+                    disabled={busy || location.id == null}
+                    label={included ? `Remove ${name} from billing` : `Include ${name} in billing`}
+                    onToggle={() => {
+                      if (location.id == null) return;
+                      setConfirmRequest({ kind: 'location', locationId: location.id, name, include: !included });
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
-          <p className="text-sm text-muted-foreground mt-3">
+          <p className="text-sm text-gray-600 mt-3">
             A custom flat fee uses quantity 1. Otherwise the count is active locations marked included. Update the count after you change locations.
           </p>
         </section>
       )}
+
+      <AlertDialog open={confirmRequest != null} onOpenChange={(open) => { if (!open) setConfirmRequest(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmText}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row gap-3 sm:gap-4">
+            <AlertDialogCancel className={`${dialogButton} bg-blue-100 hover:bg-blue-200`}>
+              <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </span>
+              <span className="font-semibold text-blue-700">Keep as it is</span>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={`${dialogButton} ${turningOff ? 'bg-red-100 hover:bg-red-200' : 'bg-green-100 hover:bg-green-200'}`}
+              onClick={() => {
+                const request = confirmRequest;
+                setConfirmRequest(null);
+                if (request) void applyConfirm(request);
+              }}
+            >
+              <span className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${turningOff ? 'bg-red-200' : 'bg-green-200'}`}>
+                <svg className={`w-6 h-6 ${turningOff ? 'text-red-600' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={turningOff ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7'} />
+                </svg>
+              </span>
+              <span className={`font-semibold ${turningOff ? 'text-red-700' : 'text-green-700'}`}>
+                {confirmRequest?.kind === 'location' ? (turningOff ? 'Remove' : 'Include') : (turningOff ? 'Turn off' : 'Turn on')}
+              </span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={result != null} onOpenChange={(open) => { if (!open) setResult(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{result?.ok ? 'Saved' : 'Could not save'}</AlertDialogTitle>
+            <AlertDialogDescription>{result?.text}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className={`${dialogButton} ${result?.ok ? 'bg-green-100 hover:bg-green-200' : 'bg-red-100 hover:bg-red-200'}`}
+              onClick={() => setResult(null)}
+            >
+              <span className={`font-semibold ${result?.ok ? 'text-green-700' : 'text-red-700'}`}>OK</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

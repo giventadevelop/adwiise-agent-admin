@@ -16,9 +16,12 @@ export default async function PlatformBillingPage({
   const report = await loadPlatformBillingReport(query, Number.isFinite(page) ? page : 0);
   return (
     <div className="w-full min-w-0 px-2 sm:px-4 py-4 space-y-4">
-      <div className="flex flex-wrap items-center gap-4" style={adminPageTopStyle}>
+      <div className="bg-white rounded-lg shadow-md p-6 flex flex-wrap items-center gap-4" style={adminPageTopStyle}>
         <AdminBackButton href="/admin" label="Back to Admin" />
-        <h1 className="text-3xl font-bold">Platform billing</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Platform billing</h1>
+          <p className="text-sm text-gray-600 mt-1">Open an organization to see its websites and billing scope.</p>
+        </div>
       </div>
       <PlatformBillingHome report={report} query={query} />
     </div>

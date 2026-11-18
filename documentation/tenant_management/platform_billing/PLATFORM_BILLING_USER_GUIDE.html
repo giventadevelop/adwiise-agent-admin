@@ -49,12 +49,12 @@
         </ol>
     </nav>
     <div class="section-intro">
-        <p>A platform super-admin opens <code class="code-highlight">/admin/platform-billing</code>. A tenant admin of the website that pays opens <code class="code-highlight">/admin/billing</code>.</p>
+        <p>A platform super-admin turns the charge switch on at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. Open <code class="code-highlight">/admin/platform-billing</code>, open the organization, then open the tenant id. A tenant admin of the website that pays opens <code class="code-highlight">/admin/billing</code> and cannot turn the switch on.</p>
     </div>
     <div class="section-container usage" id="who">
         <div class="section-header usage">1. Who can turn a charge on</div>
-        <p>Only a platform super-admin can turn the charge switch on, set a custom fee, or change grace days. While the switch is off, the website is complimentary and Stripe is not called.</p>
-        <p>Turning the switch on sets the status to payment due and starts the grace window (today plus the grace days). The payer still has to open <strong>Pay</strong>. The switch does not charge the card by itself.</p>
+        <p>Only a platform super-admin can turn the charge switch on, set a custom fee, or change grace days. Open <code class="code-highlight">/admin/platform-billing</code>, open the organization, then open <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, where <code class="code-highlight">{tenantId}</code> is that website’s tenant id. Use the <strong>Charge switch</strong> under Event site or Gas stations and confirm. The catalog plan, custom fee, review-by date, and grace days still use <strong>Save event site billing</strong> or <strong>Save gas station billing</strong>. While the switch is off, the website is complimentary and Stripe is not called.</p>
+        <p>Turning the switch on sets the status to payment due and starts the grace window (today plus the grace days). The payer still has to open <strong>Pay</strong> on <code class="code-highlight">/admin/billing</code>. The switch does not charge the card by itself. A regular tenant admin on that Pay page does not see a switch they can turn on. A platform super-admin who is signed into that same tenant also sees the switch on <code class="code-highlight">/admin/billing</code>.</p>
     </div>
     <div class="section-container parameters" id="scope">
         <div class="section-header parameters">2. Organization or each website</div>

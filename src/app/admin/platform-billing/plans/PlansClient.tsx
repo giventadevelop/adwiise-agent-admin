@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import AdminNavigation from '@/components/AdminNavigation';
-import SuccessDialog from '@/components/SuccessDialog';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { FaCheck, FaPlus, FaTimes } from 'react-icons/fa';
+import BillingPagination from '../BillingPagination';
 import Modal from '@/components/ui/Modal';
+import SuccessDialog from '@/components/SuccessDialog';
 import { savePlatformBillingPlan } from '../ApiServerActions';
 import type { PlatformBillingPlanDTO, PlatformProduct } from '@/types/platformBilling';
+
+const PAGE_SIZE = 20;
 
 const money = (amount?: number | null) =>
   new Intl.NumberFormat('en-US', {
@@ -29,6 +32,41 @@ const emptyPlan = (): PlatformBillingPlanDTO => ({
   graduatedTiersJson: '',
 });
 
+const HEADERS: Array<{ label: string; path: string }> = [
+  { label: 'Name', path: 'M7 7h10M7 12h10M7 17h6' },
+  { label: 'Product', path: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+  { label: 'Billing', path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+  { label: 'Interval', path: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { label: 'Price', path: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2' },
+  { label: 'Visibility', path: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  { label: 'Stripe price', path: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+  { label: 'Edit', path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+];
+
+function productLabel(product: string): string {
+  return product === 'GAS_STATION' ? 'Gas station' : 'Event site';
+}
+
+function modeLabel(mode: string): string {
+  if (mode === 'RECURRING') return 'Recurring';
+  if (mode === 'ONE_TIME') return 'One-time';
+  return 'Recurring or one-time';
+}
+
+function modeClass(mode: string): string {
+  if (mode === 'RECURRING') return 'bg-blue-100 text-blue-800';
+  if (mode === 'ONE_TIME') return 'bg-amber-100 text-amber-800';
+  return 'bg-purple-100 text-purple-800';
+}
+
+function intervalLabel(interval?: string | null, count?: number | null): string {
+  const n = count && count > 1 ? count : 1;
+  const unit = interval === 'YEAR' ? 'year' : interval === 'WEEK' ? 'week' : interval === 'DAY' ? 'day' : 'month';
+  return n === 1 ? `Every ${unit}` : `Every ${n} ${unit}s`;
+}
+
+const fieldClass = 'mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3 text-base bg-white';
+
 function PlanFields({
   plan,
   priceText,
@@ -42,10 +80,10 @@ function PlanFields({
 }) {
   return (
     <>
-      <label className="block text-sm font-medium">
+      <label className="block text-sm font-medium text-gray-700">
         Product
         <select
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
           value={plan.product}
           onChange={(event) => onPlan({ ...plan, product: event.target.value as PlatformProduct })}
         >
@@ -53,30 +91,30 @@ function PlanFields({
           <option value="GAS_STATION">Gas station</option>
         </select>
       </label>
-      <label className="block text-sm font-medium">
+      <label className="block text-sm font-medium text-gray-700">
         Name
         <input
           required
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
           value={plan.name}
           onChange={(event) => onPlan({ ...plan, name: event.target.value })}
         />
       </label>
-      <label className="block text-sm font-medium">
+      <label className="block text-sm font-medium text-gray-700">
         Code
         <input
           required
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
           value={plan.code}
           onChange={(event) => onPlan({ ...plan, code: event.target.value })}
         />
       </label>
-      <label className="block text-sm font-medium">
+      <label className="block text-sm font-medium text-gray-700">
         List price (USD)
         <input
           required
           inputMode="decimal"
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
           value={priceText}
           onChange={(event) => {
             let next = event.target.value;
@@ -86,10 +124,10 @@ function PlanFields({
           onBlur={() => onPrice((Number(priceText) || 0).toFixed(2))}
         />
       </label>
-      <label className="block text-sm font-medium">
+      <label className="block text-sm font-medium text-gray-700">
         Billing
         <select
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
           value={plan.billingMode}
           onChange={(event) =>
             onPlan({ ...plan, billingMode: event.target.value as PlatformBillingPlanDTO['billingMode'] })
@@ -100,37 +138,74 @@ function PlanFields({
           <option value="ONE_TIME">One-time only</option>
         </select>
       </label>
-      <label className="block text-sm font-medium">
+      <label className="block text-sm font-medium text-gray-700">
         Stripe price id
         <input
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
           value={plan.stripePriceId || ''}
           onChange={(event) => onPlan({ ...plan, stripePriceId: event.target.value })}
           placeholder="price_..."
         />
       </label>
-      <label className="block text-sm font-medium md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 md:col-span-2">
         Feature summary
         <textarea
-          className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
+          className={fieldClass}
+          rows={3}
           value={plan.featureSummary || ''}
           onChange={(event) => onPlan({ ...plan, featureSummary: event.target.value })}
         />
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="md:col-span-2 flex items-center gap-3 rounded-xl border-2 border-blue-300 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
         <input
           type="checkbox"
           checked={!!plan.published}
           onChange={(event) => onPlan({ ...plan, published: event.target.checked })}
         />
-        Published
+        Published. Hidden plans stay off the tenant catalog until you assign one.
       </label>
     </>
   );
 }
 
+function DialogButton({
+  type,
+  color,
+  label,
+  icon,
+  disabled,
+  onClick,
+}: {
+  type: 'submit' | 'button';
+  color: 'green' | 'blue';
+  label: string;
+  icon: ReactNode;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const tone =
+    color === 'green'
+      ? 'bg-green-100 hover:bg-green-200 text-green-700'
+      : 'bg-blue-100 hover:bg-blue-200 text-blue-700';
+  const box = color === 'green' ? 'bg-green-200 text-green-600' : 'bg-blue-200 text-blue-600';
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`flex-1 flex-shrink-0 h-14 rounded-xl flex items-center justify-center gap-3 font-semibold transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${tone}`}
+    >
+      <span className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${box}`}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 export default function PlansClient({ initialPlans }: { initialPlans: PlatformBillingPlanDTO[] }) {
   const [plans, setPlans] = useState(initialPlans);
+  const [page, setPage] = useState(0);
   const [draft, setDraft] = useState<PlatformBillingPlanDTO>(emptyPlan());
   const [priceText, setPriceText] = useState('0.00');
   const [adding, setAdding] = useState(false);
@@ -139,6 +214,12 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const gasCount = plans.filter((plan) => plan.product === 'GAS_STATION').length;
+  const eventSiteCount = plans.length - gasCount;
+  const publishedCount = plans.filter((plan) => plan.published).length;
+  const hiddenCount = plans.length - publishedCount;
+  const pageRows = plans.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   function openAdd() {
     setDraft(emptyPlan());
@@ -173,6 +254,7 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
         setDraft(emptyPlan());
         setPriceText('0.00');
         setAdding(false);
+        setPage(0);
       } else {
         setEditing(null);
       }
@@ -194,52 +276,113 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
     if (editing) void savePlan(editing, editPrice, false);
   }
 
+  const tiles = [
+    { label: 'Event site', count: eventSiteCount, className: 'bg-blue-50 text-blue-800 border-blue-300' },
+    { label: 'Gas station', count: gasCount, className: 'bg-teal-50 text-teal-800 border-teal-300' },
+    { label: 'Published', count: publishedCount, className: 'bg-green-50 text-green-800 border-green-300' },
+    { label: 'Hidden', count: hiddenCount, className: 'bg-amber-50 text-amber-800 border-amber-300' },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingTop: '120px' }}>
-      <AdminNavigation contextLine="Platform fee catalog — list prices used to charge tenants (not ticket or membership prices)." />
-      <h1 className="font-heading text-3xl text-foreground mb-2">Platform billing plans</h1>
-      <p className="text-muted-foreground mb-8">
-        Catalog prices for event sites and gas stations. These are not ticket prices and not membership plans.
-      </p>
-      {error && <p className="mb-4 text-sm text-red-700">{error}</p>}
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {tiles.map((tile) => (
+          <div key={tile.label} className={`rounded-lg border-2 shadow-md p-4 ${tile.className}`}>
+            <p className="text-sm font-semibold">{tile.label}</p>
+            <p className="text-2xl font-bold">{tile.count}</p>
+          </div>
+        ))}
+      </div>
+      {error && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-sm text-red-800">{error}</div>
+      )}
       <button
         type="button"
         title="Add plan"
         aria-label="Add plan"
         onClick={openAdd}
-        className="mb-6 flex h-14 flex-shrink-0 items-center justify-center gap-3 rounded-xl bg-blue-100 px-6 font-semibold text-blue-700 transition-all duration-300 hover:scale-105 hover:bg-blue-200"
+        className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 inline-flex items-center gap-3 transition-all duration-300 hover:scale-105"
       >
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-200">
-          <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </div>
+        <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+          <FaPlus className="w-5 h-5 text-blue-600" />
+        </span>
         Add plan
       </button>
-      <div className="space-y-3">
-          {plans.map((plan) => (
-            <div key={plan.id} className="bg-card rounded-lg sacred-shadow p-4 flex items-center justify-between gap-4">
-              <div>
-                <div className="font-semibold">{plan.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {plan.product} · {plan.billingMode} · {money(plan.listPriceUsd)}
-                  {plan.published ? ' · published' : ' · hidden'}
-                </div>
-              </div>
-              <button
-                type="button"
-                title="Edit"
-                aria-label={`Edit ${plan.name}`}
-                onClick={() => openEdit(plan)}
-                className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 transition-all duration-300 hover:scale-110 hover:bg-blue-200"
-              >
-                <svg className="h-10 w-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-            </div>
-          ))}
-          {plans.length === 0 && <p>No plans yet.</p>}
+      <div className="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
+        <table className="min-w-full border border-blue-200">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+              {HEADERS.map((heading) => (
+                <th key={heading.label} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide">
+                  <span className="inline-flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={heading.path} />
+                    </svg>
+                    {heading.label}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pageRows.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center">
+                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border-2 border-orange-300 rounded-lg text-sm font-medium text-orange-700">
+                    No plans yet
+                  </span>
+                </td>
+              </tr>
+            ) : (
+              pageRows.map((plan) => (
+                <tr key={plan.id ?? plan.code} className="border-t border-blue-100 hover:bg-blue-50">
+                  <td className="px-4 py-3 text-sm">
+                    <div className="font-semibold text-gray-900">{plan.name}</div>
+                    <div className="text-xs text-gray-500">{plan.code}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${plan.product === 'GAS_STATION' ? 'bg-teal-100 text-teal-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                      {productLabel(plan.product)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${modeClass(plan.billingMode)}`}>
+                      {modeLabel(plan.billingMode)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{intervalLabel(plan.billingInterval, plan.intervalCount)}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-blue-700">{money(plan.listPriceUsd)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${plan.published ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                      {plan.published ? 'Published' : 'Hidden'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{plan.stripePriceId || '—'}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      title={`Edit ${plan.name}`}
+                      aria-label={`Edit ${plan.name}`}
+                      onClick={() => openEdit(plan)}
+                      className="flex-shrink-0 w-14 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-all duration-300 hover:scale-110"
+                    >
+                      <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+        <BillingPagination
+          page={page}
+          totalCount={plans.length}
+          pageSize={PAGE_SIZE}
+          itemLabel="plans"
+          onPage={setPage}
+        />
       </div>
       <Modal
         isOpen={adding}
@@ -255,28 +398,26 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
       >
         <form onSubmit={onCreate} className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <PlanFields plan={draft} priceText={priceText} onPlan={setDraft} onPrice={setPriceText} />
-          <div className="flex flex-wrap gap-3 md:col-span-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="h-14 rounded-xl bg-blue-100 px-6 font-semibold text-blue-700 hover:bg-blue-200 disabled:opacity-50"
-            >
-              {saving && adding ? 'Saving...' : 'Create plan'}
-            </button>
-            <button
+          <div className="flex flex-row gap-3 sm:gap-4 md:col-span-2">
+            <DialogButton
               type="button"
-              title="Cancel"
-              aria-label="Cancel"
+              color="blue"
+              label="Cancel"
+              icon={<FaTimes className="w-5 h-5" />}
               disabled={saving}
               onClick={() => {
                 setAdding(false);
                 setDraft(emptyPlan());
                 setPriceText('0.00');
               }}
-              className="h-14 rounded-xl bg-gray-100 px-6 font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-            >
-              Cancel
-            </button>
+            />
+            <DialogButton
+              type="submit"
+              color="green"
+              label={saving && adding ? 'Saving...' : 'Create plan'}
+              icon={<FaCheck className="w-5 h-5" />}
+              disabled={saving}
+            />
           </div>
         </form>
       </Modal>
@@ -285,31 +426,29 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
         onClose={() => {
           if (!saving) setEditing(null);
         }}
-        title={editing ? `Edit plan ${editing.name}` : 'Edit plan'}
+        title={editing ? `Edit ${editing.name}` : 'Edit plan'}
         size="lg"
       >
         <form onSubmit={onUpdate} className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {editing && (
             <PlanFields plan={editing} priceText={editPrice} onPlan={setEditing} onPrice={setEditPrice} />
           )}
-          <div className="flex flex-wrap gap-3 md:col-span-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="h-14 rounded-xl bg-blue-100 px-6 font-semibold text-blue-700 hover:bg-blue-200 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Update plan'}
-            </button>
-            <button
+          <div className="flex flex-row gap-3 sm:gap-4 md:col-span-2">
+            <DialogButton
               type="button"
-              title="Cancel"
-              aria-label="Cancel"
+              color="blue"
+              label="Cancel"
+              icon={<FaTimes className="w-5 h-5" />}
               disabled={saving}
               onClick={() => setEditing(null)}
-              className="h-14 rounded-xl bg-gray-100 px-6 font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-            >
-              Cancel
-            </button>
+            />
+            <DialogButton
+              type="submit"
+              color="green"
+              label={saving ? 'Saving...' : 'Update plan'}
+              icon={<FaCheck className="w-5 h-5" />}
+              disabled={saving}
+            />
           </div>
         </form>
       </Modal>

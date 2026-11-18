@@ -2,6 +2,8 @@
 
 This is the order to build the design in [PLATFORM_TENANT_BILLING_GUIDE.md](PLATFORM_TENANT_BILLING_GUIDE.md). Do the phases in order. Do not start phase 2 until phase 1 can show a tenant as complimentary with the charge switch off.
 
+What shipped is recorded in [PLATFORM_BILLING_STATUS.html](PLATFORM_BILLING_STATUS.html). This file stays the phase history.
+
 The payment choice is already made: Stripe, not Zoho. See [STRIPE_VS_ZOHO_ANALYSIS.md](STRIPE_VS_ZOHO_ANALYSIS.md).
 
 ## Rules for every phase
@@ -87,8 +89,8 @@ Do not build this with phases 1–4.
 ## Suggested first screens
 
 - Platform admin: `/admin/platform-billing/plans` for the catalog.
-- Platform admin: a “Platform billing” section on the existing tenant organization page, not a new membership screen.
-- Tenant admin: `/admin/billing` for the pay button, location include toggles (gas station), status, and “Manage billing.”
+- Platform admin: `/admin/platform-billing/{tenantId}` for the charge switch. `{tenantId}` is the website’s tenant id. Open `/admin/platform-billing`, open the organization, then open the tenant id. Use the **Charge switch** and confirm. Saving sets payment due and does not charge the card. Only a platform super-admin can open this page.
+- Tenant admin: `/admin/billing` for the pay button, location include toggles (gas station), status, and “Manage billing.” A tenant admin cannot turn the switch on there. A platform super-admin signed into that same tenant also sees the switch.
 
 Platform-only catalog editing follows the same super-admin guard as Tenant Management (`assertPlatformSuperAdmin` / `isPlatformOnlyAdminPath`). The tenant billing page is available to that tenant’s admin.
 

@@ -2,7 +2,9 @@
 
 This guide explains, in plain English, how event-site tenants and gas-station tenants pay to use this platform. It is the reference for the build described in [BUILD_PLAN.md](BUILD_PLAN.md). The payment-system choice is explained in [STRIPE_VS_ZOHO_ANALYSIS.md](STRIPE_VS_ZOHO_ANALYSIS.md).
 
-Charging is live. A platform super-admin turns the charge switch on, and the paying admin opens Pay on `/admin/billing`. Stripe Checkout collects the card. The charge ledger is `/admin/platform-billing`.
+Charging is live. A platform super-admin turns the charge switch on at `/admin/platform-billing/{tenantId}`, and the paying admin opens Pay on `/admin/billing`. Stripe Checkout collects the card. The charge ledger is `/admin/platform-billing`.
+
+`{tenantId}` is that website’s tenant id. From `/admin/platform-billing`, open the organization, then open the tenant id. Use the **Charge switch** under Event site or Gas stations and confirm. The catalog plan, custom fee, review-by date, and grace days still use **Save event site billing** or **Save gas station billing**. Saving sets payment due. It does not charge the card. Only a platform super-admin can open `/admin/platform-billing/{tenantId}`. A regular tenant admin on `/admin/billing` sees Pay and cannot turn the switch on. A platform super-admin who is signed into that same tenant also sees the switch on `/admin/billing`.
 
 ## 1. Two different kinds of money
 
@@ -14,7 +16,13 @@ This platform already takes two kinds of payments. This guide adds a third. Keep
 
 **Platform money (this guide).** The organization that runs the event site, or the owner that runs the gas stations, pays us for the software. One Stripe customer per tenant organization. Event-site fees and gas-station fees are billed as separate products so a hybrid tenant can be free on one and paying on the other.
 
-The words “subscription” and “plan” already appear on the tenant admin form (Basic, Professional, Enterprise) and on membership pages. Those words are labels today. They are not a live bill.
+The words “subscription” and “plan” appear in three different forms. They do not share a list.
+
+| Words you see | Where they are defined | Where the dropdown appears | What it bills |
+| --- | --- | --- | --- |
+| Basic, Professional, Enterprise | `/admin/access-catalogs/subscription-plans`. **Add plan** sets Code and Label. Basic, Professional, and Enterprise are shared rows already in that list. The organization stores the code, such as `BASIC`. | **Subscription Plan** on `/admin/onboarding-requests/new`, and **Plan** on `/admin/tenant-management/settings/{id}/edit`. | Nothing. It is a label on the organization. It does not create a Stripe price and it does not charge the card. |
+| Starter, Standard, Custom | `/admin/platform-billing/plans`. These names are not a built-in list. **Add plan** has a **Name** box and a **List price (USD)** box. Type Starter and 49.00, or Standard and 149.00, or Custom and 0.00, then check **Published**. | **Catalog plan** on `/admin/platform-billing/{tenantId}`, after the plan exists. Save with **Save event site billing** or **Save gas station billing**. | The software fee for that website, after the charge switch is on and someone pays. |
+| Membership plan names | `/admin/membership/plans`. | The public membership pages a person uses to join. | That person’s membership. Leave those plans out of platform billing. |
 
 ## 2. What the tenant is buying
 
@@ -27,7 +35,7 @@ For each product the tenant can be offered:
 
 - A **catalog plan** with a published price (for example Starter, Standard, or a gas-station per-location rate).
 - A **custom fee** typed by a platform admin for that tenant only. The catalog price is ignored for that tenant when a custom fee is set.
-- **Recurring** billing (every month or every year) or a **one-time** payment, when the plan allows that choice.
+- **Recurring** or **one-time** billing, from the **Billing** dropdown on `/admin/platform-billing/plans` (section 4). A plan created there is monthly.
 - A **long free period**. The tenant uses the product with no card on file until a person turns charging on. A reminder date does not start a charge by itself.
 
 ## 3. The charge switch
@@ -36,7 +44,7 @@ This is the main rule.
 
 1. When a tenant is created, the charge switch for each product is **off**.
 2. While the switch is off, the tenant uses that product freely. No Stripe customer is required. No invoice is created. No card is stored.
-3. Only a **platform super-admin** can turn the switch on. The tenant cannot turn it on, and a reminder date cannot turn it on.
+3. Only a **platform super-admin** can turn the switch on. Open `/admin/platform-billing`, open the organization, then open `/admin/platform-billing/{tenantId}`. Use the **Charge switch** and confirm. The switch saves on its own. The tenant cannot turn it on, and a reminder date cannot turn it on.
 4. The admin may set a **review-by date** (30 days, 90 days, 180 days, or any date they type). That date is a reminder on the admin screen. It does not charge the tenant.
 5. When the admin turns the switch on, the tenant must choose how to pay (or pay the custom amount the admin already set). They get a **grace period** (a number of days the admin sets, default 14) to finish payment. During grace, access stays open.
 6. If grace ends and there is still no successful payment, the paid admin tools for that product stop. The tenant’s public site and stored data stay in place. A pay page explains what to do.
@@ -52,27 +60,18 @@ Status words to show in the admin screen:
 
 ## 4. Plans the tenant can choose
 
-A platform super-admin keeps a small catalog. Each plan has:
+A platform super-admin sets the catalog at `/admin/platform-billing/plans` (Platform billing plans). **Add plan** creates a plan. The pencil on a listed plan edits it. Unpublished plans stay hidden from tenants. The tenant sees only published plans for products they actually have.
 
-- A name people can read (Starter, Standard, Gas station locations).
-- Which product it belongs to: event site or gas station.
-- Whether it is recurring, one-time, or both.
-- For recurring: every month or every year.
-- The list price in US dollars.
-- For gas stations that use location pricing: the per-location rates by count (see section 6). A flat custom fee skips those rates.
-- A short list of what the plan includes, shown on the choose-a-plan page.
-- Whether the plan is published. Unpublished plans are hidden from tenants. An admin can still assign one.
+| What | Page and field |
+| --- | --- |
+| Product, name, and code | **Product**, **Name**, and **Code** on Add plan or Edit plan. Product is Event site or Gas station. Type the name yourself. Starter and Standard are not a built-in dropdown the way Basic and Professional are. |
+| Recurring, one-time, or both | The **Billing** dropdown on that same dialog: Recurring or one-time, Recurring only, or One-time only. |
+| Interval | A plan saved from that dialog is every month. The dialog has no month-or-year field. A yearly amount is a second published plan on the same product, with its own name and list price. This screen does not store a year interval. |
+| List price | **List price (USD)** on that dialog. Type the real amount with cents, for example 49.00 or 149.00. A Custom plan with no list price uses 0.00 here. The amount that website pays is then **Custom fee USD** on `/admin/platform-billing/{tenantId}`. |
+| Feature list and published flag | **Feature summary** and the **Published** checkbox on the same dialog. |
+| Which plan one website uses | **Catalog plan** on `/admin/platform-billing/{tenantId}`, then **Save event site billing** or **Save gas station billing**. That page picks a plan that already exists. It does not create the price. |
 
-The tenant sees only published plans for products they actually have. A gas-station-only tenant does not see event-site plans.
-
-Example catalog (prices are placeholders until the business sets them):
-
-- Event site Starter — $49 per month, or a one-time setup fee the admin defines.
-- Event site Standard — $149 per month.
-- Event site Custom — no list price. The admin types the fee on that tenant.
-- Gas station locations — graduated per location per month (section 6), or a custom flat monthly amount.
-
-Yearly prices, when offered, are a separate published price on the same plan (for example ten months’ price paid once a year). The tenant picks monthly or yearly on the pay page when both exist.
+Placeholder prices, not a quote. The numbers in this guide are examples until someone types them on `/admin/platform-billing/plans`. Event site Starter is $49.00 per month, Standard is $149.00 per month, and Custom uses list price $0.00. Gas-station location rates in section 6 are the same kind of example. A custom flat amount for one website is **Custom fee USD** on `/admin/platform-billing/{tenantId}`, not a field on the plans page. Set the real numbers before the first live charge.
 
 ## 5. A custom fee for one tenant
 
@@ -101,7 +100,7 @@ A gas-station tenant owns one or more locations. Billing follows these rules:
   - 4 to 10 locations: $149 each per month for those extra locations.
   - 11 or more: $99 each per month for those extra locations.
 - Example: 6 locations = (3 × $199) + (3 × $149) = $1,044 per month.
-- These dollar amounts are placeholders. Put the real numbers in the catalog before the first live charge.
+- These dollar amounts are examples in this guide. They are not a settings screen. Put a gas-station list price in **List price (USD)** on `/admin/platform-billing/plans`. A flat amount for one website is **Custom fee USD** on `/admin/platform-billing/{tenantId}`. The Add plan dialog has no fields for the 1 to 3, 4 to 10, and 11 or more tiers.
 - A custom flat fee replaces this math for that tenant. Quantity is then ignored.
 - Adding or removing an included location after they are subscribed changes the next invoice and prorates the current period.
 
@@ -109,7 +108,7 @@ The older note in the mosc-temp repo (`documentation/tenant_management/gas_stati
 
 ## 7. Recurring payment or one-time payment
 
-The admin decides what a plan allows. The tenant chooses only among the allowed options.
+The admin decides what a plan allows with the **Billing** dropdown at `/admin/platform-billing/plans`. The tenant chooses only among the allowed options. A plan created on that page is monthly.
 
 **Recurring.** Stripe charges the card or US bank account on the schedule. The tenant can open the billing portal to change the card or bank account, see invoices, or cancel. Cancel means access continues until the end of the period already paid, unless the admin locks the product sooner.
 
@@ -138,20 +137,21 @@ After the first successful payment, the tenant manages the card or bank account 
 These steps are the operating procedure. The screens come in the build phases in [BUILD_PLAN.md](BUILD_PLAN.md).
 
 1. Create the tenant the way onboarding already works. Both product switches stay off. Status is Complimentary.
-2. If this tenant negotiated a price, open the tenant and type the custom fee and a short note. Leave the switch off.
-3. Optionally set a review-by date so the admin list can show “review soon.”
-4. When the business is ready to charge, turn the charge switch on for the event site, the gas stations, or both. Set the grace days (default 14).
-5. Tell the tenant to open the billing page and pay. The page shows the catalog, or only the custom amount if one is set.
-6. After they pay, confirm the status is Active and that the Stripe customer id and subscription id (or one-time payment id) are stored.
-7. If a renewal fails, Stripe emails the tenant and retries. The admin list shows Past due. Do not build a second retry system.
-8. To stop charging without deleting the tenant, turn the switch off and confirm whether the current period should finish or stop now.
+2. Set the catalog on `/admin/platform-billing/plans` before the first live charge. **List price (USD)**, **Billing**, and **Published** are on Add plan. A new plan is monthly.
+3. If this tenant negotiated a price, open `/admin/platform-billing/{tenantId}` and type the custom fee and a short note. Leave the switch off.
+4. Optionally set a review-by date so the admin list can show “review soon.”
+5. When the business is ready to charge, open `/admin/platform-billing/{tenantId}` and turn the charge switch on for the event site, the gas stations, or both. Set the grace days (default 14) and save. Saving does not charge the card.
+6. Tell the tenant to open `/admin/billing` and pay. The page shows the catalog, or only the custom amount if one is set.
+7. After they pay, confirm the status is Active and that the Stripe customer id and subscription id (or one-time payment id) are stored.
+8. If a renewal fails, Stripe emails the tenant and retries. The admin list shows Past due. Do not build a second retry system.
+9. To stop charging without deleting the tenant, turn the switch off and confirm whether the current period should finish or stop now.
 
 Only a platform super-admin can change the switch, the custom fee, the catalog, or the grace days. A tenant admin can pay, change their card or bank account, and cancel at period end. They cannot set their own price.
 
 ## 10. What the tenant does
 
 1. Use the product while the switch is off. No pay page is required.
-2. When the admin turns the switch on, open the billing page from the admin home.
+2. When the admin turns the switch on, open `/admin/billing` and click Pay. That page does not let a tenant admin turn the switch on.
 3. Read the plan (or the custom amount) and choose monthly, yearly, or one-time if more than one option is offered.
 4. For gas stations on location pricing, check which locations are included. The page shows the monthly total before they continue.
 5. Continue to Stripe Checkout. Pay by card or, in the US, by bank account.

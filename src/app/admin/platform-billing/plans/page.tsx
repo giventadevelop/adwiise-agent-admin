@@ -1,8 +1,12 @@
+import AdminBackButton from '@/components/admin/AdminBackButton';
+import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { fetchAdminAccessForClerkUser } from '@/app/admin/adminAccessServer';
 import { fetchPlatformBillingPlans } from '../ApiServerActions';
 import PlansClient from './PlansClient';
+
+export const dynamic = 'force-dynamic';
 
 export default async function PlatformBillingPlansPage() {
   const { userId } = await auth();
@@ -11,5 +15,16 @@ export default async function PlatformBillingPlansPage() {
   const access = await fetchAdminAccessForClerkUser(userId, user?.emailAddresses?.[0]?.emailAddress);
   if (!access.isPlatformSuperAdmin) redirect('/admin');
   const plans = await fetchPlatformBillingPlans().catch(() => []);
-  return <PlansClient initialPlans={plans} />;
+  return (
+    <div className="w-full min-w-0 px-2 sm:px-4 py-4 space-y-4">
+      <div className="bg-white rounded-lg shadow-md p-6 flex flex-wrap items-center gap-4" style={adminPageTopStyle}>
+        <AdminBackButton href="/admin/platform-billing" label="Back to Platform Billing" />
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Platform billing plans</h1>
+          <p className="text-sm text-gray-600 mt-1">Catalog prices for event sites and gas stations. These are not ticket prices and not membership plans.</p>
+        </div>
+      </div>
+      <PlansClient initialPlans={plans} />
+    </div>
+  );
 }
