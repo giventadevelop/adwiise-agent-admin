@@ -28,7 +28,7 @@ The words “subscription” and “plan” appear in three different forms. The
 
 A tenant can be on one or both products:
 
-- **Event site.** One fee for a website that is not a shop. The site type can be Events organization, Church / parish, School, Sports team, Music band, Personal profile, or Hybrid. A school or a church does not get its own charge switch. They use **Save event site billing**.
+- **Event site.** One fee for a website that is not a shop. The site type can be Events organization, Church / parish, School, Sports team, Music band, Personal profile, or Hybrid. The billing page has only two charge switches, Event site and Retail. A school or a church is not a third switch. Open the Event site card, turn that switch on, and click **Save event site billing**.
 - **Retail.** One fee for a shop website. The site type is Retail. The retail type, also called the shop pack, is Gas station, Liquor store, Dunkin Donuts, Seven-Eleven, Restaurant, or Clinic. The Retail card shows that pack. The fee can grow with the number of included locations. One subscription covers the chain, not one per store. They use **Save retail billing**.
 
 For each product the tenant can be offered:
@@ -37,6 +37,8 @@ For each product the tenant can be offered:
 - A **custom fee** typed by a platform admin for that tenant only. The catalog price is ignored for that tenant when a custom fee is set.
 - **Recurring** or **one-time** billing, from the **Billing** dropdown on `/admin/platform-billing/plans` (section 4). A plan created there is monthly.
 - A **long free period**. The tenant uses the product with no card on file until a person turns charging on. A reminder date does not start a charge by itself.
+
+Organization billing is different. If a super admin chooses **Bill the organization once** and types one monthly amount, that one payment covers every website under the organization. Four websites or ten websites still mean one charge, not four or ten charges. Each website’s own Event site and Retail switches are turned off. Those websites stay complimentary and do not show their own Pay button. A website added later is covered by the same amount. The card charged is the organization’s Stripe customer. Choosing **Bill each website separately** again does not start a charge by itself. Each website stays free until its own switch is turned on.
 
 ## 3. The charge switch
 

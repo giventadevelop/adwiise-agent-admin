@@ -262,11 +262,12 @@
     <div class="section-container" id="what-they-buy">
         <div class="section-header">2. What the tenant is buying</div>
         <ul>
-            <li><strong>Event site.</strong> One fee for a website that is not a shop. The site type can be Events organization, Church / parish, School, Sports team, Music band, Personal profile, or Hybrid. A school or a church does not get its own charge switch. They use <strong>Save event site billing</strong>.</li>
+            <li><strong>Event site.</strong> One fee for a website that is not a shop. The site type can be Events organization, Church / parish, School, Sports team, Music band, Personal profile, or Hybrid. The billing page has only two charge switches, Event site and Retail. A school or a church is not a third switch. Open the Event site card, turn that switch on, and click <strong>Save event site billing</strong>.</li>
             <li><strong>Retail.</strong> One fee for a shop website. The site type is Retail. The retail type, also called the shop pack, is Gas station, Liquor store, Dunkin Donuts, Seven-Eleven, Restaurant, or Clinic. The Retail card shows that pack. The fee can grow with the number of included locations. One subscription covers the chain, not one per store. They use <strong>Save retail billing</strong>.</li>
         </ul>
         <p>For each product the tenant can be offered a published catalog plan, or a custom fee typed for that tenant only. Recurring, one-time, or both is the <strong>Billing</strong> dropdown on <code class="code-highlight">/admin/platform-billing/plans</code>. A plan created there is monthly. A long free period is the default: no card on file until a person turns charging on.</p>
         <p>A hybrid tenant can be free on one product and paying on the other.</p>
+        <p>Organization billing is different. If a super admin chooses <strong>Bill the organization once</strong> and types one monthly amount, that one payment covers every website under the organization. Four websites or ten websites still mean one charge, not four or ten charges. Each website’s own Event site and Retail switches are turned off. Those websites stay complimentary and do not show their own Pay button. A website added later is covered by the same amount. The card charged is the organization’s Stripe customer. Choosing <strong>Bill each website separately</strong> again does not start a charge by itself. Each website stays free until its own switch is turned on.</p>
     </div>
 
     <div class="section-container parameters" id="charge-switch">
