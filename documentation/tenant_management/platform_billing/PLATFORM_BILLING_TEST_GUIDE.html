@@ -47,6 +47,58 @@
         <p>Create a new billing-test organization. Do not use organizations 18, 19, or 20. Do not click Make inactive, Make active, or Cascade Delete on an existing organization.</p>
     </div>
     <div class="section-container usage">
+        <div class="section-header usage">End-to-end test</div>
+        <p>This walk-through starts with a platform super admin, adds a charge, picks a plan, then switches to a tenant admin to pay. Use Stripe test mode. The success card is <code class="code-highlight">4242 4242 4242 4242</code>, any future expiry, any CVC.</p>
+        <table>
+            <thead>
+                <tr><th scope="col">Who</th><th scope="col">Can do</th><th scope="col">Cannot do</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Platform super admin</td>
+                    <td>Create a catalog plan. Open <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. Turn the charge switch on. Set the catalog, custom fee, review-by date, and grace days. Cancel now.</td>
+                    <td>Nothing on this fee is hidden from them. They can also open Pay on <code class="code-highlight">/admin/billing</code>.</td>
+                </tr>
+                <tr>
+                    <td>Tenant admin</td>
+                    <td>Open <code class="code-highlight">/admin/billing</code> for their website. Click Pay. Update the card. Cancel at period end.</td>
+                    <td>Cannot open the plans page or the website charge page. Those send them away. They do not see a switch they can turn on.</td>
+                </tr>
+            </tbody>
+        </table>
+        <h2>Before you start</h2>
+        <ol class="steps">
+            <li>Sign in as a platform super admin. The database role is <code class="code-highlight">SUPER_ADMIN</code>.</li>
+            <li>Have a second user who is <code class="code-highlight">ADMIN</code> on the test website only. You will sign in as that person to pay.</li>
+            <li>In a second window, forward Stripe test events. The command is in section 1 below. Leave that window open until the payment finishes.</li>
+            <li>Use a test website. Do not change organizations 18, 19, or 20.</li>
+        </ol>
+        <h2>Super admin: add the plan and turn charging on</h2>
+        <ol class="steps">
+            <li>Open <code class="code-highlight">/admin/platform-billing/plans</code>. Click <strong>Add plan</strong>.</li>
+            <li>Set Product to Event site. Type a name such as Test day and a code such as <code class="code-highlight">test-e2e-day</code>. Set List price to <code class="code-highlight">1.00</code>. Set Billing to Recurring or one-time. Leave Stripe price id blank. Check <strong>Published</strong>. Click <strong>Create plan</strong>. A published plan is what the website catalog can show. An unpublished plan stays off that list until you assign it.</li>
+            <li>Open <code class="code-highlight">/admin/platform-billing</code>. Open the test organization, then open the test website. The address is <code class="code-highlight">/admin/platform-billing/{tenantId}</code>.</li>
+            <li>On the Event site card, choose the plan you just created in <strong>Catalog plan</strong>. Leave Custom fee blank so the catalog price is used. Review-by date can stay empty. It is only a reminder. Set Grace days to <code class="code-highlight">14</code> for a normal test, or <code class="code-highlight">0</code> if you want the unpaid lock to happen on the next page open.</li>
+            <li>Turn the <strong>Charge switch</strong> on and confirm. The status becomes Payment due. Stripe is not charged by the switch. Click <strong>Save event site billing</strong> if you still need to store the plan or the grace days.</li>
+            <li>Sign out.</li>
+        </ol>
+        <h2>Tenant admin: pay</h2>
+        <ol class="steps">
+            <li>Sign in as the tenant admin for that website.</li>
+            <li>Open <code class="code-highlight">/admin/billing</code>. Confirm there is no charge switch you can turn on. The Event site card shows Payment due and a Pay button.</li>
+            <li>Click <strong>Pay monthly</strong>. Stripe Checkout opens. Pay with <code class="code-highlight">4242 4242 4242 4242</code>.</li>
+            <li>You return to <code class="code-highlight">/admin/billing</code>. The status becomes Active after the webhook is received. The Charges table shows a Paid row.</li>
+        </ol>
+        <h2>Super admin: confirm the payment</h2>
+        <ol class="steps">
+            <li>Sign in again as the platform super admin.</li>
+            <li>Open <code class="code-highlight">/admin/platform-billing</code> and search the organization. The Status column shows Active. Export ledger shows a PAID row and a Stripe invoice id. The same invoice is in the Stripe test dashboard.</li>
+            <li>Optional failure check, on a second website or after canceling this one: turn the switch on, click Pay, and use the failing card <code class="code-highlight">4000 0000 0000 0341</code>. The ledger status is FAILED. If grace has ended and nobody has paid, the next open of the billing page sets Locked. Admin tools then send that admin to billing. The public site stays up.</li>
+            <li>Optional cancel check: the tenant admin can click <strong>Cancel at period end</strong>. Only the super admin sees <strong>Cancel now</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>.</li>
+        </ol>
+        <div class="warning">A retried Stripe event with the same event id does not insert a second ledger row. A ticket purchase in the same Stripe test account must not appear as a platform charge.</div>
+    </div>
+    <div class="section-container usage">
         <div class="section-header usage">1. Listen for webhooks</div>
         <p>Forward Stripe test events to this app with <code class="script-name">stripe.exe</code>. The admin app in local development is port 3001.</p>
         <div class="command-block setup" data-command-type="setup" data-command-base="stripe listen --forward-to" data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe">

@@ -8,6 +8,7 @@ import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organiza
 import AdminRecordMissing from '@/components/admin/AdminRecordMissing';
 import type { RetailLocationDTO } from '@/types/retail';
 import BillingDesk from '@/app/admin/billing/BillingDesk';
+import { loadShopPack } from '@/lib/platformBilling/shopPackServer';
 
 export default async function TenantPlatformBillingPage({
   params,
@@ -41,9 +42,10 @@ export default async function TenantPlatformBillingPage({
   );
   const locationData = locationResponse.ok ? await locationResponse.json() : [];
   const locations: RetailLocationDTO[] = Array.isArray(locationData) ? locationData : locationData?.content ?? [];
-  const [desk, plans] = await Promise.all([
+  const [desk, plans, shopPack] = await Promise.all([
     prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false, charges: [] })),
     fetchPlatformBillingPlans().catch(() => []),
+    loadShopPack(tenantId).catch(() => ({ code: null, label: null })),
   ]);
   return (
     <BillingDesk
@@ -55,6 +57,8 @@ export default async function TenantPlatformBillingPage({
       complimentaryPlan={desk.complimentaryPlan}
       charges={desk.charges || []}
       lockedNotice={desk.rows.some((row) => row.status === 'LOCKED')}
+      shopPackCode={shopPack.code}
+      shopPackLabel={shopPack.label}
     />
   );
 }

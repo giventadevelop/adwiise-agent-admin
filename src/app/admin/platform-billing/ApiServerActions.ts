@@ -6,7 +6,9 @@ import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { isComplimentarySubscriptionPlan, isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
 import { appendAssignmentEvent, fetchPlatformCharges, lockBillingIfGraceEnded } from '@/lib/platformBilling/chargeLedger';
-import { cancelPlatformSubscription, loadOrganization } from '@/lib/platformBilling/stripeCheckout';
+import { ORGANIZATION_CUSTOMER_REQUIRED, explainBillingSaveError } from '@/lib/platformBilling/billingMessages';
+import { cancelPlatformSubscription, ensureStripeCustomer, loadOrganization } from '@/lib/platformBilling/stripeCheckout';
+import { fetchTenantOrganizationByTenantId } from '@/app/admin/tenant-management/organizations/ApiServerActions';
 import type { PlatformBillingChargeDTO, PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 function apiBase() {
@@ -201,9 +203,35 @@ export async function prepareTenantBillingDesk(tenantId: string): Promise<{
   }
 }
 
+async function owningOrganization(tenantId: string) {
+  try {
+    const linked = await fetchTenantOrganizationByTenantId(tenantId);
+    if (linked?.id) return linked;
+  } catch (error) {
+    console.error('[platform-billing] organization lookup skipped', error);
+  }
+  return loadOrganization(tenantId);
+}
+
+async function ensureOrganizationCustomer(tenantId: string): Promise<void> {
+  const org = await owningOrganization(tenantId);
+  if (!org?.id || (!org.stripeCustomerId && !org.contactEmail?.trim())) {
+    throw new Error(ORGANIZATION_CUSTOMER_REQUIRED);
+  }
+  if (org.stripeCustomerId) return;
+  try {
+    await ensureStripeCustomer(org);
+  } catch (error) {
+    throw new Error(explainBillingSaveError(error));
+  }
+}
+
 export async function saveTenantProductBilling(row: TenantProductBillingDTO): Promise<TenantProductBillingDTO> {
   await assertPlatformSuperAdmin();
   await refuseSeparateCharge(row);
+  if (row.chargeEnabled) {
+    await ensureOrganizationCustomer(row.tenantId);
+  }
   const now = new Date().toISOString();
   const previous = row.id
     ? (await fetchTenantProductBillings(row.tenantId).catch(() => [])).find((entry) => entry.id === row.id) || null
@@ -212,30 +240,35 @@ export async function saveTenantProductBilling(row: TenantProductBillingDTO): Pr
     ...tenantHeaders(row.tenantId),
     'Content-Type': row.id ? 'application/merge-patch+json' : 'application/json',
   };
-  const saved = row.id
-    ? await readJson<TenantProductBillingDTO>(
-        await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings/${row.id}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ ...row, id: row.id, updatedAt: now }),
-        })
-      )
-    : await readJson<TenantProductBillingDTO>(
-        await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings`, {
-          method: 'POST',
-          headers: tenantHeaders(row.tenantId),
-          body: JSON.stringify({
-            ...row,
-            id: null,
-            chargeEnabled: row.chargeEnabled ?? false,
-            status: row.status ?? 'COMPLIMENTARY',
-            graceDays: row.graceDays ?? 14,
-            intervalCount: row.intervalCount ?? 1,
-            createdAt: now,
-            updatedAt: now,
-          }),
-        })
-      );
+  let saved: TenantProductBillingDTO;
+  try {
+    saved = row.id
+      ? await readJson<TenantProductBillingDTO>(
+          await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings/${row.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ ...row, id: row.id, updatedAt: now }),
+          })
+        )
+      : await readJson<TenantProductBillingDTO>(
+          await fetchWithJwtRetry(`${apiBase()}/api/tenant-product-billings`, {
+            method: 'POST',
+            headers: tenantHeaders(row.tenantId),
+            body: JSON.stringify({
+              ...row,
+              id: null,
+              chargeEnabled: row.chargeEnabled ?? false,
+              status: row.status ?? 'COMPLIMENTARY',
+              graceDays: row.graceDays ?? 14,
+              intervalCount: row.intervalCount ?? 1,
+              createdAt: now,
+              updatedAt: now,
+            }),
+          })
+        );
+  } catch (error) {
+    throw new Error(explainBillingSaveError(error));
+  }
   const changed =
     !previous ||
     previous.platformPlanId !== saved.platformPlanId ||

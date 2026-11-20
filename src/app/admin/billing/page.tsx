@@ -5,6 +5,7 @@ import { getApiBaseUrl, getTenantIdOptional } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { fetchPlatformBillingPlans, prepareTenantBillingDesk } from '@/app/admin/platform-billing/ApiServerActions';
 import type { RetailLocationDTO } from '@/types/retail';
+import { loadShopPack } from '@/lib/platformBilling/shopPackServer';
 import BillingDesk from './BillingDesk';
 
 async function loadLocations(tenantId: string): Promise<RetailLocationDTO[]> {
@@ -36,10 +37,11 @@ export default async function TenantBillingPage({
   const resolvedSearch = typeof (searchParams as Promise<{ reason?: string }>).then === 'function'
     ? await (searchParams as Promise<{ reason?: string }>)
     : (searchParams as { reason?: string });
-  const [desk, plans, locations] = await Promise.all([
+  const [desk, plans, locations, shopPack] = await Promise.all([
     prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false, charges: [] })),
     fetchPlatformBillingPlans().catch(() => []),
     loadLocations(tenantId).catch(() => []),
+    loadShopPack(tenantId).catch(() => ({ code: null, label: null })),
   ]);
   return (
     <BillingDesk
@@ -51,6 +53,8 @@ export default async function TenantBillingPage({
       complimentaryPlan={desk.complimentaryPlan}
       charges={desk.charges || []}
       lockedNotice={resolvedSearch.reason === 'locked' || desk.rows.some((row) => row.status === 'LOCKED')}
+      shopPackCode={shopPack.code}
+      shopPackLabel={shopPack.label}
     />
   );
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Plain-English guide for charging event-site and gas-station tenants, with a charge switch that stays off until a platform admin turns it on.">
+    <meta name="description" content="Plain-English guide for charging an event-style website or a retail website, with a charge switch that stays off until a platform admin turns it on.">
     <title>Tenant platform billing guide</title>
     <style>
         body {
@@ -167,7 +167,7 @@
 </head>
 <body>
     <h1>Tenant platform billing guide</h1>
-    <p class="lede">How event-site tenants and gas-station tenants pay to use this platform. Charging is live: a platform super-admin turns the charge switch on at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, and the paying admin uses Pay on <code class="code-highlight">/admin/billing</code>.</p>
+    <p class="lede">How an organization pays for an event-style website or a retail website. Charging is live: a platform super-admin turns the charge switch on at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, and the paying admin uses Pay on <code class="code-highlight">/admin/billing</code>.</p>
     <p class="related">Same folder: <a href="README.md">README</a>, <a href="STRIPE_VS_ZOHO_ANALYSIS.md">Stripe or Zoho</a>, <a href="BUILD_PLAN.md">build plan</a>, <a href="PLATFORM_TENANT_BILLING_GUIDE.md">Markdown copy of this guide</a>, <a href="PLATFORM_BILLING_USER_GUIDE.html">user guide</a>, <a href="PLATFORM_BILLING_TEST_GUIDE.html">test guide</a>, <a href="PLATFORM_BILLING_SUPPORT_PLAYBOOK.html">support playbook</a>.</p>
 
     <nav class="toc" aria-label="Table of contents">
@@ -178,7 +178,7 @@
             <li><a href="#charge-switch">The charge switch</a></li>
             <li><a href="#plans">Plans the tenant can choose</a></li>
             <li><a href="#custom-fee">A custom fee for one tenant</a></li>
-            <li><a href="#gas">Gas stations and location count</a></li>
+            <li><a href="#retail">Retail shops and location count</a></li>
             <li><a href="#recurring">Recurring or one-time</a></li>
             <li><a href="#pay">How they pay: card and bank</a></li>
             <li><a href="#admin-steps">What the platform admin does</a></li>
@@ -191,7 +191,7 @@
     <div class="section-intro">
         <p>A new tenant uses the product for free until a platform super-admin turns a charge switch on. A reminder date does not start a charge. Payment, when it starts, goes through the Stripe account this app already uses. Zoho Billing is not the payment system. The comparison is in <a href="STRIPE_VS_ZOHO_ANALYSIS.md">STRIPE_VS_ZOHO_ANALYSIS.md</a>.</p>
         <div class="info">
-            The switch is at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. <code class="code-highlight">{tenantId}</code> is that website’s tenant id. Open <code class="code-highlight">/admin/platform-billing</code>, open the organization, then open the tenant id. Use the <strong>Charge switch</strong> under Event site or Gas stations and confirm. The catalog plan, custom fee, review-by date, and grace days still use <strong>Save event site billing</strong> or <strong>Save gas station billing</strong>. Saving sets payment due. It does not charge the card. The website admin still opens Pay on <code class="code-highlight">/admin/billing</code>. Only a platform super-admin can open the tenant billing page. A regular tenant admin on <code class="code-highlight">/admin/billing</code> sees Pay and cannot turn the switch on. A platform super-admin who is signed into that same tenant also sees the switch on <code class="code-highlight">/admin/billing</code>.
+            The switch is at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. <code class="code-highlight">{tenantId}</code> is that website’s tenant id. Open <code class="code-highlight">/admin/platform-billing</code>, open the organization, then open the tenant id. Use the <strong>Charge switch</strong> under Event site or Retail and confirm. The catalog plan, custom fee, review-by date, and grace days are saved with <strong>Save event site billing</strong> or <strong>Save retail billing</strong>. Which database tables hold those fields, and what changes the status to Locked, is in <a href="#records">Where the facts live</a>. That save does not charge the card. Payment due starts only when the charge switch is turned on. The review-by date is only a reminder for the admin. Grace days are how many days the website can still be used after the switch is turned on, before payment is required. Grace days start at 14 unless you type a different number. During those days the status is Payment due and the admin tools still work. If nobody pays before the days end, the status becomes Locked only when an admin later opens the billing page, or when Stripe tells this app that a subscription was deleted because payment failed. Paid admin tools are then blocked, and the public website stays online. The website admin still opens Pay on <code class="code-highlight">/admin/billing</code>. Only a platform super-admin can open the tenant billing page. A regular tenant admin on <code class="code-highlight">/admin/billing</code> sees Pay and cannot turn the switch on. A platform super-admin who is signed into that same tenant also sees the switch on <code class="code-highlight">/admin/billing</code>.
         </div>
     </div>
 
@@ -219,8 +219,8 @@
                 </tr>
                 <tr>
                     <td>Platform money</td>
-                    <td>The organization that runs the event site, or the owner of the gas stations</td>
-                    <td>This guide. One Stripe customer per tenant. Event-site fees and gas-station fees are separate products.</td>
+                    <td>The organization that runs the website. A school or a church pays the event-site fee. A shop pays the retail fee.</td>
+                    <td>This guide. One Stripe customer per organization. The event-site fee and the retail fee stay separate.</td>
                 </tr>
             </tbody>
         </table>
@@ -246,7 +246,7 @@
                 <tr>
                     <td>Starter, Standard, Custom</td>
                     <td><code class="code-highlight">/admin/platform-billing/plans</code>. These names are not a built-in list. <strong>Add plan</strong> has a <strong>Name</strong> box and a <strong>List price (USD)</strong> box. Type Starter and 49.00, or Standard and 149.00, or Custom and 0.00, then check <strong>Published</strong>.</td>
-                    <td><strong>Catalog plan</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, after the plan exists. Save with <strong>Save event site billing</strong> or <strong>Save gas station billing</strong>.</td>
+                    <td><strong>Catalog plan</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, after the plan exists. Save with <strong>Save event site billing</strong> or <strong>Save retail billing</strong>.</td>
                     <td>The software fee for that website, after the charge switch is on and someone pays.</td>
                 </tr>
                 <tr>
@@ -262,8 +262,8 @@
     <div class="section-container" id="what-they-buy">
         <div class="section-header">2. What the tenant is buying</div>
         <ul>
-            <li><strong>Event site.</strong> A flat fee for the event website and its admin tools.</li>
-            <li><strong>Gas station.</strong> A fee that normally grows with the number of locations on the bill. One subscription for the chain, not one per store.</li>
+            <li><strong>Event site.</strong> One fee for a website that is not a shop. The site type can be Events organization, Church / parish, School, Sports team, Music band, Personal profile, or Hybrid. A school or a church does not get its own charge switch. They use <strong>Save event site billing</strong>.</li>
+            <li><strong>Retail.</strong> One fee for a shop website. The site type is Retail. The retail type, also called the shop pack, is Gas station, Liquor store, Dunkin Donuts, Seven-Eleven, Restaurant, or Clinic. The Retail card shows that pack. The fee can grow with the number of included locations. One subscription covers the chain, not one per store. They use <strong>Save retail billing</strong>.</li>
         </ul>
         <p>For each product the tenant can be offered a published catalog plan, or a custom fee typed for that tenant only. Recurring, one-time, or both is the <strong>Billing</strong> dropdown on <code class="code-highlight">/admin/platform-billing/plans</code>. A plan created there is monthly. A long free period is the default: no card on file until a person turns charging on.</p>
         <p>A hybrid tenant can be free on one product and paying on the other.</p>
@@ -276,11 +276,12 @@
             <li>When a tenant is created, the charge switch for each product is <strong>off</strong>.</li>
             <li>While it is off, the tenant uses that product freely. Stripe is not called. No invoice is created. No card is stored.</li>
             <li>Only a <strong>platform super-admin</strong> can turn the switch on. Open <code class="code-highlight">/admin/platform-billing</code>, open the organization, then open <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. Use the <strong>Charge switch</strong> and confirm. The switch saves on its own. The tenant cannot turn it on. A reminder date cannot.</li>
-            <li>The admin may set a review-by date (30, 90, 180 days, or any date). That date is a reminder on the admin screen. It does not charge anyone.</li>
-            <li>When the switch is turned on, the tenant chooses how to pay and gets a grace period (default 14 days) to finish. Access stays open during grace.</li>
+            <li>The review-by date is only a reminder for the admin. It does not start a charge.</li>
+            <li>Grace days start at 14 unless you type a different number. During those days the charge switch is on, the status is Payment due, and the admin tools still work. If nobody pays before the days end, the status becomes Locked. A tenant admin who opens another admin page is sent to <code class="code-highlight">/admin/billing</code>. Visitors can still open the public website.</li>
             <li>If grace ends with no successful payment, paid admin tools for that product stop. The public site and the stored data stay. A pay page explains what to do.</li>
             <li>Turning the switch off again stops future charges. It does not delete the tenant. If Stripe is already billing them, the admin confirms whether the current period finishes or the charge stops now.</li>
         </ol>
+        <p>The status pill is on the Event site card and the Retail card at <code class="code-highlight">/admin/billing</code> and at <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. A <strong>Status</strong> field sits with Catalog plan, Custom fee, Review-by date, and Grace days, and it repeats the same words. The screen shows Complimentary or Payment due. The same status is in the Status column on <code class="code-highlight">/admin/platform-billing</code> and on the organization billing page.</p>
         <table>
             <thead>
                 <tr>
@@ -291,11 +292,11 @@
             <tbody>
                 <tr>
                     <td>Complimentary</td>
-                    <td>Switch off. Using the product for free.</td>
+                    <td>The charge switch is off. The website uses the product for free. No card is charged. The pill says <code class="code-highlight">COMPLIMENTARY</code>.</td>
                 </tr>
                 <tr>
                     <td>Payment due</td>
-                    <td>Switch on, still inside grace, no successful payment yet.</td>
+                    <td>The charge switch is on, the grace days have not ended, and nobody has paid yet. Admin tools still work. The pill says <code class="code-highlight">PAYMENT_DUE</code>.</td>
                 </tr>
                 <tr>
                     <td>Active</td>
@@ -307,7 +308,7 @@
                 </tr>
                 <tr>
                     <td>Locked</td>
-                    <td>Switch on, grace over, not paid. Paid tools are blocked.</td>
+                    <td>The grace days ended and the fee is still unpaid. Paid admin tools are blocked. The public website stays online. The pill says <code class="code-highlight">LOCKED</code>.</td>
                 </tr>
             </tbody>
         </table>
@@ -326,11 +327,11 @@
             <tbody>
                 <tr>
                     <td>Product, name, and code</td>
-                    <td><strong>Product</strong>, <strong>Name</strong>, and <strong>Code</strong> on Add plan or Edit plan. Product is Event site or Gas station. Type the name yourself. Starter and Standard are not a built-in dropdown the way Basic and Professional are.</td>
+                    <td><strong>Product</strong>, <strong>Name</strong>, and <strong>Code</strong> on Add plan or Edit plan. Product is Event site or Retail. An optional shop pack limits a retail price to one retail type, such as Gas station. Older saved gas-station plans stay visible until you edit them. Type the name yourself. Starter and Standard are not a built-in dropdown the way Basic and Professional are.</td>
                 </tr>
                 <tr>
                     <td>Recurring, one-time, or both</td>
-                    <td>The <strong>Billing</strong> dropdown on that same dialog: Recurring or one-time, Recurring only, or One-time only.</td>
+                    <td>The <strong>Billing</strong> dropdown on Add plan or Edit plan. Recurring only means Stripe charges again on the schedule, usually every month. One-time only means Stripe charges once and does not charge again. Recurring or one-time means either way is allowed. The pay page uses <strong>Pay monthly</strong> for a repeating charge and <strong>Pay once</strong> for a single charge.</td>
                 </tr>
                 <tr>
                     <td>Interval</td>
@@ -341,17 +342,21 @@
                     <td><strong>List price (USD)</strong> on that dialog. Type the real amount with cents, for example 49.00 or 149.00. A Custom plan with no list price uses 0.00 here. The amount that website pays is then <strong>Custom fee USD</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>.</td>
                 </tr>
                 <tr>
+                    <td>Stripe price id</td>
+                    <td>Optional. Leave <strong>Stripe price id</strong> blank when you create or update a plan. Typing the list price does not create a Stripe price and does not fill that box. Pasting a price id does not change the list price. If the box is empty, the first payment creates a Stripe price from the list price, or from the custom fee. Paste a price id only when that price already exists in Stripe and Checkout should use it.</td>
+                </tr>
+                <tr>
                     <td>Feature list and published flag</td>
                     <td><strong>Feature summary</strong> and the <strong>Published</strong> checkbox on the same dialog.</td>
                 </tr>
                 <tr>
                     <td>Which plan one website uses</td>
-                    <td><strong>Catalog plan</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, then <strong>Save event site billing</strong> or <strong>Save gas station billing</strong>. That page picks a plan that already exists. It does not create the price.</td>
+                    <td><strong>Catalog plan</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, then <strong>Save event site billing</strong> or <strong>Save retail billing</strong>. That page picks a plan that already exists. It does not create the price.</td>
                 </tr>
             </tbody>
         </table>
         <div class="info">
-            <strong>Placeholder prices, not a quote.</strong> The numbers in this guide are examples until someone types them on <code class="code-highlight">/admin/platform-billing/plans</code>. Event site Starter is $49.00 per month, Standard is $149.00 per month, and Custom uses list price $0.00. Gas-station location rates in the next section are the same kind of example. A custom flat amount for one website is <strong>Custom fee USD</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, not a field on the plans page. Set the real numbers before the first live charge.
+            <strong>Placeholder prices, not a quote.</strong> The numbers in this guide are examples until someone types them on <code class="code-highlight">/admin/platform-billing/plans</code>. Event site Starter is $49.00 per month, Standard is $149.00 per month, and Custom uses list price $0.00. The location rates in the next section are the same kind of example, often used for a gas-station retail type. A custom flat amount for one website is <strong>Custom fee USD</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, not a field on the plans page. Set the real numbers before the first live charge.
         </div>
     </div>
 
@@ -365,13 +370,14 @@
         </ul>
     </div>
 
-    <div class="section-container" id="gas">
-        <div class="section-header">6. Gas stations and location count</div>
+    <div class="section-container" id="retail">
+        <div class="section-header">6. Retail shops and location count</div>
+        <p>The count is the number of included retail locations. It is not a gas-station-only bill. A gas-station retail type can still use location tiers. Fuel rules stay in the retail module, not in this fee.</p>
         <ul>
             <li>One subscription for the tenant, not one per store.</li>
             <li>The tenant or the admin marks which locations are included.</li>
             <li>The billable count is how many locations are active and included. Do not type the count by hand.</li>
-            <li>Default rates are graduated, so adding a location never makes the total go down.</li>
+            <li>The rates are stepped. The first locations stay at the higher price. Each location you add after that is cheaper, but it is added on top. The earlier locations are not repriced. Going from 3 locations to 4 is the first three at $199.00 plus one more at $149.00, not four locations at $149.00. Adding a location always makes the bill larger.</li>
         </ul>
         <table>
             <thead>
@@ -400,7 +406,7 @@
             </tbody>
         </table>
         <p>A custom flat fee replaces this math. Quantity is then ignored. Adding or removing an included location after they are subscribed changes the next invoice and prorates the current period.</p>
-        <p>The dollar amounts in the table are examples in this guide. They are not a settings screen. Put a gas-station list price in <strong>List price (USD)</strong> on <code class="code-highlight">/admin/platform-billing/plans</code>. A flat amount for one website is <strong>Custom fee USD</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. The Add plan dialog has no fields for the 1 to 3, 4 to 10, and 11 or more tiers.</p>
+        <p>The dollar amounts in the table are examples in this guide. They are not a settings screen. They are often used for a gas-station retail type. Put the real list price in <strong>List price (USD)</strong> on <code class="code-highlight">/admin/platform-billing/plans</code>, on a Retail plan. A flat amount for one website is <strong>Custom fee USD</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>, and that custom fee replaces the location math. The Add plan dialog has no fields for the 1 to 3, 4 to 10, and 11 or more tiers.</p>
         <div class="info">
             The older gas-station note in the mosc-temp repo describes the same location idea. This folder is the one to follow, because it also covers event sites, the charge switch, and custom fees.
         </div>
@@ -408,7 +414,7 @@
 
     <div class="section-container usage" id="recurring">
         <div class="section-header usage">7. Recurring payment or one-time payment</div>
-        <p>The admin decides what a plan allows with the <strong>Billing</strong> dropdown at <code class="code-highlight">/admin/platform-billing/plans</code>. The tenant chooses only among those options. A plan created on that page is monthly.</p>
+        <p>The <strong>Billing</strong> dropdown on Add plan or Edit plan records how that plan may be charged. Recurring only means Stripe charges again on the schedule. One-time only means Stripe charges once. Recurring or one-time means either way is allowed. You do not need a Stripe price id to create or update the plan. Leave it blank and type the list price. The first payment creates the Stripe price. Paste a price id only when you already made that price in Stripe.</p>
         <p><strong>Recurring.</strong> Stripe charges the card or US bank account on the schedule. The tenant uses the billing portal to change the card or bank account, see invoices, or cancel. Cancel keeps access until the end of the period already paid, unless the admin locks the product sooner.</p>
         <p><strong>One-time.</strong> Stripe charges once. We store a paid-through date the admin sets (for example 12 months). There is no automatic second charge.</p>
         <div class="error">
@@ -438,8 +444,8 @@
             <li>Create the tenant the way onboarding already works. Both product switches stay off. Status is Complimentary.</li>
             <li>Set the catalog on <code class="code-highlight">/admin/platform-billing/plans</code> before the first live charge. <strong>List price (USD)</strong>, <strong>Billing</strong>, and <strong>Published</strong> are on Add plan. A new plan is monthly.</li>
             <li>If the price was negotiated, type the custom fee and a short note on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. Leave the switch off.</li>
-            <li>Optionally set a review-by date so the list can show “review soon.”</li>
-            <li>When the business is ready to charge, open <code class="code-highlight">/admin/platform-billing/{tenantId}</code> and turn the switch on for the event site, the gas stations, or both. Set the grace days (default 14) and save. Saving does not charge the card.</li>
+            <li>Optionally set a review-by date. It is only a reminder. It does not charge the card.</li>
+            <li>When the business is ready to charge, open <code class="code-highlight">/admin/platform-billing/{tenantId}</code> and turn the switch on for the event site, retail, or both. Set the grace days (default 14) and save. Saving does not charge the card. Payment due starts when the switch is turned on.</li>
             <li>Tell the tenant to open <code class="code-highlight">/admin/billing</code> and pay.</li>
             <li>After they pay, confirm status Active and that the Stripe customer id and subscription id (or one-time payment id) are stored.</li>
             <li>If a renewal fails, Stripe emails the tenant and retries. The admin list shows Past due. Do not build a second retry system.</li>
@@ -456,7 +462,7 @@
             <li>Use the product while the switch is off. No pay page is required.</li>
             <li>When the admin turns the switch on, open <code class="code-highlight">/admin/billing</code> and click Pay. That page does not let a tenant admin turn the switch on.</li>
             <li>Read the plan, or the custom amount, and choose monthly, yearly, or one-time if more than one option is offered.</li>
-            <li>For gas stations on location pricing, check which locations are included. The page shows the monthly total before they continue.</li>
+            <li>For a retail website on location pricing, check which retail locations are included. The page shows the monthly total before they continue.</li>
             <li>Continue to Stripe Checkout and pay by card or, in the US, by bank account.</li>
             <li>Return to the billing page. It should say Active.</li>
             <li>Later, use “Manage billing” to update the card or bank account, download invoices, or cancel.</li>
@@ -477,7 +483,7 @@
     <div class="section-container output" id="records">
         <div class="section-header output">12. Where the facts live</div>
         <p>Store platform billing on its own records, not on membership subscription rows. Keep the Stripe customer id that already exists on the tenant organization. One customer covers both products.</p>
-        <p>For each product (event site, gas station), store:</p>
+        <p>For each product (event site or retail), store:</p>
         <ul>
             <li>Charge switch on or off, and the status.</li>
             <li>Catalog plan id, if they are on a catalog plan.</li>
@@ -485,7 +491,7 @@
             <li>Billing mode actually chosen: recurring or one-time.</li>
             <li>Review-by date (reminder only) and grace end date (set when the switch turns on).</li>
             <li>Stripe subscription id for recurring, or the payment id and paid-through date for one-time.</li>
-            <li>For gas stations: which locations are included. Calculate the count. Do not store a typed count.</li>
+            <li>For retail: which locations are included. Calculate the count. Do not store a typed count.</li>
         </ul>
         <p>Every Checkout session for this fee must include this metadata so ticket and membership code can skip the event:</p>
         <div class="prompt-block">
@@ -495,7 +501,12 @@
             </div>
             <pre id="meta-scope">billingScope=platform_tenant</pre>
         </div>
-        <p>Also send the tenant id, the product (event site or gas station), and whether the charge is recurring or one-time.</p>
+        <p>Also send the tenant id, the product (event site or retail), and whether the charge is recurring or one-time.</p>
+        <p><strong>Save event site billing</strong> and <strong>Save retail billing</strong> write one row in <code class="code-highlight">tenant_product_billing</code> for that website and product. The catalog plan is <code class="code-highlight">platform_plan_id</code>, which points at <code class="code-highlight">platform_billing_plan</code>. The custom fee is <code class="code-highlight">custom_fee_usd</code>. The review-by date is <code class="code-highlight">review_by_date</code>. Grace days are <code class="code-highlight">grace_days</code>, and the moment grace ends is <code class="code-highlight">grace_ends_at</code>. The status word is <code class="code-highlight">status</code>.</p>
+        <p>A person who saves the plan, the fee, the switch, or the grace days is recorded in <code class="code-highlight">platform_billing_assignment_event</code>, with their user id and a short reason. Payments are a separate list in <code class="code-highlight">platform_billing_charge</code>.</p>
+        <p>Nothing runs at midnight to change the status. There is no batch job for this. Opening the page does change the status when grace is over. It is not only a look. A platform super-admin can open <code class="code-highlight">/admin/billing</code> or <code class="code-highlight">/admin/platform-billing/{tenantId}</code>. A tenant admin can open <code class="code-highlight">/admin/billing</code>. If the charge switch is still on, the status is still Payment due or Past due, <code class="code-highlight">grace_ends_at</code> is in the past, and no paid charge covers today, that page writes Locked. If grace has not ended, the page only reads the row and leaves the status as it is. No person is stored as the one who locked it.</p>
+        <p>The Stripe Customer Portal does not update our database. Stripe sends a message to this Next.js app, not to the Spring backend. The receiver is <code class="code-highlight">src/app/api/webhooks/stripe/route.ts</code>, which is the address <code class="code-highlight">/api/webhooks/stripe</code>. Platform billing, including Locked when a subscription is deleted because payment failed, is handled in this project by <code class="code-highlight">src/lib/platformBilling/applyPlatformBillingWebhook.ts</code>. That code then calls the backend billing API. Stripe does not call the Spring app directly for this. Ticket and membership events that are not platform billing are forwarded from the same file to <code class="code-highlight">{NEXT_PUBLIC_API_BASE_URL}/api/webhooks/stripe</code>.</p>
+        <p>Stripe is told where to send events outside this repo. In the Stripe Dashboard, the endpoint URL is this site’s <code class="code-highlight">/api/webhooks/stripe</code>. On a local machine, <code class="code-highlight">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</code> does the same job. This app checks the signature with the environment variable <code class="code-highlight">STRIPE_WEBHOOK_SECRET</code>, read in <code class="code-highlight">src/lib/stripe/init.ts</code>. Set that in <code class="code-highlight">.env.local</code> for local work and in Amplify for production. It is the signing secret Stripe shows when the endpoint is created. It is not a URL. If Stripe deletes the subscription because the payment failed, our app sets Locked. A failed payment that does not delete the subscription sets Past due, not Locked.</p>
     </div>
 
     <div class="section-intro">

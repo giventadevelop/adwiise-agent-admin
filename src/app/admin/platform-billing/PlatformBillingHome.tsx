@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { FaFileExcel, FaSearch } from 'react-icons/fa';
 import BillingPagination from './BillingPagination';
 import type { PlatformBillingPortfolioRow, PlatformBillingReport } from './reportActions';
+import { billingStatusLabel, billingStatusMeaning } from '@/lib/platformBilling/statusLabel';
 
 const money = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -68,7 +69,7 @@ export default function PlatformBillingHome({
   const router = useRouter();
   const [text, setText] = useState(query);
   const tiles = [
-    ...Object.entries(report.statusCounts).map(([status, count]) => ({ label: status, count })),
+    ...Object.entries(report.statusCounts).map(([status, count]) => ({ label: billingStatusLabel(status), count })),
     ...Object.entries(report.scopeCounts).map(([scope, count]) => ({
       label: scope === 'ORGANIZATION' ? 'Organization billing' : 'Per website',
       count,
@@ -204,7 +205,14 @@ export default function PlatformBillingHome({
                 </td>
                 <td className="px-4 py-3 text-sm">{row.amountUsd != null && row.amountUsd > 0 ? money.format(row.amountUsd) : '—'}</td>
                 <td className="px-4 py-3 text-sm">
-                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${statusClass(row.status)}`}>{row.status}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className={`inline-flex w-fit px-2 py-1 rounded-full text-xs font-semibold ${statusClass(row.status)}`}>
+                      {billingStatusLabel(row.status)}
+                    </span>
+                    {billingStatusMeaning(row.status) && (
+                      <span className="text-xs text-gray-600">{billingStatusMeaning(row.status)}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm">{row.stripeCustomerId || '—'}</td>
                 <td className="px-4 py-3 text-sm">{when(row.lastPayment)}</td>

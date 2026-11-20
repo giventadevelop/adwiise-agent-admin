@@ -1,5 +1,5 @@
 export type PlatformProduct = 'EVENT_SITE' | 'GAS_STATION';
-/** RETAIL holds the one monthly portfolio charge. Catalog plans stay event site and gas station. */
+/** RETAIL on a billing row is the organization portfolio charge. Catalog plans use EVENT_SITE or RETAIL. A shop pack such as gas station is retailerTypeCode, not a separate fee. */
 export type BillingRowProduct = PlatformProduct | 'RETAIL';
 export type PlatformBillingMode = 'RECURRING' | 'ONE_TIME' | 'BOTH';
 export type PlatformBillingInterval = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
@@ -15,7 +15,7 @@ export type TenantPlatformBillingStatus =
 export interface PlatformBillingPlanDTO {
   id?: number | null;
   tenantId?: string | null;
-  product: PlatformProduct;
+  product: BillingRowProduct;
   name: string;
   code: string;
   billingMode: PlatformBillingMode;
@@ -25,6 +25,8 @@ export interface PlatformBillingPlanDTO {
   published?: boolean | null;
   featureSummary?: string | null;
   graduatedTiersJson?: string | null;
+  /** Empty means every retail pack. A code such as GAS_STATION limits the plan to that pack. */
+  retailerTypeCode?: string | null;
   stripeProductId?: string | null;
   stripePriceId?: string | null;
   createdAt?: string | null;

@@ -1,5 +1,5 @@
 ---
-description: Tenant platform fees for event sites and gas stations stay separate from ticket and membership Stripe payments.
+description: Tenant platform fees for event sites and retail shops stay separate from ticket and membership Stripe payments.
 globs: documentation/tenant_management/platform_billing/**,src/app/admin/tenant-management/**,src/app/admin/platform-billing/**
 alwaysApply: false
 ---
@@ -8,7 +8,7 @@ alwaysApply: false
 
 - **Read the guide before changing tenant fees**
   - Start with [PLATFORM_TENANT_BILLING_GUIDE.md](mdc:documentation/tenant_management/platform_billing/PLATFORM_TENANT_BILLING_GUIDE.md), then [BUILD_PLAN.md](mdc:documentation/tenant_management/platform_billing/BUILD_PLAN.md) and [STRIPE_VS_ZOHO_ANALYSIS.md](mdc:documentation/tenant_management/platform_billing/STRIPE_VS_ZOHO_ANALYSIS.md).
-  - This bills the **tenant organization** for the event site or the gas-station tools. It does not bill a ticket buyer or a member.
+  - This bills the **tenant organization** for the event site or the retail tools. Gas station, liquor store, Dunkin, and the other shop packs are retailer types under retail. They are not separate platform fees. It does not bill a ticket buyer or a member.
 
 - **Charge switch stays off until a platform super-admin turns it on**
   - A new tenant uses the product for free. Do not create a Stripe customer, subscription, or invoice while the switch is off.

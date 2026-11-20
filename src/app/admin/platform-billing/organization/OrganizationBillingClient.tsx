@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FaBuilding, FaEnvelope, FaIdBadge } from 'react-icons/fa';
 import OrganizationBillingScopeCard from '@/app/admin/tenant-management/organizations/OrganizationBillingScopeCard';
 import BillingPagination from '../BillingPagination';
+import { billingStatusClass, billingStatusLabel, billingStatusMeaning } from '@/lib/platformBilling/statusLabel';
 
 const PAGE_SIZE = 20;
 
@@ -71,7 +72,14 @@ export default function OrganizationBillingClient({
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">Status</dt>
-            <dd className="mt-1 text-sm font-semibold text-gray-900">{subscriptionStatus || '—'}</dd>
+            <dd className="mt-1 flex flex-wrap items-center gap-2">
+              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${billingStatusClass(subscriptionStatus)}`}>
+                {billingStatusLabel(subscriptionStatus)}
+              </span>
+              {billingStatusMeaning(subscriptionStatus) && (
+                <span className="text-sm text-gray-600">{billingStatusMeaning(subscriptionStatus)}</span>
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">Stripe customer</dt>

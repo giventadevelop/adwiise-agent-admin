@@ -6,7 +6,9 @@ import BillingPagination from '../BillingPagination';
 import Modal from '@/components/ui/Modal';
 import SuccessDialog from '@/components/SuccessDialog';
 import { savePlatformBillingPlan } from '../ApiServerActions';
-import type { PlatformBillingPlanDTO, PlatformProduct } from '@/types/platformBilling';
+import { packLabel, retailPacks } from '@/lib/platformBilling/shopPack';
+import type { RetailerTypeDTO } from '@/types/accessCatalog';
+import type { PlatformBillingPlanDTO } from '@/types/platformBilling';
 
 const PAGE_SIZE = 20;
 
@@ -43,8 +45,10 @@ const HEADERS: Array<{ label: string; path: string }> = [
   { label: 'Edit', path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
 ];
 
-function productLabel(product: string): string {
-  return product === 'GAS_STATION' ? 'Gas station' : 'Event site';
+function productLabel(plan: PlatformBillingPlanDTO, packs: RetailerTypeDTO[]): string {
+  if (plan.product === 'EVENT_SITE') return 'Event site';
+  const pack = packLabel(plan.retailerTypeCode, packs) || (plan.product === 'GAS_STATION' ? 'Gas station' : null);
+  return pack ? `Retail · ${pack}` : 'Retail';
 }
 
 function modeLabel(mode: string): string {
@@ -70,14 +74,22 @@ const fieldClass = 'mt-1 block w-full border border-gray-400 rounded-xl px-4 py-
 function PlanFields({
   plan,
   priceText,
+  packs,
   onPlan,
   onPrice,
 }: {
   plan: PlatformBillingPlanDTO;
   priceText: string;
+  packs: RetailerTypeDTO[];
   onPlan: (plan: PlatformBillingPlanDTO) => void;
   onPrice: (price: string) => void;
 }) {
+  const retail = plan.product === 'RETAIL' || plan.product === 'GAS_STATION';
+  const knownPacks = retailPacks(packs);
+  const extraPack =
+    plan.retailerTypeCode && !knownPacks.some((pack) => pack.code === plan.retailerTypeCode)
+      ? plan.retailerTypeCode
+      : null;
   return (
     <>
       <label className="block text-sm font-medium text-gray-700">
@@ -85,12 +97,37 @@ function PlanFields({
         <select
           className={fieldClass}
           value={plan.product}
-          onChange={(event) => onPlan({ ...plan, product: event.target.value as PlatformProduct })}
+          onChange={(event) => {
+            const product = event.target.value as PlatformBillingPlanDTO['product'];
+            onPlan({
+              ...plan,
+              product,
+              retailerTypeCode: product === 'EVENT_SITE' ? null : plan.retailerTypeCode,
+            });
+          }}
         >
           <option value="EVENT_SITE">Event site</option>
-          <option value="GAS_STATION">Gas station</option>
+          <option value="RETAIL">Retail</option>
+          {plan.product === 'GAS_STATION' && <option value="GAS_STATION">Retail (saved as gas station)</option>}
         </select>
       </label>
+      {retail && (
+        <label className="block text-sm font-medium text-gray-700">
+          Shop pack
+          <select
+            className={fieldClass}
+            value={plan.retailerTypeCode || ''}
+            onChange={(event) => onPlan({ ...plan, retailerTypeCode: event.target.value || null })}
+          >
+            <option value="">All retail packs</option>
+            {knownPacks.map((pack) => (
+              <option key={pack.code} value={pack.code}>{pack.label}</option>
+            ))}
+            {extraPack && <option value={extraPack}>{extraPack}</option>}
+          </select>
+          <span className="mt-1 block text-xs text-gray-600">Leave this empty to use the price for every shop pack.</span>
+        </label>
+      )}
       <label className="block text-sm font-medium text-gray-700">
         Name
         <input
@@ -203,7 +240,13 @@ function DialogButton({
   );
 }
 
-export default function PlansClient({ initialPlans }: { initialPlans: PlatformBillingPlanDTO[] }) {
+export default function PlansClient({
+  initialPlans,
+  packs,
+}: {
+  initialPlans: PlatformBillingPlanDTO[];
+  packs: RetailerTypeDTO[];
+}) {
   const [plans, setPlans] = useState(initialPlans);
   const [page, setPage] = useState(0);
   const [draft, setDraft] = useState<PlatformBillingPlanDTO>(emptyPlan());
@@ -215,8 +258,8 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const gasCount = plans.filter((plan) => plan.product === 'GAS_STATION').length;
-  const eventSiteCount = plans.length - gasCount;
+  const retailCount = plans.filter((plan) => plan.product === 'RETAIL' || plan.product === 'GAS_STATION').length;
+  const eventSiteCount = plans.filter((plan) => plan.product === 'EVENT_SITE').length;
   const publishedCount = plans.filter((plan) => plan.published).length;
   const hiddenCount = plans.length - publishedCount;
   const pageRows = plans.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
@@ -242,6 +285,7 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
     try {
       const savedPlan = await savePlatformBillingPlan({
         ...plan,
+        retailerTypeCode: plan.product === 'EVENT_SITE' ? null : plan.retailerTypeCode || null,
         listPriceUsd: Number(price) || 0,
         stripePriceId: plan.stripePriceId || null,
         graduatedTiersJson: plan.graduatedTiersJson || null,
@@ -278,7 +322,7 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
 
   const tiles = [
     { label: 'Event site', count: eventSiteCount, className: 'bg-blue-50 text-blue-800 border-blue-300' },
-    { label: 'Gas station', count: gasCount, className: 'bg-teal-50 text-teal-800 border-teal-300' },
+    { label: 'Retail', count: retailCount, className: 'bg-teal-50 text-teal-800 border-teal-300' },
     { label: 'Published', count: publishedCount, className: 'bg-green-50 text-green-800 border-green-300' },
     { label: 'Hidden', count: hiddenCount, className: 'bg-amber-50 text-amber-800 border-amber-300' },
   ];
@@ -341,8 +385,8 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
                     <div className="text-xs text-gray-500">{plan.code}</div>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${plan.product === 'GAS_STATION' ? 'bg-teal-100 text-teal-800' : 'bg-indigo-100 text-indigo-800'}`}>
-                      {productLabel(plan.product)}
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${plan.product === 'EVENT_SITE' ? 'bg-indigo-100 text-indigo-800' : 'bg-teal-100 text-teal-800'}`}>
+                      {productLabel(plan, packs)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm">
@@ -397,7 +441,7 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
         size="lg"
       >
         <form onSubmit={onCreate} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <PlanFields plan={draft} priceText={priceText} onPlan={setDraft} onPrice={setPriceText} />
+          <PlanFields plan={draft} priceText={priceText} packs={packs} onPlan={setDraft} onPrice={setPriceText} />
           <div className="flex flex-row gap-3 sm:gap-4 md:col-span-2">
             <DialogButton
               type="button"
@@ -431,7 +475,7 @@ export default function PlansClient({ initialPlans }: { initialPlans: PlatformBi
       >
         <form onSubmit={onUpdate} className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {editing && (
-            <PlanFields plan={editing} priceText={editPrice} onPlan={setEditing} onPrice={setEditPrice} />
+            <PlanFields plan={editing} priceText={editPrice} packs={packs} onPlan={setEditing} onPrice={setEditPrice} />
           )}
           <div className="flex flex-row gap-3 sm:gap-4 md:col-span-2">
             <DialogButton

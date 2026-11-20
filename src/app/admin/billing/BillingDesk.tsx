@@ -14,6 +14,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { saveTenantProductBilling, setLocationIncludedInBilling } from '@/app/admin/platform-billing/ApiServerActions';
+import { explainBillingSaveError } from '@/lib/platformBilling/billingMessages';
+import { billingStatusLabel, billingStatusMeaning } from '@/lib/platformBilling/statusLabel';
 import { isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
 import type { RetailLocationDTO } from '@/types/retail';
 import type { PlatformBillingChargeDTO, PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
@@ -36,7 +38,22 @@ type ConfirmRequest =
   | { kind: 'location'; locationId: number; name: string; include: boolean };
 
 function productLabel(product: PlatformProduct): string {
-  return product === 'EVENT_SITE' ? 'event site' : 'gas stations';
+  return product === 'EVENT_SITE' ? 'event site' : 'retail';
+}
+
+function StatusReadout({ status }: { status?: string | null }) {
+  const value = status || 'COMPLIMENTARY';
+  return (
+    <label className="text-sm font-medium text-gray-700 md:col-span-2">
+      Status
+      <div className="mt-1 flex flex-wrap items-center gap-3 border border-gray-400 rounded-xl px-4 py-3">
+        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${statusClass(value)}`}>
+          {billingStatusLabel(value)}
+        </span>
+        <span className="text-sm font-normal text-gray-600">{billingStatusMeaning(value)}</span>
+      </div>
+    </label>
+  );
 }
 
 function statusClass(status: string): string {
@@ -150,6 +167,8 @@ export default function BillingDesk({
   lockedNotice,
   complimentaryPlan = false,
   charges = [],
+  shopPackCode = null,
+  shopPackLabel = null,
 }: {
   tenantId: string;
   canEditSwitch: boolean;
@@ -159,6 +178,8 @@ export default function BillingDesk({
   lockedNotice?: boolean;
   complimentaryPlan?: boolean;
   charges?: PlatformBillingChargeDTO[];
+  shopPackCode?: string | null;
+  shopPackLabel?: string | null;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [locationRows, setLocationRows] = useState(locations);
@@ -203,7 +224,7 @@ export default function BillingDesk({
         text: 'Billing saved. Turning the switch on does not charge the card by itself.',
       });
     } catch (error) {
-      setResult({ ok: false, text: error instanceof Error ? error.message : 'Save failed' });
+      setResult({ ok: false, text: explainBillingSaveError(error) });
     } finally {
       setBusy(false);
     }
@@ -272,7 +293,7 @@ export default function BillingDesk({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6" style={{ paddingTop: '120px' }}>
       <AdminNavigation
         tenantId={tenantId}
-        contextLine="Platform billing for this tenant — event site and gas station fees."
+        contextLine="Platform billing for this tenant — event site and retail fees."
       />
       <div className="bg-white rounded-lg shadow-md p-6">
         <h1 className="text-3xl font-bold text-gray-900">Platform billing</h1>
@@ -286,14 +307,28 @@ export default function BillingDesk({
       {PRODUCTS.map((product) => {
         const row = rowFor(product);
         const covered = isCoveredByPortfolio(row.notes);
-        const productPlans = plans.filter((plan) => plan.product === product && (plan.published !== false || plan.id === row.platformPlanId));
+        const productPlans = plans.filter((plan) => {
+          const keepAssigned = plan.id != null && plan.id === row.platformPlanId;
+          if (plan.published === false && !keepAssigned) return false;
+          if (product === 'EVENT_SITE') return plan.product === 'EVENT_SITE' || keepAssigned;
+          if (plan.product !== 'RETAIL' && plan.product !== 'GAS_STATION' && !keepAssigned) return false;
+          const planPack = plan.retailerTypeCode?.trim() || '';
+          if (!planPack) return true;
+          return planPack === shopPackCode || keepAssigned;
+        });
         const charged = complimentaryPlan ? false : !!row.chargeEnabled;
+        const title = product === 'EVENT_SITE' ? 'Event site' : 'Retail';
         return (
           <section key={product} className="bg-white rounded-lg shadow-md p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-gray-900">{product === 'EVENT_SITE' ? 'Event site' : 'Gas stations'}</h2>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+                {product !== 'EVENT_SITE' && shopPackLabel && (
+                  <p className="text-sm text-gray-600 mt-1">Shop pack: {shopPackLabel}</p>
+                )}
+              </div>
               <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${statusClass(row.status || 'COMPLIMENTARY')}`}>
-                {row.status || 'COMPLIMENTARY'}
+                {billingStatusLabel(row.status)}
               </span>
             </div>
             <p className="text-sm text-gray-700">
@@ -303,6 +338,7 @@ export default function BillingDesk({
             </p>
             {canEditSwitch && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StatusReadout status={row.status} />
                 <label className="text-sm font-medium text-gray-700">
                   Catalog plan
                   <select
@@ -371,8 +407,13 @@ export default function BillingDesk({
                   title={`Save ${productLabel(product)} billing`}
                   onClick={() => persist(rowFor(product))}
                 >
-                  Save {product === 'EVENT_SITE' ? 'event site' : 'gas station'} billing
+                  Save {product === 'EVENT_SITE' ? 'event site' : 'retail'} billing
                 </DeskButton>
+              </div>
+            )}
+            {!canEditSwitch && (
+              <div className="grid grid-cols-1 gap-4">
+                <StatusReadout status={row.status} />
               </div>
             )}
             {covered ? (
@@ -462,9 +503,10 @@ export default function BillingDesk({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-gray-900">Organization subscription</h2>
             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${statusClass(row.status || 'COMPLIMENTARY')}`}>
-              {row.status || 'COMPLIMENTARY'}
+              {billingStatusLabel(row.status)}
             </span>
           </div>
+          <StatusReadout status={row.status} />
           <p className="text-sm text-gray-700">{money(row.customFeeUsd)} per month</p>
           <div className="flex flex-wrap gap-3">
             <DeskButton color="green" icon={<FaCreditCard className="w-5 h-5" />} disabled={busy || !row.id || !row.chargeEnabled} title="Pay monthly" onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'RECURRING' })}>Pay monthly</DeskButton>
@@ -493,7 +535,14 @@ export default function BillingDesk({
               ) : charges.map((charge) => (
                 <tr key={charge.id || charge.stripeEventId} className="border-t border-blue-100">
                   <td className="px-4 py-3 text-sm">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${statusClass(charge.status || '')}`}>{charge.status || '—'}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex w-fit px-2 py-1 rounded-full text-xs font-semibold ${statusClass(charge.status || '')}`}>
+                        {billingStatusLabel(charge.status)}
+                      </span>
+                      {billingStatusMeaning(charge.status) && (
+                        <span className="text-xs text-gray-600">{billingStatusMeaning(charge.status)}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold">{money(charge.amountUsd)}</td>
                   <td className="px-4 py-3 text-sm">{charge.occurredAt ? new Date(charge.occurredAt).toLocaleString() : '—'}</td>
