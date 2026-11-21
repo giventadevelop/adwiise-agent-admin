@@ -572,19 +572,6 @@ export async function persistGalleryCoverOcrServer(
   file: File,
   tenantId?: string,
 ): Promise<number> {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const { extractTextFromImageBytes } = await import('@/lib/search/extractImageText');
-  const { mergeOcrText, buildGalleryAlbumSearchText } = await import('@/lib/search/buildSearchText');
-  const extracted = await extractTextFromImageBytes(bytes, `gallery-album-${albumId}-cover`);
-  if (!extracted.trim()) return 0;
-  const existing = await fetchAlbumServer(albumId, tenantId);
-  const ocrText = mergeOcrText(existing?.ocrText, extracted);
-  const searchText = buildGalleryAlbumSearchText({
-    title: existing?.title,
-    description: existing?.description,
-    eventLocation: existing?.eventLocation,
-    ocrText,
-  });
-  await updateAlbumServer(albumId, { ocrText, searchText }, tenantId ?? existing?.tenantId);
-  return extracted.length;
+  const { refreshImageSearchText } = await import('@/lib/search/refreshImageSearchText');
+  return refreshImageSearchText('gallery_album', albumId);
 }

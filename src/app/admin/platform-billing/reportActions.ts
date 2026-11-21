@@ -67,8 +67,9 @@ async function organizationsForQuery(query: string, page: number): Promise<{ dat
     return { data, totalCount: data.length };
   }
   if (query.startsWith('cus_')) {
-    const result = await fetchTenantOrganizations({ page: 0, pageSize: 200 }, {});
-    const data = result.data.filter((organization) => organization.stripeCustomerId === query);
+    const params = new URLSearchParams({ 'stripeCustomerId.equals': query, size: '50' });
+    const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-organizations?${params.toString()}`, { cache: 'no-store' });
+    const data = response.ok ? ((await response.json()) as TenantOrganizationDTO[]) : [];
     return { data, totalCount: data.length };
   }
   if (query.includes('@')) {

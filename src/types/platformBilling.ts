@@ -54,6 +54,7 @@ export interface TenantProductBillingDTO {
   paidThroughDate?: string | null;
   locationQuantity?: number | null;
   clearCustomFee?: boolean | null;
+  clearPlatformPlan?: boolean | null;
   organizationId?: number | null;
   organizationBillingScope?: OrganizationBillingScope | null;
   createdAt?: string | null;
@@ -83,4 +84,70 @@ export interface PlatformBillingChargeDTO {
   failureReason?: string | null;
   notes?: string | null;
   createdAt?: string | null;
+}
+
+/** Fee filter on the charge search. ORGANIZATION is the one charge an organization pays for all its websites. */
+export type ChargeFeeFilter = 'EVENT_SITE' | 'GAS_STATION' | 'ORGANIZATION';
+
+/** Dates are ISO instants worked out in the browser, so "today" means the viewer's day. */
+export interface ChargeSearchFilters {
+  find?: string;
+  tenantId?: string;
+  fee?: ChargeFeeFilter | '';
+  statuses?: string[];
+  fromIso?: string;
+  toIso?: string;
+  amountMin?: string;
+  amountMax?: string;
+  /** Id of the catalog plan. The ledger stores the plan id, not its code. */
+  planId?: string;
+  sort?: 'occurredAt,desc' | 'occurredAt,asc' | 'amountUsd,desc' | 'amountUsd,asc';
+}
+
+export interface ChargeSearchRow extends PlatformBillingChargeDTO {
+  organizationName?: string;
+  /** An Open or Failed row whose invoice was paid afterward. */
+  paidLater?: boolean;
+}
+
+export interface ChargeStatusTotal {
+  status: string;
+  count: number;
+  amountUsd: number;
+}
+
+export interface ChargeSearchResult {
+  rows: ChargeSearchRow[];
+  totalCount: number;
+  totals: ChargeStatusTotal[];
+  notice: string;
+}
+
+export interface BillingHistoryRow {
+  id?: number | null;
+  organizationId?: number | null;
+  organizationName?: string;
+  tenantId?: string | null;
+  product?: string | null;
+  previousPlanCode?: string | null;
+  newPlanCode?: string | null;
+  previousAmountUsd?: number | null;
+  newAmountUsd?: number | null;
+  actorUserId?: string | null;
+  actorName?: string;
+  reason?: string | null;
+  occurredAt?: string | null;
+}
+
+export interface BillingHistoryResult {
+  rows: BillingHistoryRow[];
+  totalCount: number;
+  notice: string;
+}
+
+export interface ChargeDetail {
+  charge: ChargeSearchRow;
+  sameInvoice: PlatformBillingChargeDTO[];
+  history: BillingHistoryRow[];
+  stripeTestMode: boolean;
 }

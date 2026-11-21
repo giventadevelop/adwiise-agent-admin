@@ -1,6 +1,7 @@
 'use server';
 
 import { headersForAdminTenantScope } from '@/app/admin/adminAccessServer';
+import { loadOrganizationForTenantId } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import type { TenantTournamentDTO } from '@/types';
@@ -8,12 +9,8 @@ import type { TenantTournamentDTO } from '@/types';
 export async function fetchTenantSiteTypeServer(tenantId: string): Promise<string | null> {
   if (!tenantId) return null;
   try {
-    const headers = await headersForAdminTenantScope(tenantId);
-    const url = `${getApiBaseUrl()}/api/tenant-organizations?tenantId.equals=${encodeURIComponent(tenantId)}&size=1`;
-    const res = await fetchWithJwtRetry(url, { cache: 'no-store', headers });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const row = Array.isArray(data) ? data[0] : Array.isArray(data?.content) ? data.content[0] : data;
+    await headersForAdminTenantScope(tenantId);
+    const row = await loadOrganizationForTenantId(tenantId);
     return typeof row?.siteType === 'string' ? row.siteType : null;
   } catch (error) {
     console.error('[fetchTenantSiteTypeServer]', error);

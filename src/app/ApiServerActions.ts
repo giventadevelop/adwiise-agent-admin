@@ -3,6 +3,7 @@
 import type { TenantOrganizationDTO, TenantSettingsDTO } from '@/types';
 import { getApiBaseUrl, getTenantId } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
+import { loadOrganizationForTenantId } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 import { resolveTenantOrganizationIdentity } from '@/lib/resolveTenantOrganizationIdentity';
 import { formatOrganizationAddress } from '@/lib/formatOrganizationAddress';
 import type { FooterContactProps } from '@/lib/footerContactTypes';
@@ -73,26 +74,7 @@ export async function fetchTenantOrganizationByTenantIdServer(
     }
 
     const tid = tenantId ?? getTenantId();
-    const response = await fetchWithJwtRetry(
-      `${API_BASE_URL}/api/tenant-organizations?tenantId.equals=${encodeURIComponent(tid)}&size=1`,
-      {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      },
-    );
-
-    if (!response.ok) {
-      console.error(
-        '[fetchTenantOrganizationByTenantIdServer] Failed to fetch organization:',
-        response.status,
-      );
-      return null;
-    }
-
-    const data = await response.json();
-    const organization = Array.isArray(data) ? data[0] : data;
-    return organization || null;
+    return (await loadOrganizationForTenantId(tid)) as unknown as TenantOrganizationDTO | null;
   } catch (error) {
     console.error('[fetchTenantOrganizationByTenantIdServer] Error:', error);
     return null;

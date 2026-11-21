@@ -180,38 +180,28 @@ export default function TenantSettingsList({
         setTotalCount(response.totalCount);
         setOrganizationsWithoutSettings(response.organizationsWithoutSettings ?? []);
 
-        const tenantIds = Array.from(
-          new Set(settingsData.map((setting: TenantSettingsDTO) => setting.tenantId).filter(Boolean))
+        // The organization list has no tenant filter. Each settings row holds the link to its organization.
+        const orgMap: Record<string, string> = {};
+        await Promise.all(
+          settingsData.map(async (setting: TenantSettingsDTO) => {
+            const tenantId = setting.tenantId;
+            const organizationId = setting.tenantOrganization?.id;
+            if (!tenantId || !organizationId) return;
+            if (setting.tenantOrganization?.organizationName) {
+              orgMap[tenantId] = setting.tenantOrganization.organizationName;
+              return;
+            }
+            try {
+              const orgResponse = await fetch(`/api/proxy/tenant-organizations/${organizationId}`);
+              if (!orgResponse.ok) return;
+              const org: TenantOrganizationDTO = await orgResponse.json();
+              if (org?.organizationName) orgMap[tenantId] = org.organizationName;
+            } catch (orgError) {
+              console.error(`Failed to load organization for tenant ${tenantId}:`, orgError);
+            }
+          })
         );
-
-        if (tenantIds.length > 0) {
-          const orgMap: Record<string, string> = {};
-
-          await Promise.all(
-            tenantIds.map(async (tenantId) => {
-              try {
-                const orgResponse = await fetch('/api/proxy/tenant-organizations?' + new URLSearchParams({
-                  'tenantId.equals': tenantId,
-                  page: '0',
-                  size: '1',
-                }));
-
-                if (!orgResponse.ok) return;
-
-                const orgData: TenantOrganizationDTO[] = await orgResponse.json();
-                if (Array.isArray(orgData) && orgData.length > 0 && orgData[0]?.organizationName) {
-                  orgMap[tenantId] = orgData[0].organizationName;
-                }
-              } catch (orgError) {
-                console.error(`Failed to load organization for tenant ${tenantId}:`, orgError);
-              }
-            })
-          );
-
-          setOrganizationNamesByTenant(orgMap);
-        } else {
-          setOrganizationNamesByTenant({});
-        }
+        setOrganizationNamesByTenant(orgMap);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {

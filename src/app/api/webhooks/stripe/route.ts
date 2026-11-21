@@ -448,8 +448,12 @@ export async function POST(req: NextRequest) {
             return competitionResponse;
           }
         }
-      } catch (verifyErr) {
-        console.warn('[STRIPE-WEBHOOK] Local event verification skipped or failed:', verifyErr);
+      } catch {
+        console.error('[STRIPE-WEBHOOK] STRIPE_WEBHOOK_SECRET in .env.local does not match the whsec_ value in the stripe listen window. Copy that value and restart the Next.js dev server.');
+        return new NextResponse(
+          'Webhook signature does not match STRIPE_WEBHOOK_SECRET. Copy the whsec_ value from the stripe listen window into .env.local and restart the dev server.',
+          { status: 400 }
+        );
       }
     }
 

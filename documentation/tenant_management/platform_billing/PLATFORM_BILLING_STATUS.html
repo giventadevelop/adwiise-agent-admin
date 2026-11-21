@@ -246,7 +246,7 @@
             <li><a href="#flow">How a charge moves</a></li>
             <li><a href="#prices">Catalog price, custom price, and one organization amount</a></li>
             <li><a href="#status">What is built</a></li>
-            <li><a href="#listen">Listen for Stripe test events</a></li>
+            <li><a href="#listen">Install the Stripe CLI, then listen</a></li>
         </ol>
     </nav>
 
@@ -267,7 +267,7 @@
                 </tr>
                 <tr>
                     <td><a href="PLATFORM_BILLING_TEST_GUIDE.html">Test guide</a></td>
-                    <td>You are charging in Stripe test mode with the unpublished $1.00 plans.</td>
+                    <td>You are charging in Stripe test mode. Publish a $1.00 plan such as Test every day, install the Stripe CLI, and leave the listener running before you pay.</td>
                 </tr>
                 <tr>
                     <td><a href="PLATFORM_BILLING_SUPPORT_PLAYBOOK.html">Support playbook</a></td>
@@ -364,8 +364,8 @@
     <div class="section-container parameters" id="prices">
         <div class="section-header parameters">Catalog price, custom price, and one organization amount</div>
         <h3>Catalog plan for one website</h3>
-        <p>A super-admin keeps plans at <code class="code-highlight">/admin/platform-billing/plans</code>. Each plan belongs to Event site or Gas station. It can be recurring, one-time, or both. A new plan defaults to every month. A published production plan uses month or year. The list price is in US dollars. Gas-station plans can store graduated tiers so the monthly total depends on how many locations are included. Unpublished plans stay hidden until a super-admin assigns one.</p>
-        <p>The seeded test plans are unpublished event-site plans at $1.00: <code class="code-highlight">test-every-day</code>, <code class="code-highlight">test-every-2-days</code>, <code class="code-highlight">test-every-15-days</code>, and <code class="code-highlight">test-monthly</code>. Day and week intervals are rejected unless the Stripe secret starts with <code class="code-highlight">sk_test_</code>.</p>
+        <p>A super-admin keeps plans at <code class="code-highlight">/admin/platform-billing/plans</code>. Each plan belongs to Event site or Gas station. It can be recurring, one-time, or both. A new plan defaults to every month. A published production plan uses month or year. The list price is in US dollars. Gas-station plans can store graduated tiers so the monthly total depends on how many locations are included. The Catalog plan dropdown only lists published plans. Check <strong>Published</strong> and click <strong>Update plan</strong> before you can choose one. Leave <strong>Stripe price id</strong> blank. The first payment creates the Stripe price.</p>
+        <p>The seeded test plans start unpublished. They are Event site plans at $1.00: <code class="code-highlight">test-every-day</code>, <code class="code-highlight">test-every-2-days</code>, <code class="code-highlight">test-every-15-days</code>, and <code class="code-highlight">test-monthly</code>. To use Test every day in a local lab, open that plan, leave Stripe price id blank, check Published, and click Update plan. Day and week intervals are rejected unless the Stripe secret starts with <code class="code-highlight">sk_test_</code>.</p>
         <h3>Custom price for one website</h3>
         <p>When a website will not pay the catalog price, a super-admin types <code class="code-highlight">customFeeUsd</code> for that website, with cents, plus a short note. Checkout creates a Stripe Price for that website only. The shared catalog price is left unchanged. A custom fee also skips gas-station location quantity: the quantity stays 1.</p>
         <h3>One monthly amount for the whole organization</h3>
@@ -440,7 +440,7 @@
                 <tr>
                     <td>Day and week test plans at $1.00</td>
                     <td>Test only</td>
-                    <td>Unpublished. Allowed when the secret key starts with <code class="code-highlight">sk_test_</code>. Production catalog plans stay month or year.</td>
+                    <td>They start unpublished. Check Published and click Update plan before the catalog can show them. Allowed when the secret key starts with <code class="code-highlight">sk_test_</code>. Production catalog plans stay month or year. Leave Stripe price id blank. The first payment creates the price.</td>
                 </tr>
                 <tr>
                     <td>A Stripe product for each site type or retail pack</td>
@@ -467,14 +467,31 @@
     </div>
 
     <div class="section-container usage" id="listen">
-        <div class="section-header usage">Listen for Stripe test events</div>
+        <div class="section-header usage">Install the Stripe CLI, then listen</div>
         <div class="section-intro">
-            <p>Forward Stripe test events to this app with <code class="script-name">stripe.exe</code>. Local admin development uses port 3001. Change the port below if this app is listening somewhere else, then use Copy. The full test steps, including the 4242 card and the failing card, are in the <a href="PLATFORM_BILLING_TEST_GUIDE.html">test guide</a>.</p>
+            <p><code class="code-highlight">stripe</code> is a separate program. Windows does not include it. If Command Prompt says <code class="code-highlight">'stripe' is not recognized as an internal or external command</code>, run the install command, close Command Prompt, and open a new one. You can save a plan and turn the charge switch on without it. Start the listener before <strong>Pay monthly</strong> and leave that window open. Stripe sends the payment-succeeded message to this app. If the listener is closed, the card can succeed in Checkout while the billing page stays Payment due and the Charges table stays empty. The current Stripe CLI also stops with <code class="code-highlight">must specify events to forward using --events, --all-snapshot, or --all-thin</code>. Add <code class="code-highlight">--all-snapshot</code> so the full event is forwarded. Do not use <code class="code-highlight">--all-thin</code> for this test. A thin event is only a short notice, and the billing page stays Payment due. Local admin development uses port 3001. Change the port below if this app is listening somewhere else, then use Copy. The full steps are in the <a href="PLATFORM_BILLING_TEST_GUIDE.html">test guide</a>.</p>
+        </div>
+        <div class="command-block setup"
+             data-command-type="setup"
+             data-command-base="winget install Stripe.StripeCLI"
+             data-template-command="winget install Stripe.StripeCLI">
+            <div class="command-header">
+                <span class="command-type">Install</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this, 'stripe-install')" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'stripe-install')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="stripe-install">winget install Stripe.StripeCLI</div>
+            <div class="command-single-line" id="stripe-install-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="stripe-install-single-code">winget install Stripe.StripeCLI</code>
+            </div>
         </div>
         <div class="command-block setup"
              data-command-type="setup"
              data-command-base="stripe listen --forward-to"
-             data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe">
+             data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot">
             <div class="command-header">
                 <span class="command-type">Setup</span>
                 <div class="command-header-buttons">
@@ -491,10 +508,10 @@
                     </div>
                 </div>
             </div>
-            <div class="command-content" id="stripe-listen">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</div>
+            <div class="command-content" id="stripe-listen">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot</div>
             <div class="command-single-line" id="stripe-listen-single">
                 <div class="command-single-line-label">Windows single-line</div>
-                <code id="stripe-listen-single-code">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</code>
+                <code id="stripe-listen-single-code">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot</code>
             </div>
         </div>
         <div class="info">The success card is <code class="code-highlight">4242 4242 4242 4242</code>, any future expiry, any CVC. The failure card is <code class="code-highlight">4000 0000 0000 0341</code>. A ticket purchase in the same Stripe test account must not insert a platform charge.</div>
@@ -522,7 +539,7 @@
             if (!/^\d+$/.test(port)) {
                 port = '3001';
             }
-            var command = baseCommand + ' http://localhost:' + port + '/api/webhooks/stripe';
+            var command = baseCommand + ' http://localhost:' + port + '/api/webhooks/stripe --all-snapshot';
             commandElement.textContent = command;
             var singleLineCode = document.getElementById(commandId + '-single-code');
             if (singleLineCode) {

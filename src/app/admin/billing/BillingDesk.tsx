@@ -13,12 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import TenantChargesTable from './TenantChargesTable';
 import { saveTenantProductBilling, setLocationIncludedInBilling } from '@/app/admin/platform-billing/ApiServerActions';
 import { explainBillingSaveError } from '@/lib/platformBilling/billingMessages';
 import { billingStatusLabel, billingStatusMeaning } from '@/lib/platformBilling/statusLabel';
 import { isCoveredByPortfolio } from '@/lib/platformBilling/complimentaryPlan';
 import type { RetailLocationDTO } from '@/types/retail';
-import type { PlatformBillingChargeDTO, PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
+import type { PlatformBillingPlanDTO, PlatformProduct, TenantProductBillingDTO } from '@/types/platformBilling';
 
 const money = (amount?: number | null) =>
   new Intl.NumberFormat('en-US', {
@@ -166,7 +167,6 @@ export default function BillingDesk({
   locations,
   lockedNotice,
   complimentaryPlan = false,
-  charges = [],
   shopPackCode = null,
   shopPackLabel = null,
 }: {
@@ -177,12 +177,12 @@ export default function BillingDesk({
   locations: RetailLocationDTO[];
   lockedNotice?: boolean;
   complimentaryPlan?: boolean;
-  charges?: PlatformBillingChargeDTO[];
   shopPackCode?: string | null;
   shopPackLabel?: string | null;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [locationRows, setLocationRows] = useState(locations);
+  const [feeDraft, setFeeDraft] = useState<Partial<Record<PlatformProduct, string>>>({});
   const [busy, setBusy] = useState(false);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -198,6 +198,38 @@ export default function BillingDesk({
         billingMode: 'RECURRING',
       }
     );
+  }
+
+  /**
+   * Checkout, the Stripe webhook and the backend own these fields. The copy on this page can be older than the
+   * saved row, so a save from the page must not send them back. An old grace end sent back would stop the backend
+   * from starting a new grace period when the switch is turned on again.
+   */
+  function withoutStripeFields(next: TenantProductBillingDTO): TenantProductBillingDTO {
+    if (!next.id) return next;
+    const {
+      billingMode: _billingMode,
+      stripePriceId: _stripePriceId,
+      stripeSubscriptionId: _stripeSubscriptionId,
+      stripePaymentId: _stripePaymentId,
+      paidThroughDate: _paidThroughDate,
+      locationQuantity: _locationQuantity,
+      graceEndsAt: _graceEndsAt,
+      ...rest
+    } = next;
+    return rest;
+  }
+
+  function withoutCatalogPlan(next: TenantProductBillingDTO): TenantProductBillingDTO {
+    if (next.customFeeUsd == null || Number(next.customFeeUsd) <= 0) return next;
+    const selected = plans.find((plan) => plan.id != null && plan.id === next.platformPlanId);
+    return {
+      ...next,
+      platformPlanId: null,
+      clearPlatformPlan: true,
+      billingInterval: next.billingInterval || selected?.billingInterval || null,
+      intervalCount: next.intervalCount || selected?.intervalCount || 1,
+    };
   }
 
   function updateRow(product: PlatformProduct, patch: Partial<TenantProductBillingDTO>) {
@@ -217,7 +249,7 @@ export default function BillingDesk({
   async function persist(next: TenantProductBillingDTO) {
     setBusy(true);
     try {
-      const saved = await saveTenantProductBilling(next);
+      const saved = await saveTenantProductBilling(withoutStripeFields(withoutCatalogPlan(next)));
       setRows((current) => [...current.filter((row) => row.product !== saved.product), saved]);
       setResult({
         ok: true,
@@ -225,6 +257,138 @@ export default function BillingDesk({
       });
     } catch (error) {
       setResult({ ok: false, text: explainBillingSaveError(error) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pay(next: TenantProductBillingDTO, mode: 'RECURRING' | 'ONE_TIME') {
+    if (!next.id) return;
+    setBusy(true);
+    try {
+      let billingId = next.id;
+      let amountSource = next;
+      if (canEditSwitch) {
+        const saved = await saveTenantProductBilling(withoutStripeFields(withoutCatalogPlan(next)));
+        if (!saved.id) throw new Error('Billing row is missing an id');
+        billingId = saved.id;
+        amountSource = saved;
+        setRows((current) => [...current.filter((row) => row.product !== saved.product), saved]);
+      }
+      const response = await fetch('/api/platform-billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingId, tenantId, mode }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Request failed');
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      if (data.updated) {
+        // The page learns the count and the subscription here, so the card and its Cancel buttons are right without a reload.
+        setRows((current) =>
+          current.map((item) =>
+            item.id === billingId
+              ? {
+                  ...item,
+                  locationQuantity: data.quantity ?? item.locationQuantity,
+                  stripeSubscriptionId: data.subscriptionId ?? item.stripeSubscriptionId,
+                  status: data.status ?? item.status,
+                }
+              : item
+          )
+        );
+      }
+      const amount = amountSource.customFeeUsd != null ? money(amountSource.customFeeUsd) : 'the catalog price';
+      setResult({
+        ok: true,
+        text: data.updated
+          ? `The subscription now uses ${amount}. The next invoice uses that amount. Checkout was not opened again.`
+          : 'Done.',
+      });
+    } catch (error) {
+      setResult({ ok: false, text: error instanceof Error ? error.message : 'Request failed' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelBilling(row: TenantProductBillingDTO, cancelNow: boolean) {
+    if (!row.id) return;
+    setBusy(true);
+    try {
+      const response = await fetch('/api/platform-billing/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingId: row.id, tenantId, cancelNow }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Request failed');
+      if (cancelNow) {
+        const flatFee = /organization-flat:|portfolio-flat:/.test(row.notes || '');
+        setRows((current) =>
+          current.map((item) =>
+            item.id === row.id
+              ? {
+                  ...item,
+                  chargeEnabled: false,
+                  status: 'COMPLIMENTARY',
+                  stripeSubscriptionId: null,
+                  ...(flatFee ? {} : { platformPlanId: null, customFeeUsd: null }),
+                }
+              : item
+          )
+        );
+        if (!flatFee) {
+          setFeeDraft((current) => {
+            const next = { ...current };
+            delete next[row.product as PlatformProduct];
+            return next;
+          });
+        }
+      }
+      setResult({
+        ok: true,
+        text: cancelNow
+          ? 'Canceled now. The card is Complimentary. Pay monthly starts a new subscription.'
+          : 'The subscription will cancel at the end of the period.',
+      });
+    } catch (error) {
+      setResult({ ok: false, text: error instanceof Error ? error.message : 'Request failed' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function syncLocationCount(row: TenantProductBillingDTO) {
+    if (!row.id) return;
+    setBusy(true);
+    try {
+      const response = await fetch('/api/platform-billing/sync-quantity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingId: row.id, tenantId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Request failed');
+      const quantity = Number(data.locationQuantity) || 1;
+      setRows((current) =>
+        current.map((item) => (item.id === row.id ? { ...item, locationQuantity: quantity } : item))
+      );
+      const counted = `${quantity} ${quantity === 1 ? 'location' : 'locations'}`;
+      const customFee = row.customFeeUsd != null && Number(row.customFeeUsd) > 0;
+      setResult({
+        ok: true,
+        text: customFee
+          ? 'This website pays a custom flat fee, so the quantity stays 1.'
+          : row.stripeSubscriptionId
+            ? `The fee now counts ${counted}. Stripe prorates the change on the next invoice.`
+            : `The fee now counts ${counted}. The next payment uses that count.`,
+      });
+    } catch (error) {
+      setResult({ ok: false, text: error instanceof Error ? error.message : 'Request failed' });
     } finally {
       setBusy(false);
     }
@@ -281,8 +445,8 @@ export default function BillingDesk({
       : '';
   const confirmText = confirmRequest?.kind === 'charge'
     ? confirmRequest.enable
-      ? `Turn charging on for the ${productLabel(confirmRequest.product)}. This marks the fee due. It does not charge the card.`
-      : `Turn charging off for the ${productLabel(confirmRequest.product)}.`
+      ? `Turn charging on for ${confirmRequest.product === 'EVENT_SITE' ? 'the event site' : 'retail'}. This marks the fee due. It does not charge the card.`
+      : `Turn charging off for ${confirmRequest.product === 'EVENT_SITE' ? 'the event site' : 'retail'}.`
     : confirmRequest?.kind === 'location'
       ? confirmRequest.include
         ? `Include ${confirmRequest.name} in the location fee.`
@@ -343,8 +507,34 @@ export default function BillingDesk({
                   Catalog plan
                   <select
                     className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
-                    value={row.platformPlanId != null ? row.platformPlanId : ''}
-                    onChange={(event) => updateRow(product, { platformPlanId: Number(event.target.value) || null })}
+                    value={
+                      row.customFeeUsd != null && Number(row.customFeeUsd) > 0
+                        ? ''
+                        : row.platformPlanId != null
+                          ? row.platformPlanId
+                          : ''
+                    }
+                    onChange={(event) => {
+                      const platformPlanId = Number(event.target.value) || null;
+                      const selected = plans.find((plan) => plan.id === platformPlanId);
+                      setFeeDraft((current) => {
+                        const next = { ...current };
+                        delete next[product];
+                        return next;
+                      });
+                      if (!platformPlanId) {
+                        updateRow(product, { platformPlanId: null });
+                        return;
+                      }
+                      updateRow(product, {
+                        platformPlanId,
+                        clearPlatformPlan: false,
+                        customFeeUsd: null,
+                        clearCustomFee: true,
+                        billingInterval: selected?.billingInterval || row.billingInterval || null,
+                        intervalCount: selected?.intervalCount || row.intervalCount || 1,
+                      });
+                    }}
                   >
                     <option value="">No catalog plan</option>
                     {productPlans.filter((plan) => plan.id != null).map((plan) => (
@@ -358,12 +548,43 @@ export default function BillingDesk({
                   Custom fee USD (blank uses the catalog)
                   <input
                     className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3"
-                    defaultValue={row.customFeeUsd != null ? Number(row.customFeeUsd).toFixed(2) : ''}
-                    onBlur={(event) => {
-                      const raw = event.target.value.trim();
-                      const value = raw === '' ? null : Number(raw.startsWith('.') ? `0${raw}` : raw);
-                      updateRow(product, { customFeeUsd: value, clearCustomFee: value == null });
-                      if (raw) event.target.value = (Number(raw.startsWith('.') ? `0${raw}` : raw) || 0).toFixed(2);
+                    inputMode="decimal"
+                    value={feeDraft[product] ?? (row.customFeeUsd != null ? Number(row.customFeeUsd).toFixed(2) : '')}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      setFeeDraft((current) => ({ ...current, [product]: raw }));
+                      const trimmed = raw.trim();
+                      if (trimmed === '' || trimmed === '.') {
+                        updateRow(product, { customFeeUsd: trimmed === '' ? null : 0, clearCustomFee: trimmed === '' });
+                        return;
+                      }
+                      const processed = trimmed.startsWith('.') ? `0${trimmed}` : trimmed;
+                      const value = Number(processed);
+                      if (!Number.isNaN(value) && value > 0) {
+                        updateRow(product, withoutCatalogPlan({ ...row, customFeeUsd: value, clearCustomFee: false }));
+                      } else if (!Number.isNaN(value)) {
+                        updateRow(product, { customFeeUsd: value, clearCustomFee: false });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (feeDraft[product] == null) return;
+                      const raw = feeDraft[product].trim();
+                      setFeeDraft((current) => {
+                        const next = { ...current };
+                        delete next[product];
+                        return next;
+                      });
+                      if (raw === '' || raw === '.') {
+                        updateRow(product, { customFeeUsd: null, clearCustomFee: true });
+                        return;
+                      }
+                      const processed = raw.startsWith('.') ? `0${raw}` : raw;
+                      const value = Number(processed);
+                      if (!Number.isNaN(value) && value > 0) {
+                        updateRow(product, withoutCatalogPlan({ ...row, customFeeUsd: Number(value.toFixed(2)), clearCustomFee: false }));
+                      } else if (!Number.isNaN(value)) {
+                        updateRow(product, { customFeeUsd: value, clearCustomFee: false });
+                      }
                     }}
                   />
                 </label>
@@ -426,22 +647,20 @@ export default function BillingDesk({
                   color="green"
                   icon={<FaCreditCard className="w-5 h-5" />}
                   disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
-                  title={row.billingMode === 'ONE_TIME' ? 'Pay once' : 'Pay monthly'}
-                  onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: row.billingMode || 'RECURRING' })}
+                  title="Pay monthly"
+                  onClick={() => pay(rowFor(product), 'RECURRING')}
                 >
-                  Pay {row.billingMode === 'ONE_TIME' ? 'once' : 'monthly'}
+                  Pay monthly
                 </DeskButton>
-                {row.billingMode !== 'ONE_TIME' && (
-                  <DeskButton
-                    color="emerald"
-                    icon={<FaCreditCard className="w-5 h-5" />}
-                    disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
-                    title="Pay once"
-                    onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'ONE_TIME' })}
-                  >
-                    Pay once
-                  </DeskButton>
-                )}
+                <DeskButton
+                  color="emerald"
+                  icon={<FaCreditCard className="w-5 h-5" />}
+                  disabled={busy || !row.id || !row.chargeEnabled || complimentaryPlan}
+                  title="Pay once"
+                  onClick={() => pay(rowFor(product), 'ONE_TIME')}
+                >
+                  Pay once
+                </DeskButton>
                 <DeskButton
                   color="indigo"
                   icon={<FaUniversity className="w-5 h-5" />}
@@ -457,7 +676,7 @@ export default function BillingDesk({
                     icon={<FaSyncAlt className="w-5 h-5" />}
                     disabled={busy}
                     title="Update location count"
-                    onClick={() => post('/api/platform-billing/sync-quantity', { billingId: row.id, tenantId })}
+                    onClick={() => syncLocationCount(rowFor(product))}
                   >
                     Update location count
                   </DeskButton>
@@ -468,7 +687,7 @@ export default function BillingDesk({
                     icon={<FaBan className="w-5 h-5" />}
                     disabled={busy}
                     title="Cancel at period end"
-                    onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}
+                    onClick={() => cancelBilling(rowFor(product), false)}
                   >
                     Cancel at period end
                   </DeskButton>
@@ -479,7 +698,7 @@ export default function BillingDesk({
                     icon={<FaBan className="w-5 h-5" />}
                     disabled={busy}
                     title="Cancel now"
-                    onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}
+                    onClick={() => cancelBilling(rowFor(product), true)}
                   >
                     Cancel now
                   </DeskButton>
@@ -498,7 +717,10 @@ export default function BillingDesk({
           </section>
         );
       })}
-      {rows.filter((row) => row.product === 'RETAIL').map((row) => (
+      {/* An organization fee that was switched off is not shown. Its subscription is already set to end. */}
+      {rows
+        .filter((row) => row.product === 'RETAIL' && (row.chargeEnabled || (row.status || 'COMPLIMENTARY') !== 'COMPLIMENTARY'))
+        .map((row) => (
         <section key={row.id || 'retail'} className="bg-white rounded-lg shadow-md p-6 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-gray-900">Organization subscription</h2>
@@ -509,50 +731,14 @@ export default function BillingDesk({
           <StatusReadout status={row.status} />
           <p className="text-sm text-gray-700">{money(row.customFeeUsd)} per month</p>
           <div className="flex flex-wrap gap-3">
-            <DeskButton color="green" icon={<FaCreditCard className="w-5 h-5" />} disabled={busy || !row.id || !row.chargeEnabled} title="Pay monthly" onClick={() => post('/api/platform-billing/checkout', { billingId: row.id, tenantId, mode: 'RECURRING' })}>Pay monthly</DeskButton>
+            <DeskButton color="green" icon={<FaCreditCard className="w-5 h-5" />} disabled={busy || !row.id || !row.chargeEnabled} title="Pay monthly" onClick={() => pay(row, 'RECURRING')}>Pay monthly</DeskButton>
             <DeskButton color="indigo" icon={<FaUniversity className="w-5 h-5" />} disabled={busy} title="Payment methods" onClick={() => post('/api/platform-billing/portal', { tenantId })}>Payment methods</DeskButton>
-            {row.stripeSubscriptionId && <DeskButton color="red" icon={<FaBan className="w-5 h-5" />} disabled={busy} title="Cancel at period end" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: false })}>Cancel at period end</DeskButton>}
-            {canEditSwitch && row.stripeSubscriptionId && <DeskButton color="red" icon={<FaBan className="w-5 h-5" />} disabled={busy} title="Cancel now" onClick={() => post('/api/platform-billing/cancel', { billingId: row.id, tenantId, cancelNow: true })}>Cancel now</DeskButton>}
+            {row.stripeSubscriptionId && <DeskButton color="red" icon={<FaBan className="w-5 h-5" />} disabled={busy} title="Cancel at period end" onClick={() => cancelBilling(row, false)}>Cancel at period end</DeskButton>}
+            {canEditSwitch && row.stripeSubscriptionId && <DeskButton color="red" icon={<FaBan className="w-5 h-5" />} disabled={busy} title="Cancel now" onClick={() => cancelBilling(row, true)}>Cancel now</DeskButton>}
           </div>
         </section>
       ))}
-      <section className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Charges</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full border border-blue-200">
-            <thead>
-              <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-                {['Status', 'Amount', 'When', 'Invoice'].map((heading) => (
-                  <th key={heading} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide">{heading}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {charges.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-600">No platform charges are recorded for this website yet.</td>
-                </tr>
-              ) : charges.map((charge) => (
-                <tr key={charge.id || charge.stripeEventId} className="border-t border-blue-100">
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex flex-col gap-1">
-                      <span className={`inline-flex w-fit px-2 py-1 rounded-full text-xs font-semibold ${statusClass(charge.status || '')}`}>
-                        {billingStatusLabel(charge.status)}
-                      </span>
-                      {billingStatusMeaning(charge.status) && (
-                        <span className="text-xs text-gray-600">{billingStatusMeaning(charge.status)}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-semibold">{money(charge.amountUsd)}</td>
-                  <td className="px-4 py-3 text-sm">{charge.occurredAt ? new Date(charge.occurredAt).toLocaleString() : '—'}</td>
-                  <td className="px-4 py-3 text-sm">{charge.stripeInvoiceId || charge.stripeSubscriptionId || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <TenantChargesTable tenantId={tenantId} showSearchLinks={canEditSwitch} />
       {locationRows.length > 0 && (
         <section className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Locations counted in the location fee</h2>
@@ -566,7 +752,7 @@ export default function BillingDesk({
                     <p className="font-semibold text-gray-900">{name}</p>
                     <p className="text-sm text-gray-600">{included ? 'Included' : 'Not included'}</p>
                   </div>
-                  <BillingSwitch
+                  {canEditSwitch && <BillingSwitch
                     on={included}
                     disabled={busy || location.id == null}
                     label={included ? `Remove ${name} from billing` : `Include ${name} in billing`}
@@ -574,13 +760,15 @@ export default function BillingDesk({
                       if (location.id == null) return;
                       setConfirmRequest({ kind: 'location', locationId: location.id, name, include: !included });
                     }}
-                  />
+                  />}
                 </div>
               );
             })}
           </div>
           <p className="text-sm text-gray-600 mt-3">
-            A custom flat fee uses quantity 1. Otherwise the count is active locations marked included. Update the count after you change locations.
+            {canEditSwitch
+              ? 'A custom flat fee uses quantity 1. Otherwise the count is active locations marked included. Update the count after you change locations.'
+              : 'A custom flat fee uses quantity 1. Otherwise the count is active locations marked included. Ask the platform team to include or remove a location.'}
           </p>
         </section>
       )}

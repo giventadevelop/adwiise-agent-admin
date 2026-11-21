@@ -94,24 +94,20 @@ export default function PromotionEmailTemplateEditClient({
   }, [template]);
 
   useEffect(() => {
-    const tenantIdForOrg = settings?.tenantId || tenantId;
-    if (!tenantIdForOrg) {
+    // The organization list has no tenant filter. The tenant's settings hold the link to its organization.
+    const organizationId = settings?.tenantOrganization?.id;
+    if (!organizationId) {
       setOrganization(null);
       return;
     }
     let cancelled = false;
     (async () => {
       try {
-        const params = new URLSearchParams({
-          'tenantId.equals': tenantIdForOrg,
-          size: '1',
-        });
-        const res = await fetch(`/api/proxy/tenant-organizations?${params.toString()}`, {
+        const res = await fetch(`/api/proxy/tenant-organizations/${organizationId}`, {
           cache: 'no-store',
         });
         if (!res.ok || cancelled) return;
-        const data = await res.json();
-        const org = Array.isArray(data) ? data[0] : data;
+        const org = await res.json();
         if (!cancelled) setOrganization(org || null);
       } catch (err) {
         console.warn('[Promotion] Failed to load tenant organization for site footer:', err);
@@ -121,7 +117,7 @@ export default function PromotionEmailTemplateEditClient({
     return () => {
       cancelled = true;
     };
-  }, [settings?.tenantId, tenantId]);
+  }, [settings?.tenantOrganization?.id]);
 
   const organizationIdentity = resolveTenantOrganizationIdentity(organization, settings);
 

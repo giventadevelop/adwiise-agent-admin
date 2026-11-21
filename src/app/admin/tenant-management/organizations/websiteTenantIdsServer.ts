@@ -103,6 +103,23 @@ export async function loadOrganizationIdsForTenantIds(tenantIds: string[]): Prom
 }
 
 /**
+ * The organization that owns one website tenant id, or null.
+ * The organization list has no tenant filter, so `tenant-organizations?tenantId.equals=` returns some other organization.
+ */
+export async function loadOrganizationForTenantId(tenantId: string): Promise<TenantOrganizationDTO | null> {
+  const tid = tenantId.trim();
+  if (!tid) return null;
+  const [organizationId] = await loadOrganizationIdsForTenantIds([tid]);
+  if (organizationId == null) return null;
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-organizations/${organizationId}`, {
+    cache: 'no-store',
+  });
+  if (!response.ok) return null;
+  const organization = (await response.json()) as TenantOrganizationDTO;
+  return { ...organization, tenantId: organization.tenantId || tid };
+}
+
+/**
  * Copies website tenant ids from tenant settings onto each organization.
  * When settings have no row, the deprecated organization tenantId is kept as the only id.
  */

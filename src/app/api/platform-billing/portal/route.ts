@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json(session);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Portal failed';
+    console.error('[platform-billing] customer portal failed', message);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

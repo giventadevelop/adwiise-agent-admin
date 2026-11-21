@@ -148,47 +148,11 @@ export async function createFocusGroupServer(
  */
 export async function persistFocusGroupCoverOcrServer(
   focusGroupId: number,
-  file: File,
-  tenantId?: string,
+  _file: File,
+  _tenantId?: string,
 ): Promise<number> {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const { extractTextFromImageBytes } = await import('@/lib/search/extractImageText');
-  const { mergeOcrText, buildFocusGroupSearchText } = await import('@/lib/search/buildSearchText');
-  const extracted = await extractTextFromImageBytes(bytes, `focus-group-${focusGroupId}-cover`);
-  if (!extracted.trim()) return 0;
-
-  const tid = await resolveAdminMutationTenantId(tenantId);
-  const existingRes = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups/${focusGroupId}`, {
-    cache: 'no-store',
-    headers: await headersForTenantScope(tid),
-  });
-  if (!existingRes.ok) {
-    throw new Error(`Failed to load focus group ${focusGroupId}`);
-  }
-  const existing = (await existingRes.json()) as FocusGroupDTO;
-  const ocrText = mergeOcrText(existing.ocrText, extracted);
-  const searchText = buildFocusGroupSearchText({
-    name: existing.name,
-    slug: existing.slug,
-    description: existing.description,
-    ocrText,
-  });
-  const payload = withTenantId({
-    id: focusGroupId,
-    ocrText,
-    searchText,
-    updatedAt: new Date().toISOString(),
-    ...(tid ? { tenantId: tid } : {}),
-  });
-  const patch = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups/${focusGroupId}`, {
-    method: 'PATCH',
-    headers: await headersForTenantScope(tid, { 'Content-Type': 'application/merge-patch+json' }),
-    body: JSON.stringify(payload),
-  });
-  if (!patch.ok) {
-    throw new Error(await patch.text());
-  }
-  return extracted.length;
+  const { refreshImageSearchText } = await import('@/lib/search/refreshImageSearchText');
+  return refreshImageSearchText('focus_group', focusGroupId);
 }
 
 export async function updateFocusGroupDetailsServer(input: {

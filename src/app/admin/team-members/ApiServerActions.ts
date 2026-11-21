@@ -1,9 +1,9 @@
 'use server';
 import { appendAdminTenantFilter, headersForAdminTenantScope, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 
+import { loadOrganizationForTenantId } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 import { getAdminProxyBaseUrl } from '@/lib/adminProxyBaseUrl';
-import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl } from '@/lib/env';
-import { fetchWithJwtRetry } from '@/lib/proxyHandler';
+import { appendTenantIfPresent, effectiveTenantId } from '@/lib/env';
 import { parseTeamMembersResponse } from '@/lib/parseTeamMembersResponse';
 import type { TeamMemberDTO } from '@/types/teamMember';
 import type { TeamMemberAchievementDTO } from '@/types/teamMemberAchievement';
@@ -257,26 +257,6 @@ export async function updateTeamMemberAchievement(
 
 const publicOriginCache = new Map<string, string | null>();
 
-function firstApiRecord(data: unknown): Record<string, unknown> | null {
-  if (Array.isArray(data)) {
-    const row = data[0];
-    return row && typeof row === 'object' ? (row as Record<string, unknown>) : null;
-  }
-  if (!data || typeof data !== 'object') return null;
-  const obj = data as Record<string, unknown>;
-  if (Array.isArray(obj.content)) {
-    const row = obj.content[0];
-    return row && typeof row === 'object' ? (row as Record<string, unknown>) : null;
-  }
-  const embedded = obj._embedded;
-  if (embedded && typeof embedded === 'object') {
-    const list = Object.values(embedded as Record<string, unknown>).find(Array.isArray) as unknown[] | undefined;
-    const row = list?.[0];
-    return row && typeof row === 'object' ? (row as Record<string, unknown>) : null;
-  }
-  return obj;
-}
-
 function originFromOrganization(row: Record<string, unknown> | null): string | null {
   const website = typeof row?.websiteUrl === 'string' ? row.websiteUrl.trim() : '';
   const domain = typeof row?.domain === 'string' ? row.domain.trim() : '';
@@ -291,14 +271,8 @@ async function fetchTenantPublicOrigin(tenantId?: string | null): Promise<string
   if (!key) return null;
   if (publicOriginCache.has(key)) return publicOriginCache.get(key) ?? null;
   try {
-    const headers = await headersForAdminTenantScope(key);
-    const url = `${getApiBaseUrl()}/api/tenant-organizations?tenantId.equals=${encodeURIComponent(key)}&size=1`;
-    const res = await fetchWithJwtRetry(url, { cache: 'no-store', headers });
-    if (!res.ok) {
-      publicOriginCache.set(key, null);
-      return null;
-    }
-    const origin = originFromOrganization(firstApiRecord(await res.json()));
+    await headersForAdminTenantScope(key);
+    const origin = originFromOrganization(((await loadOrganizationForTenantId(key)) as Record<string, unknown> | null) ?? null);
     publicOriginCache.set(key, origin);
     return origin;
   } catch (error) {

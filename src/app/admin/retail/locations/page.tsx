@@ -7,6 +7,7 @@ import { fetchRetailerTypes } from '@/app/admin/access-catalogs/ApiServerActions
 import { useAdminTenantId } from '../../AdminTenantContext';
 import type { RetailLocationDTO, RetailLocationProfileDTO } from '@/types/retail';
 import {
+  canManageRetailLocationsServer,
   deleteRetailLocationServer,
   fetchRetailLocationsPageServer,
   fetchRetailProfilesServer,
@@ -66,6 +67,20 @@ export default function RetailLocationsPage() {
   const [loading, setLoading] = useState(true);
   const [packs, setPacks] = useState(FALLBACK_PACKS);
   const [isPending, startTransition] = useTransition();
+  // Only a platform super-admin adds, removes, or counts a location. The server enforces the same rule.
+  const [canManage, setCanManage] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    canManageRetailLocationsServer()
+      .then((allowed) => {
+        if (!cancelled) setCanManage(allowed);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const tenantQuery = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : '';
   const gasPack = form.retailerTypeCode === GAS_PACK;
   const packChoices =
@@ -212,10 +227,17 @@ export default function RetailLocationsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Retail locations</h1>
             <p className="mt-1 text-sm text-gray-600">{totalCount} stores. Dispenser and amenity fields show for a gas station.</p>
           </div>
-          <div className="w-full sm:w-64">
-            <ActionButton tone="blue" icon="plus" label="Add location" onClick={openCreate} />
-          </div>
+          {canManage && (
+            <div className="w-full sm:w-64">
+              <ActionButton tone="blue" icon="plus" label="Add location" onClick={openCreate} />
+            </div>
+          )}
         </div>
+        {!canManage && (
+          <p className="mt-4 rounded-lg border-2 border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            To add or remove a location, contact the platform team. You can edit the details of the locations listed here.
+          </p>
+        )}
         <div className="mt-6">
           <RetailNav tenantQuery={tenantQuery} current="locations" />
         </div>
@@ -223,7 +245,7 @@ export default function RetailLocationsPage() {
         {showForm && (
           <div className="mt-6 bg-white rounded-lg shadow-md p-6 grid gap-4 sm:grid-cols-2">
             <label className={labelClass}>Tenant
-              <input className={fieldClass} value={form.tenantId} onChange={event => setForm({ ...form, tenantId: event.target.value })} />
+              <input className={fieldClass} value={form.tenantId} disabled={!canManage} onChange={event => setForm({ ...form, tenantId: event.target.value })} />
             </label>
             <label className={labelClass}>Pack
               <select className={fieldClass} value={form.retailerTypeCode} onChange={event => setForm({ ...form, retailerTypeCode: event.target.value })}>
@@ -250,8 +272,8 @@ export default function RetailLocationsPage() {
             </label>
             <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <YellowCheckbox checked={form.is24Hours === true} onChange={checked => setForm({ ...form, is24Hours: checked })} label="Open 24 hours" />
-              <YellowCheckbox checked={form.isActive !== false} onChange={checked => setForm({ ...form, isActive: checked })} label="Active" />
-              <YellowCheckbox checked={form.includedInSubscription !== false} onChange={checked => setForm({ ...form, includedInSubscription: checked })} label="Counted in the location fee" />
+              {canManage && <YellowCheckbox checked={form.isActive !== false} onChange={checked => setForm({ ...form, isActive: checked })} label="Active" />}
+              {canManage && <YellowCheckbox checked={form.includedInSubscription !== false} onChange={checked => setForm({ ...form, includedInSubscription: checked })} label="Counted in the location fee" />}
             </div>
             {gasPack && (
               <>
@@ -294,7 +316,7 @@ export default function RetailLocationsPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <IconAction tone="blue" icon="pencil" label="Edit location" onClick={() => openEdit(location)} />
-                      <IconAction
+                      {canManage && <IconAction
                         tone="red"
                         icon="trash"
                         label="Delete location"
@@ -305,7 +327,7 @@ export default function RetailLocationsPage() {
                             await reload(page);
                           });
                         }}
-                      />
+                      />}
                     </div>
                   </td>
                 </tr>

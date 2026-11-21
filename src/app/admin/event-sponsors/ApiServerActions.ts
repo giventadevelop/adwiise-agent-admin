@@ -332,27 +332,8 @@ export async function uploadSponsorImageServer(
         let ocrChars = 0;
 
         try {
-          const { extractTextFromImageBytes } = await import('@/lib/search/extractImageText');
-          const { mergeOcrText, buildSponsorSearchText } = await import('@/lib/search/buildSearchText');
-          const extracted = await extractTextFromImageBytes(bytes, `sponsor-${sponsorId}-${imageType}`);
-          ocrChars = extracted.length;
-          if (extracted) {
-            const sponsor = (await fetchEventSponsorServer(sponsorId)) as EventSponsorsDTO;
-            const ocrText = mergeOcrText(sponsor?.ocrText, extracted);
-            const searchText = buildSponsorSearchText({
-              name: sponsor?.name,
-              companyName: sponsor?.companyName,
-              tagline: sponsor?.tagline,
-              description: sponsor?.description,
-              type: sponsor?.type,
-              ocrText,
-            });
-            await updateEventSponsorServer(sponsorId, {
-              ocrText,
-              searchText,
-              updatedAt: new Date().toISOString(),
-            });
-          }
+          const { refreshImageSearchText } = await import('@/lib/search/refreshImageSearchText');
+          ocrChars = await refreshImageSearchText('event_sponsors', sponsorId);
         } catch (ocrError) {
           console.error('[SponsorOCR] post-upload failed:', ocrError);
         }

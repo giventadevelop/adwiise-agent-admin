@@ -45,7 +45,8 @@ export async function setLocationIncludedInBilling(
   locationId: number,
   included: boolean
 ): Promise<void> {
-  await assertCanPayTenant(tenantId);
+  // Which locations are billed sets the fee, so only a platform super-admin may change it.
+  await assertPlatformSuperAdmin();
   const response = await fetchWithJwtRetry(`${apiBase()}/api/retail-locations/${locationId}`, {
     method: 'PATCH',
     headers: {

@@ -113,12 +113,14 @@ async function expandOrganizationWebsites(access: AdminTenantAccess): Promise<Ad
     return access;
   }
   try {
-    const seed = access.allowedTenantIds.join(',');
+    // The organization list has no tenant filter. Asking it by tenant id returns every organization,
+    // which would open every website to this admin. The owning organizations come from tenant settings.
+    const organizationIds = await loadOrganizationIdsForTenantIds(access.allowedTenantIds);
+    if (organizationIds.length === 0) return access;
+    const orgParams = new URLSearchParams({ size: '200' });
+    for (const id of organizationIds) orgParams.append('id.in', String(id));
     const orgRes = await fetchWithJwtRetry(
-      `${getBackendApiUrl()}/api/tenant-organizations?${new URLSearchParams({
-        'tenantId.in': seed,
-        size: '200',
-      }).toString()}`,
+      `${getBackendApiUrl()}/api/tenant-organizations?${orgParams.toString()}`,
       unscopedListOptions,
     );
     if (!orgRes.ok) {

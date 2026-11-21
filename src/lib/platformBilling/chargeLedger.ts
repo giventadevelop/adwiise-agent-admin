@@ -19,6 +19,23 @@ function readList<T>(data: unknown): T[] {
 
 export async function appendPlatformCharge(charge: PlatformBillingChargeDTO): Promise<void> {
   if (!charge.organizationId) return;
+  if (charge.stripeEventId) {
+    const sameEvent = await fetchPlatformCharges({
+      tenantId: charge.tenantId || undefined,
+      stripeEventId: charge.stripeEventId,
+      size: 1,
+    });
+    if (sameEvent.length > 0) return;
+  }
+  if (charge.stripeInvoiceId && charge.status === 'PAID') {
+    const sameInvoice = await fetchPlatformCharges({
+      tenantId: charge.tenantId || undefined,
+      stripeInvoiceId: charge.stripeInvoiceId,
+      status: 'PAID',
+      size: 1,
+    });
+    if (sameInvoice.length > 0) return;
+  }
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/platform-billing-charges`, {
     method: 'POST',
     cache: 'no-store',
@@ -59,6 +76,7 @@ export async function fetchPlatformCharges(query: {
   status?: string;
   stripeSubscriptionId?: string;
   stripeInvoiceId?: string;
+  stripeEventId?: string;
   size?: number;
 }): Promise<PlatformBillingChargeDTO[]> {
   const params = new URLSearchParams({ size: String(query.size ?? 100), sort: 'occurredAt,desc' });
@@ -67,6 +85,7 @@ export async function fetchPlatformCharges(query: {
   if (query.status) params.set('status.equals', query.status);
   if (query.stripeSubscriptionId) params.set('stripeSubscriptionId.equals', query.stripeSubscriptionId);
   if (query.stripeInvoiceId) params.set('stripeInvoiceId.equals', query.stripeInvoiceId);
+  if (query.stripeEventId) params.set('stripeEventId.equals', query.stripeEventId);
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/platform-billing-charges?${params.toString()}`, {
     cache: 'no-store',
     headers: headers(query.tenantId),
@@ -80,8 +99,11 @@ export async function lockBillingIfGraceEnded(row: TenantProductBillingDTO): Pro
   if (row.status !== 'PAYMENT_DUE' && row.status !== 'PAST_DUE') return row;
   if (isCoveredByPortfolio(row.notes)) return row;
   if (!row.graceEndsAt || new Date(row.graceEndsAt).getTime() > Date.now()) return row;
-  const paid = await fetchPlatformCharges({ tenantId: row.tenantId, status: 'PAID', size: 20 });
-  const covered = paid.some((charge) => charge.periodEnd && new Date(charge.periodEnd).getTime() > Date.now());
+  const paid = await fetchPlatformCharges({ tenantId: row.tenantId, status: 'PAID', size: 50 });
+  // Only a paid period of the same product counts. A paid event site does not keep an unpaid retail fee open.
+  const covered = paid.some(
+    (charge) => charge.product === row.product && charge.periodEnd && new Date(charge.periodEnd).getTime() > Date.now()
+  );
   if (covered) return row;
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-product-billings/${row.id}`, {
     method: 'PATCH',

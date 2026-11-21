@@ -33,11 +33,20 @@ export async function POST(request: Request) {
     }
     await cancelPlatformSubscription(billing, cancelNow);
     if (cancelNow) {
+      // An organization flat fee row keeps its amount. A website row goes back to a blank plan and fee.
+      const flatFee = /organization-flat:|portfolio-flat:/.test(billing.notes || '');
+      // Only the changed fields are sent. Stripe's cancel event can reach the webhook first and turn the switch off.
+      // Sending the whole row back after that would restore the old grace end, and the next switch-on would keep it.
       await saveTenantProductBilling({
-        ...billing,
+        id: billing.id,
+        tenantId: billing.tenantId,
+        product: billing.product,
         chargeEnabled: false,
         status: 'COMPLIMENTARY',
-        stripeSubscriptionId: null,
+        stripeSubscriptionId: '',
+        ...(flatFee
+          ? {}
+          : { platformPlanId: null, clearPlatformPlan: true, customFeeUsd: null, clearCustomFee: true }),
       });
     }
     return NextResponse.json({ ok: true, cancelNow });

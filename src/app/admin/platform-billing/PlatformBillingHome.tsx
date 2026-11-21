@@ -69,10 +69,15 @@ export default function PlatformBillingHome({
   const router = useRouter();
   const [text, setText] = useState(query);
   const tiles = [
-    ...Object.entries(report.statusCounts).map(([status, count]) => ({ label: billingStatusLabel(status), count })),
+    ...Object.entries(report.statusCounts).map(([status, count]) => ({
+      label: billingStatusLabel(status),
+      count,
+      href: `/admin/platform-billing/charges?status=${status}`,
+    })),
     ...Object.entries(report.scopeCounts).map(([scope, count]) => ({
       label: scope === 'ORGANIZATION' ? 'Organization billing' : 'Per website',
       count,
+      href: '',
     })),
   ];
 
@@ -87,12 +92,27 @@ export default function PlatformBillingHome({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {tiles.map((tile, index) => (
-          <div key={tile.label} className={`rounded-lg border-2 shadow-md p-4 ${TILE_COLORS[index % TILE_COLORS.length]}`}>
-            <p className="text-sm font-semibold">{tile.label}</p>
-            <p className="text-2xl font-bold">{tile.count}</p>
-          </div>
-        ))}
+        {tiles.map((tile, index) => {
+          const tileClass = `rounded-lg border-2 shadow-md p-4 ${TILE_COLORS[index % TILE_COLORS.length]}`;
+          const body = (
+            <>
+              <p className="text-sm font-semibold">{tile.label}{tile.href ? ' charges' : ''}</p>
+              <p className="text-2xl font-bold">{tile.count}</p>
+            </>
+          );
+          return tile.href ? (
+            <Link
+              key={tile.label}
+              href={tile.href}
+              className={`${tileClass} block transition-all duration-300 hover:scale-105 hover:shadow-lg`}
+              title={`Show the ${tile.label.toLowerCase()} charges`}
+            >
+              {body}
+            </Link>
+          ) : (
+            <div key={tile.label} className={tileClass}>{body}</div>
+          );
+        })}
       </div>
       {report.notice && <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 text-sm text-amber-800">{report.notice}</div>}
       <form
@@ -141,31 +161,15 @@ export default function PlatformBillingHome({
           <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><FaFileExcel className="w-5 h-5 text-green-600" /></span>
           Export portfolio
         </button>
-        <button
-          type="button"
-          className="h-14 rounded-xl bg-emerald-100 hover:bg-emerald-200 px-6 font-semibold text-emerald-700 inline-flex items-center gap-3 transition-all duration-300 hover:scale-105"
-          title="Export ledger"
-          aria-label="Export ledger"
-          onClick={() =>
-            downloadSheet('billing-ledger', [
-              ['Organization', 'Website', 'Product', 'Status', 'Amount', 'Invoice', 'Subscription', 'Payment intent', 'Occurred'],
-              ...report.charges.map((charge) => [
-                charge.organizationId ?? '',
-                charge.tenantId || '',
-                charge.product || '',
-                charge.status || '',
-                charge.amountUsd ?? '',
-                charge.stripeInvoiceId || '',
-                charge.stripeSubscriptionId || '',
-                charge.stripePaymentIntentId || '',
-                charge.occurredAt || '',
-              ]),
-            ])
-          }
+        <Link
+          href="/admin/platform-billing/charges"
+          className="h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-6 font-semibold text-indigo-700 inline-flex items-center gap-3 transition-all duration-300 hover:scale-105"
+          title="Search charges and billing changes"
+          aria-label="Search charges and billing changes"
         >
-          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-200 flex items-center justify-center"><FaFileExcel className="w-5 h-5 text-emerald-600" /></span>
-          Export ledger
-        </button>
+          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-200 flex items-center justify-center"><FaSearch className="w-5 h-5 text-indigo-600" /></span>
+          Search charges and history
+        </Link>
       </div>
       <div className="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
         <table className="min-w-full border border-blue-200">

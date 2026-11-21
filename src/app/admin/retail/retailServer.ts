@@ -504,8 +504,30 @@ export async function fetchRetailLocationsPageServer(
   }
 }
 
+/** The number of locations sets the platform fee, so only a platform super-admin adds, removes, or counts one. */
+export async function canManageRetailLocationsServer(): Promise<boolean> {
+  const access = await getCurrentAdminAccess();
+  return access.isPlatformSuperAdmin;
+}
+
 export async function saveRetailLocationServer(data: RetailLocationDTO): Promise<RetailLocationDTO | null> {
   const now = new Date().toISOString();
+  const access = await getCurrentAdminAccess();
+  if (!access.isAdmin) return null;
+  if (!access.isPlatformSuperAdmin) {
+    // A tenant admin may correct the details of a store that already exists on a website they manage.
+    // They may not add one, move it to another website, or change whether it is active or counted in the fee.
+    if (data.id == null) return null;
+    const current = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-locations/${data.id}`, { cache: 'no-store' });
+    if (!current.ok) return null;
+    const existing = (await current.json()) as RetailLocationDTO;
+    if (!existing.tenantId || !access.allowedTenantIds.includes(existing.tenantId)) return null;
+    const { isActive: _isActive, includedInSubscription: _included, tenantId: _tenantId, ...details } = data;
+    return writeRetailResource<RetailLocationDTO>(`/api/retail-locations/${data.id}`, 'PATCH', {
+      ...details,
+      updatedAt: now,
+    });
+  }
   if (data.id == null) {
     return writeRetailResource<RetailLocationDTO>('/api/retail-locations', 'POST', {
       ...data,
@@ -520,6 +542,7 @@ export async function saveRetailLocationServer(data: RetailLocationDTO): Promise
 }
 
 export async function deleteRetailLocationServer(id: number): Promise<boolean> {
+  if (!(await canManageRetailLocationsServer())) return false;
   const res = await fetchWithJwtRetry(`${API_BASE_URL}/api/retail-locations/${id}`, { method: 'DELETE' });
   return res.ok;
 }

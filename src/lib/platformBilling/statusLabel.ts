@@ -45,3 +45,11 @@ export function billingStatusClass(status?: string | null): string {
   if (key === 'REFUNDED') return 'bg-purple-100 text-purple-800';
   return 'bg-orange-100 text-orange-800';
 }
+
+/** The fee a ledger row paid for. A row with product RETAIL is the one charge an organization pays for all its websites. */
+export function billingFeeLabel(product?: string | null): string {
+  if (product === 'EVENT_SITE') return 'Event site';
+  if (product === 'GAS_STATION') return 'Retail locations';
+  if (product === 'RETAIL') return 'Organization fee';
+  return product || '—';
+}

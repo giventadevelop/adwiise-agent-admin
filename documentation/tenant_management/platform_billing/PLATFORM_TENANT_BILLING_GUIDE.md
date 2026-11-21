@@ -62,7 +62,7 @@ The status pill is on the Event site card and the Retail card at `/admin/billing
 
 ## 4. Plans the tenant can choose
 
-A platform super-admin sets the catalog at `/admin/platform-billing/plans` (Platform billing plans). **Add plan** creates a plan. The pencil on a listed plan edits it. Unpublished plans stay hidden from tenants. The tenant sees only published plans for products they actually have.
+A platform super-admin sets the catalog at `/admin/platform-billing/plans` (Platform billing plans). **Add plan** creates a plan. The pencil on a listed plan edits it. The Catalog plan dropdown only lists published plans. An existing plan such as **Test every day** (code `test-every-day`) stays off that list until you open it, check **Published**, and click **Update plan**. Leave **Stripe price id** blank. The first payment creates the Stripe price. The tenant sees only published plans for products they actually have.
 
 | What | Page and field |
 | --- | --- |
@@ -199,7 +199,17 @@ Nothing runs at midnight to change the status. There is no batch job for this. O
 
 The Stripe Customer Portal does not update our database. Stripe sends a message to this Next.js app, not to the Spring backend. The receiver is `src/app/api/webhooks/stripe/route.ts`, which is the address `/api/webhooks/stripe`. Platform billing, including Locked when a subscription is deleted because payment failed, is handled in this project by `src/lib/platformBilling/applyPlatformBillingWebhook.ts`. That code then calls the backend billing API. Stripe does not call the Spring app directly for this. Ticket and membership events that are not platform billing are forwarded from the same file to `{NEXT_PUBLIC_API_BASE_URL}/api/webhooks/stripe`.
 
-Stripe is told where to send events outside this repo. In the Stripe Dashboard, the endpoint URL is this site’s `/api/webhooks/stripe`. On a local machine, `stripe listen --forward-to http://localhost:3001/api/webhooks/stripe` does the same job. This app checks the signature with the environment variable `STRIPE_WEBHOOK_SECRET`, read in `src/lib/stripe/init.ts`. Set that in `.env.local` for local work and in Amplify for production. It is the signing secret Stripe shows when the endpoint is created. It is not a URL. If Stripe deletes the subscription because the payment failed, our app sets Locked. A failed payment that does not delete the subscription sets Past due, not Locked.
+Stripe is told where to send events outside this repo. In the Stripe Dashboard, the endpoint URL is this site’s `/api/webhooks/stripe`. On a local machine, `stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot` does the same job. The current Stripe CLI stops without that last flag and prints `must specify events to forward using --events, --all-snapshot, or --all-thin`. Use `--all-snapshot` so the full event arrives. `--all-thin` sends only a short notice, and the billing page stays Payment due. The Stripe CLI is a separate program. Windows does not include it. If Command Prompt says `'stripe' is not recognized as an internal or external command`, install it with `winget install Stripe.StripeCLI`, close Command Prompt, and open it again. You can save a plan and turn the charge switch on without that program. Start the listener before Pay monthly and leave the window open. If it is not running, Checkout can still take the test card, but this app never hears that the payment succeeded. The status stays Payment due and the Charges table stays empty. This app checks the signature with the environment variable `STRIPE_WEBHOOK_SECRET`, read in `src/lib/stripe/init.ts`. Set that in `.env.local` for local work and in Amplify for production. It is the signing secret. It is not a URL. When `stripe listen` starts, the window prints `Ready! Your webhook signing secret is whsec_...`. Copy that value into `STRIPE_WEBHOOK_SECRET`. Do not commit `.env.local`. The Dashboard endpoint secret is a different value and will reject every event the CLI sends. Restart the Next.js dev server after you change it, then leave the listener open and pay again. A log line `No signatures found matching the expected signature` followed by a Spring 404 means the CLI secret was not copied. This app returns 400 and does not forward a failed signature. The billing page stays Payment due until a verified webhook arrives. Use Stripe test mode. Add this to `.env.local` for a local test. The secret is masked after `whsec_`. Paste the rest from the listener window. Do not commit the file.
+
+```
+# Use Stripe test mode.
+# Signing secret from the webhook page. It starts with whsec_. From the Stripe Dashboard, for local machine testing.
+# For the listener, use the signing secret printed by stripe listen in the Command Prompt from:
+# stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot
+STRIPE_WEBHOOK_SECRET=whsec_
+```
+
+If Stripe deletes the subscription because the payment failed, our app sets Locked. A failed payment that does not delete the subscription sets Past due, not Locked.
 
 ## 13. Related documents
 

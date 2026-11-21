@@ -383,8 +383,10 @@ export async function setOrganizationBillingScope(input: {
       clearCustomFee: true,
     });
   }
+  // The backend ignores a null in a partial update, so the amount is cleared with zero.
+  // A leftover amount would make the organization read as billed once.
   await patchTenantOrganization(input.organizationId, {
-    monthlyFeeUsd: null,
+    monthlyFeeUsd: 0,
     billingScope: 'PER_TENANT',
     stripeSubscriptionId: null,
   });

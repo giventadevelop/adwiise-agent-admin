@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Requirement for a charge search, billing history and refunds in platform billing.">
+<title>Platform Billing: Search and Billing History Requirement</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background: #fff; }
+h1 { font-size: 2.5em; border-bottom: 3px solid #0066cc; padding-bottom: 10px; }
+h2 { font-size: 1.8em; border-left: 4px solid #0066cc; padding-left: 15px; margin-top: 40px; }
+h3 { font-size: 1.4em; color: #333; }
+h4 { font-size: 1.2em; color: #555; }
+a { color: #0052a3; }
+code { background-color: #e8f4f8; color: #0d3b66; padding: 2px 6px; border-radius: 3px; border: 1px solid #b8d4e3; font-family: 'Courier New', monospace; font-size: 0.9em; }
+pre { background-color: #e8f4f8; color: #0d3b66; padding: 15px; border-radius: 5px; border: 1px solid #b8d4e3; overflow-x: auto; margin: 15px 0; font-family: 'Courier New', monospace; font-size: 0.95em; white-space: pre-wrap; word-break: break-word; }
+pre code { background-color: transparent; border: none; padding: 0; }
+.script-name { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 10px; border-radius: 5px; border: none; font-family: 'Courier New', monospace; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
+.toc { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 10px 20px 15px 20px; margin: 20px 0; }
+.toc h2 { border: none; padding: 0; margin: 10px 0; font-size: 1.3em; }
+.section-intro { background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1); }
+.section-container { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1); }
+.section-container.parameters { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left-color: #ff9800; }
+.section-container.output { background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%); border-left-color: #28a745; }
+.section-container.usage { background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%); border-left-color: #9c27b0; }
+.section-header { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white; padding: 12px 20px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0; font-size: 1.2em; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+.section-header.parameters { background: linear-gradient(135deg, #b35c00 0%, #8f4a00 100%); }
+.section-header.output { background: linear-gradient(135deg, #1e7e34 0%, #176429 100%); }
+.section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+.parameters-list { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left: 4px solid #ff9800; border-radius: 8px; padding: 15px 20px; margin: 15px 0; }
+.parameters-list strong { color: #8f4a00; }
+.info, .warning, .success, .error { padding: 15px 20px; margin: 15px 0; border-radius: 5px; }
+.info { background: #d1ecf1; border-left: 4px solid #0c5460; }
+.warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+.success { background: #d4edda; border-left: 4px solid #28a745; }
+.error { background: #f8d7da; border-left: 4px solid #dc3545; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }
+th { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white; font-weight: bold; text-transform: uppercase; font-size: 0.9em; letter-spacing: 0.5px; }
+tr:nth-child(even) { background-color: #f8f9fa; }
+tr:hover { background-color: #e3f2fd; transition: background-color 0.2s ease; }
+.command-block { border: 2px solid #2196f3; border-radius: 8px; margin: 20px 0; overflow: hidden; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+.command-block.setup { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196f3; }
+.command-block.expedite { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9c27b0; }
+.command-block.advance { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #ff9800; }
+.command-block.verify { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4caf50; }
+.command-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+.command-type { font-weight: bold; color: #333; }
+.command-header-buttons { display: flex; gap: 8px; }
+.copy-button, .copy-button-template { color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold; transition: all 0.3s ease; }
+.copy-button { background-color: #0066cc; }
+.copy-button:hover { background-color: #0052a3; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.copy-button-template { background-color: #5a6268; }
+.copy-button-template:hover { background-color: #474d52; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.copy-button.copied, .copy-button-template.copied { background-color: #1e7e34; }
+.copy-button:focus-visible, .copy-button-template:focus-visible { outline: 3px solid #ffb300; outline-offset: 2px; }
+.command-parameters { padding: 15px; background: rgba(255, 255, 255, 0.5); border-bottom: 1px solid rgba(0,0,0,0.1); }
+.command-parameters h5 { margin: 0 0 12px 0; font-size: 0.9em; color: #333; font-weight: bold; }
+.parameter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.parameter-group.single { grid-template-columns: 1fr; }
+.parameter-input { display: flex; flex-direction: column; gap: 4px; }
+.parameter-input label { font-size: 0.8em; color: #444; font-weight: 600; }
+.parameter-input input { padding: 8px 12px; border: 2px solid #999; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.9em; transition: border-color 0.2s ease; }
+.parameter-input input:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2); }
+.command-content { background-color: #e8f4f8; color: #0d3b66; border-top: 1px solid #b8d4e3; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.95em; word-break: break-all; }
+.command-single-line { background-color: #e8f4f8; color: #0d3b66; border-top: 1px solid #b8d4e3; padding: 12px 15px; }
+.command-single-line-label { font-size: 0.8em; color: #44545f; margin-bottom: 4px; }
+.command-single-line code { border: none; padding: 0; word-break: break-all; }
+ol li, ul li { margin: 6px 0; }
+@media (max-width: 768px) { body { padding: 10px; } .command-block { font-size: 0.85em; } .parameter-group { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Platform Billing: Search and Billing History Requirement</h1>
+
+<div class="section-intro">
+  <p>This page answers one question: does the platform billing area need a search over charges and billing history, so a super admin can answer a customer, check a payment, or refund it? <strong>Yes.</strong> It was written on 21 November 2026 after reading the admin project <code>adwiise-agent-admin</code>, the backend <code>adwiise-agent-service</code>, and the schema file <code>adwiise_agent_Latest_Schema.sql</code>. Phase 1 was built the same day. Section 9 lists what was built and where it differs from this requirement. Phase 2 is not built.</p>
+  <p>The work is split in two. Phase 1 is search and history, and needs no table change. Phase 2 is refunds, and needs a schema change and three decisions from you.</p>
+</div>
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#today">What the pages do today</a></li>
+    <li><a href="#questions">Customer questions the search must answer</a></li>
+    <li><a href="#phase1">Phase 1: search and history</a></li>
+    <li><a href="#phase2">Phase 2: refunds and disputes</a></li>
+    <li><a href="#changes">Changes by project</a></li>
+    <li><a href="#roles">Who can see and do what</a></li>
+    <li><a href="#accept">Acceptance tests</a></li>
+    <li><a href="#decisions">Decisions needed</a></li>
+    <li><a href="#built">Phase 1 as built, 21 November 2026</a></li>
+  </ol>
+</nav>
+
+<h2 id="today">1. What the pages do today</h2>
+<div class="section-container">
+  <div class="section-header">🔎 Gaps found in the code</div>
+  <table>
+    <thead><tr><th>Page</th><th>Today</th><th>Gap</th></tr></thead>
+    <tbody>
+      <tr><td><code>/admin/platform-billing</code></td><td>One search box. It finds organizations by name, website id, email, customer id, subscription id or invoice id.</td><td>It returns organizations, never charges. You cannot ask for all failed charges last week, or all Retail charges over $50.</td></tr>
+      <tr><td>Same page, status tiles</td><td>Seven counts, such as Failed and Refunded.</td><td>A tile is not a link. You see that 4 charges failed and cannot open them.</td></tr>
+      <tr><td>Same page, Export ledger</td><td>Exports the charges already loaded for the organizations on screen.</td><td>At most 20 organizations and the 20 newest charges of each. It is not the ledger.</td></tr>
+      <tr><td>Same page, search by <code>cus_</code></td><td>Loads the first 200 organizations and looks for the customer id among them.</td><td>An organization past the first 200 is not found.</td></tr>
+      <tr><td><code>/admin/platform-billing/[tenantId]</code> and <code>/admin/billing</code>, Charges table</td><td>The 50 newest charges of the website. Columns: Status, Amount, When, Invoice.</td><td>No filter, and no column for the fee. A website with Retail and Event site turned on shows both in one list, and you cannot tell which fee a row paid for. Charge 51 and older are never shown.</td></tr>
+      <tr><td>Change history</td><td>Every plan, fee, switch, grace or scope change is written to <code>platform_billing_assignment_event</code> with the user who made it.</td><td>No page reads it. “Who turned the charge on, and when?” can only be answered in the database.</td></tr>
+      <tr><td>Refunds</td><td>The ledger allows the status <code>REFUNDED</code>, and the pages have a label and a colour for it.</td><td>Nothing ever writes it. There is no refund button, and the webhook does not handle <code>charge.refunded</code>. A refund made in the Stripe dashboard leaves the row Paid.</td></tr>
+      <tr><td>Backend, <code>PlatformBillingChargeResource</code></td><td>Offers PUT, PATCH and DELETE on a ledger the schema calls append-only.</td><td>Not a search gap, but a refund feature should not ship while a ledger row can be deleted through the API.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="questions">2. Customer questions the search must answer</h2>
+<div class="section-container usage">
+  <div class="section-header usage">💬 What a super admin is asked</div>
+  <table>
+    <thead><tr><th>Question</th><th>What is needed to answer it</th></tr></thead>
+    <tbody>
+      <tr><td>“I was charged twice this month.”</td><td>All charges of one website or organization in a date range, with the fee and the invoice id on each row.</td></tr>
+      <tr><td>“What is this $42.00 on my card statement?”</td><td>Search by amount and date, or by the payment id from Stripe.</td></tr>
+      <tr><td>“Why is my admin locked?”</td><td>Failed and open charges of the website, the failure reason, and the change history that shows when the switch was turned on and when grace ended.</td></tr>
+      <tr><td>“Did my payment go through?”</td><td>The newest charges of the website, filtered to one fee.</td></tr>
+      <tr><td>“Why did my fee go up?”</td><td>The change history: old and new plan, old and new amount, who changed it. For Retail, the number of locations billed.</td></tr>
+      <tr><td>“Please refund last month.”</td><td>Find the charge, see whether it is already refunded, refund all or part of it, and keep a note of why.</td></tr>
+      <tr><td>Internal: “Which customers failed to pay this week?”</td><td>All charges with status Failed in a date range, across every organization, with an export.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="phase1">3. Phase 1: search and history</h2>
+
+<div class="section-container">
+  <div class="section-header">3.1 A charge search page for the super admin</div>
+  <p>A new page at <code>/admin/platform-billing/charges</code>, linked from the platform billing home. The filters are kept in the address, so a search can be bookmarked or sent to a colleague.</p>
+  <table>
+    <thead><tr><th>Filter</th><th>Control</th><th>Matches</th><th>Backend today</th></tr></thead>
+    <tbody>
+      <tr><td>Find</td><td>One text box</td><td>The text decides the field: <code>in_</code> invoice, <code>sub_</code> subscription, <code>pi_</code> payment, <code>cus_</code> customer, a number for the organization id, text with <code>@</code> for the contact email, anything else for organization name or website id.</td><td>Invoice and subscription are supported. Payment and customer need a filter added.</td></tr>
+      <tr><td>Organization</td><td>Type-ahead</td><td><code>organization_id</code></td><td>Supported</td></tr>
+      <tr><td>Website</td><td>Type-ahead, limited to the chosen organization</td><td><code>tenant_id</code></td><td>Supported</td></tr>
+      <tr><td>Fee</td><td>Event site, Retail locations, Organization fee</td><td><code>product</code> and <code>billing_scope</code></td><td>Supported</td></tr>
+      <tr><td>Status</td><td>Check boxes: Open, Paid, Failed, Void, Refunded</td><td><code>status</code>, more than one at a time</td><td>Supported</td></tr>
+      <tr><td>Date</td><td>From and To, with shortcuts: Today, Last 7 days, This month, Last month</td><td><code>occurred_at</code></td><td>Supported</td></tr>
+      <tr><td>Amount</td><td>From and To in dollars</td><td><code>amount_usd</code></td><td>Filter to add</td></tr>
+      <tr><td>Plan</td><td>List of catalog plans</td><td><code>plan_code</code></td><td>Filter to add</td></tr>
+    </tbody>
+  </table>
+  <div class="parameters-list">
+    <p><strong>Result table.</strong> When, Organization, Website, Fee, Plan, Amount, Status, Period, Invoice. Organization and Website link to their billing pages. Newest first. When and Amount can be sorted.</p>
+    <p><strong>Paging.</strong> 20 rows a page, paged by the backend, with the same pager the other billing tables use.</p>
+    <p><strong>Totals.</strong> One line above the table: the number of charges found and the dollar sum for each status.</p>
+    <p><strong>Export.</strong> Exports every row that matches the filters, not the page on screen, up to 5,000 rows. Over that, the page asks for a narrower search.</p>
+    <p><strong>Tiles.</strong> Each status tile on the platform billing home opens this page with that status chosen.</p>
+    <p><strong>One row per invoice.</strong> A bank debit writes an Open row and later a Paid row. The table shows the newest row of each invoice, as the website page already does, and the detail panel shows both.</p>
+  </div>
+</div>
+
+<div class="section-container">
+  <div class="section-header">3.2 Charge detail</div>
+  <p>Clicking a row opens a panel with everything the ledger holds for it.</p>
+  <ul>
+    <li>Organization, website, fee, plan, billing scope, amount, currency, interval.</li>
+    <li>Period start and end, the time of the charge, the failure reason, the notes.</li>
+    <li>Invoice, subscription, payment and event ids, each with a copy button and a link that opens it in the Stripe dashboard. The link goes to the sandbox dashboard when the key is a test key.</li>
+    <li>The other ledger rows of the same invoice, oldest first.</li>
+    <li>The five newest change history rows of the same website and fee.</li>
+    <li>In Phase 2, the Refund button and the refund history.</li>
+  </ul>
+</div>
+
+<div class="section-container">
+  <div class="section-header">3.3 Change history</div>
+  <p>A second tab on the search page, and a section on each website and organization billing page. It reads <code>platform_billing_assignment_event</code>.</p>
+  <ul>
+    <li><strong>Filters:</strong> organization, website, fee, date range. The backend supports all four today.</li>
+    <li><strong>Columns:</strong> When, Organization, Website, Fee, Old plan, New plan, Old amount, New amount, Changed by, Reason.</li>
+    <li><strong>Changed by</strong> shows the name and email of the user, looked up from the stored user id.</li>
+  </ul>
+</div>
+
+<div class="section-container">
+  <div class="section-header">3.4 The Charges table on the website pages</div>
+  <p>This is the table on <code>/admin/platform-billing/[tenantId]</code> and on <code>/admin/billing</code>.</p>
+  <ul>
+    <li>Add a <strong>Fee</strong> column: Event site, Retail locations, or Organization fee.</li>
+    <li>Add a <strong>Period</strong> column.</li>
+    <li>Add three filters above the table: Fee, Status, and a date range.</li>
+    <li>Page through the whole history from the backend, instead of the 50 newest rows.</li>
+    <li>The super admin gets a link “Open in charge search” that carries the website over as a filter.</li>
+  </ul>
+</div>
+
+<h2 id="phase2">4. Phase 2: refunds and disputes</h2>
+<div class="section-container parameters">
+  <div class="section-header parameters">💵 Refund a charge from the detail panel</div>
+  <ul>
+    <li><strong>Who:</strong> the platform super admin only.</li>
+    <li><strong>Which charges:</strong> a Paid charge with a payment id. The button is hidden on any other row.</li>
+    <li><strong>Form:</strong> the amount, filled with what is still refundable, and a reason, which is required. A second click confirms, and the text states the amount, the organization, and that Stripe cannot undo a refund.</li>
+    <li><strong>What it does:</strong> asks Stripe for the refund. The ledger is not written by the button. It is written when Stripe sends <code>charge.refunded</code>, so a refund made in the Stripe dashboard is recorded the same way.</li>
+    <li><strong>Ledger:</strong> a full refund sets the status Refunded. A part refund keeps the row Paid and shows the refunded amount beside it.</li>
+    <li><strong>The subscription is not canceled</strong> by a refund. The panel says so and links to the website page, where Cancel now is.</li>
+    <li><strong>Paid period:</strong> a full refund ends the paid period of that charge, so the grace and lock rules apply again.</li>
+    <li><strong>History:</strong> every refund is written to the change history with the user and the reason.</li>
+  </ul>
+  <div class="warning">The ledger table has no column for a refunded amount, a refund id or a Stripe charge id, and its status list has no value for a dispute. Phase 2 needs these added to <code>platform_billing_charge</code>: <code>refunded_amount_usd</code>, <code>stripe_refund_id</code>, <code>stripe_charge_id</code>, and the status <code>DISPUTED</code> in the check constraint. Follow <code>.cursor/rules/database_schema_guidelines.mdc</code> for the change.</div>
+  <p><strong>Disputes.</strong> When a customer disputes a charge with their bank, Stripe sends <code>charge.dispute.created</code> and later <code>charge.dispute.closed</code>. The webhook marks the row Disputed, and the search can filter on it. Answering the dispute stays in the Stripe dashboard.</p>
+</div>
+
+<h2 id="changes">5. Changes by project</h2>
+<div class="section-container">
+  <div class="section-header">🛠️ What each project needs</div>
+  <table>
+    <thead><tr><th>Project</th><th>Phase 1</th><th>Phase 2</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Admin<br><code>adwiise-agent-admin</code></td>
+        <td>
+          New page <code>src/app/admin/platform-billing/charges/</code> with a server page and a client table.<br>
+          New server actions in <code>reportActions.ts</code>: search charges, search change history, export. Each starts with <code>assertPlatformSuperAdmin()</code>.<br>
+          A website version of the charge search that starts with <code>assertCanPayTenant()</code> and always sets the website itself.<br>
+          <code>fetchPlatformCharges</code> in <code>chargeLedger.ts</code> gains page, sort, date, amount, fee and a list of statuses, and returns the total count.<br>
+          <code>BillingDesk.tsx</code>: Fee and Period columns, filters, backend paging.<br>
+          <code>PlatformBillingHome.tsx</code>: tiles become links, Export ledger uses the new export.<br>
+          No new proxy route. The pages call server actions, as <code>.cursor/rules/nextjs_api_routes.mdc</code> asks.
+        </td>
+        <td>
+          A refund route under <code>src/app/api/platform-billing/</code>.<br>
+          <code>applyPlatformBillingWebhook.ts</code> handles <code>charge.refunded</code>, <code>charge.dispute.created</code> and <code>charge.dispute.closed</code>.<br>
+          The Stripe webhook endpoint and <code>stripe listen</code> must send these three events.
+        </td>
+      </tr>
+      <tr>
+        <td>Backend<br><code>adwiise-agent-service</code></td>
+        <td>
+          <code>PlatformBillingChargeCriteria</code> and its query service: add <code>amountUsd</code>, <code>stripePaymentIntentId</code>, <code>planCode</code> and <code>periodEnd</code>.<br>
+          <code>TenantOrganizationCriteria</code> already has <code>stripeCustomerId</code>. The admin search should use it, so a <code>cus_</code> search no longer reads 200 organizations. No backend change for this.<br>
+          A small endpoint that returns the count and sum per status for a set of filters, for the totals line.
+        </td>
+        <td>
+          New fields on the entity, DTO and criteria.<br>
+          Remove PUT and DELETE from <code>PlatformBillingChargeResource</code>, and limit PATCH to status, refund fields and notes.
+        </td>
+      </tr>
+      <tr>
+        <td>Database<br><code>adwiise-agent-database-repo</code></td>
+        <td>No table or column change. Three indexes, on <code>stripe_invoice_id</code>, <code>stripe_subscription_id</code> and <code>stripe_payment_intent_id</code>, and one on <code>(organization_id, occurred_at)</code>.</td>
+        <td>Three columns and the wider status check on <code>platform_billing_charge</code>.</td>
+      </tr>
+      <tr>
+        <td>Batch jobs<br><code>adwiise-agent-batch-jobs</code></td>
+        <td>None.</td>
+        <td>None, unless the batch lock rule should also read a refunded period. It does not read paid periods today.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="roles">6. Who can see and do what</h2>
+<div class="section-container">
+  <div class="section-header">🔐 Roles</div>
+  <table>
+    <thead><tr><th>Ability</th><th>Platform super admin</th><th>Tenant admin</th></tr></thead>
+    <tbody>
+      <tr><td>Charge search across all organizations</td><td>Yes</td><td>No. The page sends them to <code>/admin</code>.</td></tr>
+      <tr><td>Charges of their own website, with Fee, Status and date filters</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Subscription, payment and event ids</td><td>Yes</td><td>No. They see the invoice id only.</td></tr>
+      <tr><td>Change history</td><td>Yes</td><td>No in Phase 1. See decision 3.</td></tr>
+      <tr><td>Export</td><td>Yes</td><td>Their own website only</td></tr>
+      <tr><td>Refund</td><td>Yes</td><td>No</td></tr>
+    </tbody>
+  </table>
+  <p>Every server action checks the role itself. Hiding a control is not the check.</p>
+</div>
+
+<h2 id="accept">7. Acceptance tests</h2>
+<div class="section-container output">
+  <div class="section-header output">✅ Phase 1 is done when these pass</div>
+  <table>
+    <thead><tr><th>Step</th><th>Do this</th><th>Expected</th></tr></thead>
+    <tbody>
+      <tr><td>S1</td><td>Open charge search with no filter.</td><td>The newest 20 charges of all organizations, and the totals line.</td></tr>
+      <tr><td>S2</td><td>Choose website <code>kcnj_parsippany_8</code> and fee Retail locations.</td><td>Only Retail charges of that website. The address holds both filters, and a reload keeps them.</td></tr>
+      <tr><td>S3</td><td>Tick Failed and set the date to 21 November 2026.</td><td>The failed renewal rows from the Retail test, with the amount and the reason.</td></tr>
+      <tr><td>S4</td><td>Paste an invoice id, then a subscription id, then a payment id into Find.</td><td>Each finds its charge.</td></tr>
+      <tr><td>S5</td><td>Set Amount from 4 to 4.</td><td>The $4.00 organization charge, with no website on it.</td></tr>
+      <tr><td>S6</td><td>Click a row.</td><td>The detail panel. For the bank debit it lists the Open row and the Paid row.</td></tr>
+      <tr><td>S7</td><td>Click Export with the S2 filters.</td><td>The sheet holds every matching row, not 20.</td></tr>
+      <tr><td>S8</td><td>Click the Failed tile on the billing home.</td><td>Charge search opens with Failed ticked.</td></tr>
+      <tr><td>S9</td><td>Open the Change history tab for organization 15.</td><td>The scope changes of 21 November 2026, with the user who made them.</td></tr>
+      <tr><td>S10</td><td>Open <code>/admin/billing</code> for the website and filter the Charges table by fee.</td><td>The Fee column is shown and the filter works. Page 6 and later can be reached.</td></tr>
+      <tr><td>S11</td><td>As a tenant admin, open <code>/admin/platform-billing/charges</code>.</td><td>Sent to <code>/admin</code>. On <code>/admin/billing</code> the Charges table shows their website only and no subscription id.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="decisions">8. Decisions needed</h2>
+<div class="section-container parameters">
+  <div class="section-header parameters">❓ Before Phase 2 is built</div>
+  <ol>
+    <li><strong>Refund in this app, or in the Stripe dashboard only?</strong> Recommended: build the webhook part first, so a refund made in Stripe shows as Refunded here. Add the button after that. The webhook part is needed either way.</li>
+    <li><strong>Part refunds?</strong> Recommended: yes. A customer who removes a location in the middle of a month is the common case for Retail.</li>
+    <li><strong>Should a tenant admin see the change history of their own website?</strong> Recommended: yes, without the name of the platform user who made the change.</li>
+    <li><strong>Does a full refund lock the website again?</strong> Recommended: it ends the paid period, and the normal grace days then apply. It does not lock at once.</li>
+  </ol>
+  <div class="info">Phase 1 needed no decision and is built. See section 9.</div>
+</div>
+
+<h2 id="built">9. Phase 1 as built, 21 November 2026</h2>
+<div class="section-container output">
+  <div class="section-header output">✅ Built and tested</div>
+  <p>Phase 1 is in the working tree of the admin, backend and database projects. Nothing is committed. The steps in section 6 of the <a href="PLATFORM_BILLING_TEST_GUIDE.html#charge-search">test guide</a> passed on <code>http://localhost:3001</code>, except the export click, which was not run because it saves a file to the computer.</p>
+  <table>
+    <thead><tr><th>Part</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Charge search page with the Charges and Change history tabs, and the detail panel</td><td><code>src/app/admin/platform-billing/charges/</code></td></tr>
+      <tr><td>Search logic</td><td><code>src/lib/platformBilling/chargeSearch.ts</code></td></tr>
+      <tr><td>Charges table on the website pages</td><td><code>src/app/admin/billing/TenantChargesTable.tsx</code></td></tr>
+      <tr><td>Tiles as links, and a link to the search in place of Export ledger</td><td><code>PlatformBillingHome.tsx</code></td></tr>
+      <tr><td>Customer id search asks the backend</td><td><code>reportActions.ts</code></td></tr>
+      <tr><td>Backend filters: amount, payment id, plan id, plan code, period end, several statuses, several organizations. New endpoint <code>GET /api/platform-billing-charges/totals</code>.</td><td><code>PlatformBillingChargeCriteria.java</code>, <code>PlatformBillingChargeQueryService.java</code>, <code>PlatformBillingChargeResource.java</code>, <code>PlatformBillingAssignmentEventQueryService.java</code></td></tr>
+      <tr><td>Four indexes on <code>platform_billing_charge</code></td><td><code>adwiise_agent_Latest_Schema.sql</code>, and the local database</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="section-container parameters">
+  <div class="section-header parameters">↔️ Where the build differs from sections 3 and 5</div>
+  <ul>
+    <li><strong>Organization and Website are not type-ahead lists.</strong> The Find box takes the organization name, number, email or part of a website id. The Website id box takes the exact id.</li>
+    <li><strong>The tables show every ledger row.</strong> An Open or Failed row whose invoice was paid afterward carries the words “Paid later”. Showing one row per invoice does not work when the backend pages the list.</li>
+    <li><strong>The Plan filter uses the plan id.</strong> The ledger stores the id of the plan and leaves <code>plan_code</code> empty.</li>
+    <li><strong>Sorting is a list named Order,</strong> not a click on the column heading.</li>
+    <li><strong>Change history is a tab on the search page.</strong> The website billing page links to it with the website chosen. The organization billing page has no link yet.</li>
+    <li><strong>A website id typed into Find</strong> finds the organization that owns the website, and so shows the charges of all its websites. Use the Website id box for one website.</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>

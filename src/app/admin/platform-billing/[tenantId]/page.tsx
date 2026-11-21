@@ -55,7 +55,6 @@ export default async function TenantPlatformBillingPage({
       plans={plans}
       locations={locations}
       complimentaryPlan={desk.complimentaryPlan}
-      charges={desk.charges || []}
       lockedNotice={desk.rows.some((row) => row.status === 'LOCKED')}
       shopPackCode={shopPack.code}
       shopPackLabel={shopPack.label}

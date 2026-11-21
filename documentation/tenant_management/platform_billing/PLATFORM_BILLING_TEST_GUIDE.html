@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="How to test platform software billing in Stripe test mode with daily and monthly unpublished plans.">
+    <meta name="description" content="How to test platform software billing in Stripe test mode: publish the $1.00 plan, install the Stripe CLI, then pay with the listener running.">
     <title>Platform billing Stripe test guide</title>
     <style>
         body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; line-height: 1.65; color: #1a1a1a; background: #f4f8fb; max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
@@ -48,7 +48,7 @@
     </div>
     <div class="section-container usage">
         <div class="section-header usage">End-to-end test</div>
-        <p>This walk-through starts with a platform super admin, adds a charge, picks a plan, then switches to a tenant admin to pay. Use Stripe test mode. The success card is <code class="code-highlight">4242 4242 4242 4242</code>, any future expiry, any CVC.</p>
+        <p>This walk-through starts with a platform super admin, adds a charge, picks a plan, then switches to a tenant admin to pay. Use Stripe test mode. The success card is <code class="code-highlight">4242 4242 4242 4242</code>. Also fill expiry <code class="code-highlight">12/34</code>, security code <code class="code-highlight">123</code>, name <code class="code-highlight">Test User</code>, and ZIP <code class="code-highlight">10001</code>. Uncheck <strong>Save my information</strong> so Checkout does not ask for a phone.</p>
         <table>
             <thead>
                 <tr><th scope="col">Who</th><th scope="col">Can do</th><th scope="col">Cannot do</th></tr>
@@ -70,15 +70,17 @@
         <ol class="steps">
             <li>Sign in as a platform super admin. The database role is <code class="code-highlight">SUPER_ADMIN</code>.</li>
             <li>Have a second user who is <code class="code-highlight">ADMIN</code> on the test website only. You will sign in as that person to pay.</li>
-            <li>In a second window, forward Stripe test events. The command is in section 1 below. Leave that window open until the payment finishes.</li>
+            <li>Windows does not include the Stripe CLI. If Command Prompt says <code class="code-highlight">'stripe' is not recognized</code>, install it with the first command in section 1, then close Command Prompt and open it again. You can still create the plan and turn the charge switch on without that program.</li>
+            <li>Start the listener in section 1 before you click <strong>Pay monthly</strong>. Leave that window open until the payment finishes. Stripe sends the payment-succeeded message to <code class="code-highlight">http://localhost:3001/api/webhooks/stripe</code>. If the listener is not running, the card can succeed in Checkout while the billing page stays Payment due and the Charges table stays empty.</li>
             <li>Use a test website. Do not change organizations 18, 19, or 20.</li>
         </ol>
         <h2>Super admin: add the plan and turn charging on</h2>
         <ol class="steps">
-            <li>Open <code class="code-highlight">/admin/platform-billing/plans</code>. Click <strong>Add plan</strong>.</li>
-            <li>Set Product to Event site. Type a name such as Test day and a code such as <code class="code-highlight">test-e2e-day</code>. Set List price to <code class="code-highlight">1.00</code>. Set Billing to Recurring or one-time. Leave Stripe price id blank. Check <strong>Published</strong>. Click <strong>Create plan</strong>. A published plan is what the website catalog can show. An unpublished plan stays off that list until you assign it.</li>
+            <li>Open <code class="code-highlight">/admin/platform-billing/plans</code>.</li>
+            <li>If <strong>Test every day</strong> (code <code class="code-highlight">test-every-day</code>) is already in the list, open it. Leave <strong>Stripe price id</strong> blank. Check <strong>Published</strong>. Click <strong>Update plan</strong>. The Catalog plan dropdown only lists published plans, so this $1.00 Event site plan stays hidden until you publish it. The first payment creates the Stripe price.</li>
+            <li>If that plan is not there, click <strong>Add plan</strong>. Set Product to Event site. Type a name such as Test day and a code such as <code class="code-highlight">test-e2e-day</code>. Set List price to <code class="code-highlight">1.00</code>. Set Billing to Recurring only. Leave Stripe price id blank. Check <strong>Published</strong>. Click <strong>Create plan</strong>.</li>
             <li>Open <code class="code-highlight">/admin/platform-billing</code>. Open the test organization, then open the test website. The address is <code class="code-highlight">/admin/platform-billing/{tenantId}</code>.</li>
-            <li>On the Event site card, choose the plan you just created in <strong>Catalog plan</strong>. Leave Custom fee blank so the catalog price is used. Review-by date can stay empty. It is only a reminder. Set Grace days to <code class="code-highlight">14</code> for a normal test, or <code class="code-highlight">0</code> if you want the unpaid lock to happen on the next page open.</li>
+            <li>On the Event site card, choose that published plan in <strong>Catalog plan</strong>. Leave Custom fee blank so the catalog price is used. A custom fee replaces the catalog price for that website. Saving a custom fee clears the catalog dropdown to <strong>No catalog plan</strong>. Choosing a catalog plan again clears the custom fee. The charge interval stays the one already on the website, so a daily fee stays daily. <strong>Pay monthly</strong> and <strong>Pay once</strong> save the fee first. If the subscription is already active, Pay changes that subscription to the new amount and does not open Checkout at the old price. Review-by date can stay empty. It is only a reminder. Set Grace days to <code class="code-highlight">14</code> for a normal test, or <code class="code-highlight">0</code> if you want the unpaid lock to happen on the next page open.</li>
             <li>Turn the <strong>Charge switch</strong> on and confirm. The status becomes Payment due. Stripe is not charged by the switch. Click <strong>Save event site billing</strong> if you still need to store the plan or the grace days.</li>
             <li>Sign out.</li>
         </ol>
@@ -86,22 +88,53 @@
         <ol class="steps">
             <li>Sign in as the tenant admin for that website.</li>
             <li>Open <code class="code-highlight">/admin/billing</code>. Confirm there is no charge switch you can turn on. The Event site card shows Payment due and a Pay button.</li>
-            <li>Click <strong>Pay monthly</strong>. Stripe Checkout opens. Pay with <code class="code-highlight">4242 4242 4242 4242</code>.</li>
-            <li>You return to <code class="code-highlight">/admin/billing</code>. The status becomes Active after the webhook is received. The Charges table shows a Paid row.</li>
+            <li>Confirm the Stripe listener window from section 1 is still open. Click <strong>Pay monthly</strong>. Stripe Checkout opens when there is no subscription yet. The page title for the catalog plan is Subscribe to Test every day, $1.00 per day, and the corner says Sandbox. A custom fee of <code class="code-highlight">2.00</code> is a different Checkout line, not the $1.00 catalog price. Console lines on that Stripe page, including origin trial, unload, and unrecognized paymentForm parameters, do not change the amount. Fill every card field, then click <strong>Subscribe</strong>.
+                <table>
+                    <thead><tr><th scope="col">Checkout field</th><th scope="col">What to enter</th></tr></thead>
+                    <tbody>
+                        <tr><td>Card information</td><td><code class="code-highlight">4242 4242 4242 4242</code></td></tr>
+                        <tr><td>MM / YY</td><td><code class="code-highlight">12/34</code>. Any future month and year works.</td></tr>
+                        <tr><td>Security code</td><td><code class="code-highlight">123</code>. Any 3 digits work.</td></tr>
+                        <tr><td>Name on card</td><td><code class="code-highlight">Test User</code></td></tr>
+                        <tr><td>Billing information</td><td>United States</td></tr>
+                        <tr><td>ZIP code</td><td><code class="code-highlight">10001</code></td></tr>
+                        <tr><td>Save my information for faster checkout</td><td>Uncheck it. That box turns on Stripe Link and then requires a mobile number. The red line “Your phone number is incomplete” comes from that box, not from the card. Leave the phone empty after you uncheck it.</td></tr>
+                    </tbody>
+                </table>
+            </li>
+            <li>You return to <code class="code-highlight">/admin/billing</code>. The status becomes Active after the listener delivers the webhook. The Charges table shows a Paid row. If the listener was closed, the card can still succeed and the page stays Payment due.</li>
         </ol>
+        <div class="warning">The back arrow on Checkout does not save the card, the expiry, or the ZIP. You land on <code class="code-highlight">/admin/billing</code> and the status stays Payment due. Click <strong>Subscribe</strong> to pay. <strong>Payment methods</strong> opens the Stripe Customer Portal. It is not the Checkout form. A 400 from <code class="code-highlight">POST /api/platform-billing/portal</code> means that portal had no saved test configuration. This app creates that configuration and then opens the portal. To finish this lab, stay on Checkout, fill the fields above, and click <strong>Subscribe</strong> while the listener window is still open.</div>
+        <div class="info">A portal that shows Visa <code class="code-highlight">4242</code>, expiry <code class="code-highlight">12/2034</code>, and <strong>Default</strong> means the Customer Portal worked. Leave the content-security-policy lines in the console. They come from Stripe’s page (<code class="code-highlight">customer-portal.js</code>, <code class="code-highlight">js.stripe.com</code>, <code class="code-highlight">hcaptcha.com</code>, <code class="code-highlight">stripecdn.com</code>) after this app sends the browser there. This app does not set that policy, and adding a keyword here does not remove the message. The same notes can appear on Checkout, before a card is entered, for a super admin and for a tenant admin. <code class="code-highlight">unload is not allowed</code> is a browser note on Stripe’s page. <code class="code-highlight">content_script.js</code> with <code class="code-highlight">csPostMessage: timeout</code> is a browser extension. Stripe.js notes about an older Elements API, <code class="code-highlight">betas</code>, and BLIK are printed by the portal. BLIK appears in test mode until it is turned on in the Stripe Dashboard. None of these lines block <strong>Add payment method</strong> or <strong>Subscribe</strong>. <strong>No invoice history</strong> means the card was saved and the $1.00 plan was not paid. Return to <code class="code-highlight">/admin/billing</code>, click <strong>Pay monthly</strong>, and click <strong>Subscribe</strong> with the listener still open. Use card <code class="code-highlight">4242 4242 4242 4242</code>, expiry <code class="code-highlight">12/34</code>, security code <code class="code-highlight">123</code>, name <code class="code-highlight">Test User</code>, ZIP <code class="code-highlight">10001</code>, and leave <strong>Save my information</strong> unchecked. After the webhook, the billing page becomes Active and the portal can show an invoice. Until then the status stays Payment due. The name on the left of the portal, such as <code class="code-highlight">event_site_manager</code>, is the Stripe customer or the saved portal configuration. This app reuses that configuration and does not rename it.</div>
         <h2>Super admin: confirm the payment</h2>
         <ol class="steps">
             <li>Sign in again as the platform super admin.</li>
             <li>Open <code class="code-highlight">/admin/platform-billing</code> and search the organization. The Status column shows Active. Export ledger shows a PAID row and a Stripe invoice id. The same invoice is in the Stripe test dashboard.</li>
-            <li>Optional failure check, on a second website or after canceling this one: turn the switch on, click Pay, and use the failing card <code class="code-highlight">4000 0000 0000 0341</code>. The ledger status is FAILED. If grace has ended and nobody has paid, the next open of the billing page sets Locked. Admin tools then send that admin to billing. The public site stays up.</li>
-            <li>Optional cancel check: the tenant admin can click <strong>Cancel at period end</strong>. Only the super admin sees <strong>Cancel now</strong> on <code class="code-highlight">/admin/platform-billing/{tenantId}</code>.</li>
+            <li>Optional failure check, on a second website or after canceling this one: turn the switch on, click Pay, and use the same expiry, security code, name, and ZIP. Change only the card number to <code class="code-highlight">4000 0000 0000 0341</code>. Uncheck <strong>Save my information</strong>. Stripe declines the card on its own page, the status stays Payment due, and no ledger row is added. A FAILED ledger row comes from a renewal that fails. Section 5 shows how to make one. If grace has ended and nobody has paid, the next open of the billing page sets Locked. Admin tools then send that admin to billing. The public site stays up.</li>
+            <li>Optional cancel check: the tenant admin can click <strong>Cancel at period end</strong>. Only the super admin sees <strong>Cancel now</strong>. <strong>Cancel now</strong> returns the card to Complimentary immediately. The next <strong>Pay monthly</strong> opens Checkout for a new subscription. It does not try to change the canceled one.</li>
         </ol>
-        <div class="warning">A retried Stripe event with the same event id does not insert a second ledger row. A ticket purchase in the same Stripe test account must not appear as a platform charge.</div>
+        <div class="warning">One invoice is one charge. Stripe sends checkout.session.completed, invoice.paid, and invoice.payment_succeeded for the same payment, and a repeated event id is skipped too. A later day of the daily plan is a new invoice and a new row. A ticket purchase in the same Stripe test account must not appear as a platform charge.</div>
     </div>
     <div class="section-container usage">
-        <div class="section-header usage">1. Listen for webhooks</div>
-        <p>Forward Stripe test events to this app with <code class="script-name">stripe.exe</code>. The admin app in local development is port 3001.</p>
-        <div class="command-block setup" data-command-type="setup" data-command-base="stripe listen --forward-to" data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe">
+        <div class="section-header usage">1. Install Stripe CLI, then listen for webhooks</div>
+        <p>The command <code class="code-highlight">stripe</code> is a separate program. Windows does not include it. If Command Prompt says <code class="code-highlight">'stripe' is not recognized as an internal or external command</code>, install the Stripe CLI, close Command Prompt, and open a new one. You can create a plan and turn the charge switch on without it. Start the listener before <strong>Pay monthly</strong>. Leave that window open while you pay with <code class="code-highlight">4242 4242 4242 4242</code>. Without it, Checkout can still take the card, and this app never hears that the payment succeeded. The status stays Payment due and the Charges table stays empty.</p>
+        <p>The current Stripe CLI also stops if you omit the events flag. The message is <code class="code-highlight">must specify events to forward using --events, --all-snapshot, or --all-thin</code>. Add <code class="code-highlight">--all-snapshot</code>. That sends the full event this app already reads. Do not use <code class="code-highlight">--all-thin</code> for this test. A thin event is only a short notice, and the billing page stays Payment due.</p>
+        <div class="command-block setup" data-command-type="setup" data-command-base="winget install Stripe.StripeCLI" data-template-command="winget install Stripe.StripeCLI">
+            <div class="command-header">
+                <span class="command-type">Install</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'stripe-install')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="stripe-install">winget install Stripe.StripeCLI</div>
+            <div class="command-single-line" id="stripe-install-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="stripe-install-single-code">winget install Stripe.StripeCLI</code>
+            </div>
+        </div>
+        <p>The admin app in local development is port 3001. Run this in the new Command Prompt and leave the window open.</p>
+        <div class="command-block setup" data-command-type="setup" data-command-base="stripe listen --forward-to" data-template-command="stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot">
             <div class="command-header">
                 <span class="command-type">Setup</span>
                 <div class="command-header-buttons">
@@ -109,17 +142,30 @@
                     <button type="button" class="copy-button" onclick="copyCommand(this, 'stripe-listen')" title="Copy customized command">Copy</button>
                 </div>
             </div>
-            <div class="command-content" id="stripe-listen">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</div>
+            <div class="command-content" id="stripe-listen">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot</div>
             <div class="command-single-line" id="stripe-listen-single">
                 <div class="command-single-line-label">Windows single-line</div>
-                <code id="stripe-listen-single-code">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe</code>
+                <code id="stripe-listen-single-code">stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot</code>
             </div>
         </div>
-        <div class="info">The success card is <code class="code-highlight">4242 4242 4242 4242</code>, any future expiry, any CVC. The failure card is <code class="code-highlight">4000 0000 0000 0341</code>.</div>
+        <ol class="steps">
+            <li>When the listener starts, copy the signing secret from the line <code class="code-highlight">Ready! Your webhook signing secret is whsec_...</code>.</li>
+            <li>Set <code class="code-highlight">STRIPE_WEBHOOK_SECRET</code> in <code class="code-highlight">.env.local</code> to that value, using the block below. Do not commit the file. The Dashboard webhook signing secret also starts with <code class="code-highlight">whsec_</code>, and it is a different value. It will reject every event this listener sends.</li>
+            <li>Restart the Next.js dev server. A running server keeps the old secret.</li>
+            <li>Leave the listener window open. Click <strong>Pay monthly</strong> again, then <strong>Subscribe</strong>.</li>
+        </ol>
+        <p>Use Stripe test mode. Add this to <code class="code-highlight">.env.local</code> for a local test. The secret is masked after <code class="code-highlight">whsec_</code>. Paste the rest from the listener window. Do not commit the file.</p>
+        <pre class="command-single-line"><code># Use Stripe test mode.
+# Signing secret from the webhook page. It starts with whsec_. From the Stripe Dashboard, for local machine testing.
+# For the listener, use the signing secret printed by stripe listen in the Command Prompt from:
+# stripe listen --forward-to http://localhost:3001/api/webhooks/stripe --all-snapshot
+STRIPE_WEBHOOK_SECRET=whsec_</code></pre>
+        <div class="warning">A signature failure followed by a Spring 404 means the CLI secret was not copied. The log says <code class="code-highlight">No signatures found matching the expected signature</code>. This app returns 400 and does not forward that body. The billing page stays Payment due until a verified webhook arrives.</div>
+        <div class="info">On Checkout, card <code class="code-highlight">4242 4242 4242 4242</code>, expiry <code class="code-highlight">12/34</code>, security code <code class="code-highlight">123</code>, name <code class="code-highlight">Test User</code>, ZIP <code class="code-highlight">10001</code>. Uncheck <strong>Save my information</strong> so the phone field is not required. The failure card is <code class="code-highlight">4000 0000 0000 0341</code> with those same other fields.</div>
     </div>
     <div class="section-container parameters">
-        <div class="section-header parameters">2. Unpublished test plans</div>
-        <p>The schema seeds these unpublished event-site plans at $1.00. They do not appear to a tenant until a super-admin selects one on that website.</p>
+        <div class="section-header parameters">2. Existing $1.00 test plans</div>
+        <p>These Event site plans already exist at $1.00. You do not need a new plan for the local lab. They start unpublished, and the Catalog plan dropdown only lists published plans. Open <strong>Test every day</strong>, leave <strong>Stripe price id</strong> blank, check <strong>Published</strong>, and click <strong>Update plan</strong>. The first payment creates the Stripe price.</p>
         <table>
             <thead><tr><th scope="col">Code</th><th scope="col">Interval</th><th scope="col">Count</th></tr></thead>
             <tbody>
@@ -134,15 +180,241 @@
         <div class="section-header output">3. What to confirm</div>
         <ol class="steps">
             <li>Create the billing-test organization and its home website. Leave organizations 18, 19, and 20 unchanged.</li>
-            <li>On the website billing page, turn the event-site switch on and choose <code class="code-highlight">test-every-day</code>.</li>
-            <li>Open Pay and complete Checkout with the 4242 card.</li>
+            <li>Publish <code class="code-highlight">test-every-day</code> first. On the website billing page, turn the event-site switch on and choose that plan. Leave the Stripe price id blank.</li>
+            <li>Open Pay and complete Checkout with card <code class="code-highlight">4242 4242 4242 4242</code>, expiry <code class="code-highlight">12/34</code>, security code <code class="code-highlight">123</code>, name <code class="code-highlight">Test User</code>, and ZIP <code class="code-highlight">10001</code>. Uncheck <strong>Save my information</strong>.</li>
             <li>In <code class="code-highlight">/admin/platform-billing</code>, search the organization. The ledger export shows a PAID row and the Stripe invoice id. The same invoice is in the Stripe test dashboard.</li>
-            <li>Start a second subscription attempt with the failing card. The ledger status is FAILED. After grace ends with no paid period, the website status becomes LOCKED and admin tools redirect to billing. The public event page stays up.</li>
+            <li>Start a second subscription attempt with the failing card. Stripe declines it on its own page and the status stays Payment due. A FAILED ledger row comes from a renewal that fails, which section 5 shows how to make. After grace ends with no paid period, the website status becomes LOCKED and admin tools redirect to billing. The public event page stays up.</li>
             <li>Cancel at period end as the paying admin. Cancel now is only on the super-admin website page.</li>
             <li>On the organization, switch from per website to one organization charge, then back. Covered websites show the organization name and hide Pay. Switching back does not charge a website by itself.</li>
             <li>Buy a ticket in the same Stripe test account. That payment must not insert a platform charge. Ticket money stays on the ticket transaction.</li>
         </ol>
-        <div class="warning">A retried Stripe event with the same event id does not insert a second ledger row.</div>
+        <div class="warning">One invoice is one charge, even when Stripe sends the checkout event and both invoice events. A later day of the daily plan is a new invoice and a new row.</div>
+    </div>
+    <div class="section-container usage" id="retail">
+        <div class="section-header usage">4. Retail card test</div>
+        <p>The Retail card charges one website for its shop locations. A catalog plan is charged for each location that is active and marked included. A custom fee is one flat amount and the quantity is 1. This test was run on 21 November 2026 on website <code class="code-highlight">kcnj_parsippany_8</code> as a platform super admin. Use the same listener, card, and sign-in as the Event site test above.</p>
+        <h2>Test data</h2>
+        <p>Run both commands from the root of the admin project, in Command Prompt. The first adds two unpublished $1.00 retail plans and three test locations to the local database. Two locations are included and one is left out. It can be run again without adding duplicates. The second creates the Stripe sandbox price for the Gas station locations plan and prints its id. It refuses to run unless the Stripe secret key is a test key.</p>
+        <div class="command-block setup" data-command-type="setup" data-command-base="docker exec -i adwiise_agent_db-postgresql-1 psql" data-template-command="docker exec -i adwiise_agent_db-postgresql-1 psql -U postgres -d adwiise_agent_db -v tenant=kcnj_parsippany_8 &lt; scripts\platform-billing\retail-test-data.sql">
+            <div class="command-header">
+                <span class="command-type">Setup</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'retail-data')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="retail-data">docker exec -i adwiise_agent_db-postgresql-1 psql -U postgres -d adwiise_agent_db -v tenant=kcnj_parsippany_8 &lt; scripts\platform-billing\retail-test-data.sql</div>
+            <div class="command-single-line" id="retail-data-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="retail-data-single-code">docker exec -i adwiise_agent_db-postgresql-1 psql -U postgres -d adwiise_agent_db -v tenant=kcnj_parsippany_8 &lt; scripts\platform-billing\retail-test-data.sql</code>
+            </div>
+        </div>
+        <div class="command-block setup" data-command-type="setup" data-command-base="node scripts/platform-billing/create-graduated-price.cjs" data-template-command="node scripts/platform-billing/create-graduated-price.cjs --interval=month --tiers=&quot;3:199,10:149,inf:99&quot; --name=&quot;Gas station locations&quot;">
+            <div class="command-header">
+                <span class="command-type">Setup</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'retail-price')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="retail-price">node scripts/platform-billing/create-graduated-price.cjs --interval=month --tiers="3:199,10:149,inf:99" --name="Gas station locations"</div>
+            <div class="command-single-line" id="retail-price-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="retail-price-single-code">node scripts/platform-billing/create-graduated-price.cjs --interval=month --tiers="3:199,10:149,inf:99" --name="Gas station locations"</code>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th scope="col">Parameter</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code class="code-highlight">-v tenant=</code></td><td>None. Required.</td><td>Website that receives the three test locations.</td></tr>
+                <tr><td><code class="code-highlight">--interval</code></td><td>month</td><td>day, week, month, or year.</td></tr>
+                <tr><td><code class="code-highlight">--tiers</code></td><td>3:199,10:149,inf:99</td><td>Last location in the tier, then dollars per location. The last tier is <code class="code-highlight">inf</code>.</td></tr>
+                <tr><td><code class="code-highlight">--name</code></td><td>Gas station locations</td><td>Product name shown on the Stripe page.</td></tr>
+            </tbody>
+        </table>
+        <h2>Super admin: prepare the plans</h2>
+        <ol class="steps">
+            <li>Open <code class="code-highlight">/admin/platform-billing/plans</code>. Open <strong>Retail test every day</strong>, check <strong>Published</strong>, and click <strong>Update plan</strong>. Do the same for <strong>Retail test monthly</strong>. Leave Stripe price id blank on both.</li>
+            <li>Open <strong>Gas station locations</strong>. Paste the price id the second command printed into <strong>Stripe price id</strong>. Click <strong>Update plan</strong>. Without that id, Pay monthly on this plan is refused with “Paste the Stripe graduated price id on the gas-station catalog plan before charging by location.”</li>
+        </ol>
+        <h2>Super admin: run the test</h2>
+        <p>Open <code class="code-highlight">/admin/platform-billing/kcnj_parsippany_8</code>. Every step is on the Retail card. Close each Saved box before the next click.</p>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>R1</td><td>Turn the <strong>Charge switch</strong> on. Click <strong>Turn on</strong>, then <strong>OK</strong>.</td><td>The box reads “Turn charging on for retail.” The badge reads Payment due.</td></tr>
+                <tr><td>R2</td><td>Choose <strong>Retail test every day ($1.00)</strong>. Click <strong>Pay monthly</strong>. Do not pay. Go back.</td><td>Subscribe to Retail test every day, $2.00 per day. Qty 2, $1.00 each.</td></tr>
+                <tr><td>R3</td><td>Click <strong>Pay once</strong>. Do not pay. Go back.</td><td>Retail test every day, $2.00, Qty 2, with no “per day”.</td></tr>
+                <tr><td>R4</td><td>Type <code class="code-highlight">5</code> in Custom fee and press Tab. Click <strong>Pay monthly</strong>. Do not pay. Go back.</td><td>Catalog plan reads No catalog plan. Subscribe to Custom retail fee, $5.00 per day, with no quantity line.</td></tr>
+                <tr><td>R5</td><td>Choose <strong>Retail test every day ($1.00)</strong> again. Click <strong>Pay monthly</strong>. Choose the saved Visa 4242 and click <strong>Subscribe</strong>.</td><td>The custom fee clears itself. $2.00 per day. After the webhook the badge reads Active, the line under the title reads quantity 2, and Charges has a Paid row for $2.00.</td></tr>
+                <tr><td>R6</td><td>Under <strong>Locations counted in the location fee</strong>, turn Billing test Lake Hiawatha on. Click <strong>Include</strong>, then <strong>OK</strong>. Click <strong>Update location count</strong>.</td><td>“The fee now counts 3 locations. Stripe prorates the change on the next invoice.” The card reads quantity 3. The list script shows quantity=3.</td></tr>
+                <tr><td>R7</td><td>Turn Billing test Lake Hiawatha off again. Click <strong>Update location count</strong>.</td><td>“The fee now counts 2 locations.” The list script shows quantity=2.</td></tr>
+                <tr><td>R8</td><td>Type <code class="code-highlight">3</code> in Custom fee and press Tab. Click <strong>Pay monthly</strong>.</td><td>Checkout does not open. “The subscription now uses $3.00.” The card reads quantity 1. The list script shows $3.00 per day, quantity=1.</td></tr>
+                <tr><td>R9</td><td>Click <strong>Cancel at period end</strong>.</td><td>“The subscription will cancel at the end of the period.”</td></tr>
+                <tr><td>R10</td><td>Click <strong>Cancel now</strong>. Reload the page.</td><td>Complimentary, switch off, No catalog plan, blank custom fee. The same after the reload. Charges has a Void row. The list script shows the subscription canceled.</td></tr>
+                <tr><td>R11</td><td>Turn the switch on again. Choose <strong>Gas station locations ($199.00)</strong>. Click <strong>Pay monthly</strong> and click <strong>Subscribe</strong>.</td><td>Subscribe to Gas station locations, $398.00 per month. Qty 2, $199.00 each. After the webhook the badge reads Active and Charges has a Paid row for $398.00.</td></tr>
+                <tr><td>R12</td><td>With Gas station locations still chosen, click <strong>Pay once</strong>.</td><td>Checkout does not open. “This plan is charged by location on a subscription. Use Pay monthly, or set a custom fee to pay once.”</td></tr>
+                <tr><td>R13</td><td>Choose <strong>Retail test monthly ($1.00)</strong>. Click <strong>Pay monthly</strong>.</td><td>Checkout does not open. “The subscription now uses the catalog price.” No charge is taken, because both prices are monthly. The list script shows $1.00 per month, quantity=2.</td></tr>
+                <tr><td>R14</td><td>Click <strong>Pay once</strong> and click <strong>Pay</strong>.</td><td>Retail test monthly, $2.00. Charges has one more Paid row for $2.00. The card stays Active and keeps its Cancel buttons. The subscription keeps billing.</td></tr>
+            </tbody>
+        </table>
+        <div class="info">All fourteen steps were run on 21 November 2026. Steps R6, R12, and R14 found faults that were fixed the same day. The results and the fixes are in section 11 of <a href="PLATFORM_BILLING_CHECKOUT_FIX_AND_MANUAL_TEST.html#retail-test">Checkout fixes and manual test</a>. The website was left Active on Retail test monthly, $1.00 for each of 2 locations per month, with the charge switch on.</div>
+        <div class="warning">Moving a subscription from a daily price to a monthly price charges at once, because Stripe starts a new billing period. Step R11 avoids this by canceling first. The failing card, the grace lock, a US bank account, the organization charge, and paying as a tenant admin are in section 5.</div>
+        <h2>Check Stripe</h2>
+        <div class="command-block setup" data-command-type="setup" data-command-base="node scripts/platform-billing/list-platform-subscriptions.cjs" data-template-command="node scripts/platform-billing/list-platform-subscriptions.cjs">
+            <div class="command-header">
+                <span class="command-type">Verify</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'retail-list')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="retail-list">node scripts/platform-billing/list-platform-subscriptions.cjs</div>
+            <div class="command-single-line" id="retail-list-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="retail-list-single-code">node scripts/platform-billing/list-platform-subscriptions.cjs</code>
+            </div>
+        </div>
+        <pre class="command-single-line"><code>customer cus_VfFYZA9U5jYLVf
+  sub_1UeG3hK5BrggeAHMX98WPYhU  active  $1.00 per month  quantity=2  GAS_STATION  billingId=4  tenant=kcnj_parsippany_8
+  sub_1Ue4kiK5BrggeAHMJ0D3q8xo  active  $3.00 per month  quantity=1  EVENT_SITE  billingId=3  tenant=kcnj_parsippany_8</code></pre>
+        <p>Each line gives the status, the price for one unit, the quantity, and the billing row. A graduated price prints <code class="code-highlight">graduated</code> in place of an amount. The Retail card is stored as product <code class="code-highlight">GAS_STATION</code>.</p>
+    </div>
+    <div class="section-container usage" id="retail-more">
+        <div class="section-header usage">5. Retail card: failing card, grace lock, bank account, organization fee, tenant admin</div>
+        <p>These five tests were run on 21 November 2026 on website <code class="code-highlight">kcnj_parsippany_8</code>, organization 15 (KCNJ Temp). Run section 4 first. Each test starts from a Retail card with the charge switch on, the plan <strong>Retail test monthly ($1.00)</strong>, and no subscription. To get there, click <strong>Cancel now</strong>, turn the switch on again, and choose the plan. Wait for the Stripe page to finish drawing before you click anything on it.</p>
+        <h2>F. Failing card</h2>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>F1</td><td>Click <strong>Pay monthly</strong>. On the Stripe page choose <strong>Card</strong>. Type card <code class="code-highlight">4000 0000 0000 0341</code>, expiry <code class="code-highlight">12/34</code>, security code <code class="code-highlight">123</code>, name <code class="code-highlight">Test User</code>, ZIP <code class="code-highlight">10001</code>. Click <strong>Subscribe</strong>.</td><td>The Stripe page reads “Your card was declined. Try another payment method or card.” No subscription is made. The Retail card stays Payment due. The Charges table gets no row, because Stripe makes no invoice for a card it declines on this page.</td></tr>
+                <tr><td>F2</td><td>Pay with the saved Visa 4242 so the card is Active. Then run the first command below with the subscription id from the list script.</td><td>The Retail card reads Past due. Charges has a Failed row for $2.00. Grace starts again from this moment for the number of grace days on the card.</td></tr>
+                <tr><td>F3</td><td>Run the second command below.</td><td>The open invoice is paid. The Retail card reads Active. Charges has a Paid row for the same invoice.</td></tr>
+            </tbody>
+        </table>
+        <div class="command-block setup" data-command-type="setup" data-command-base="node scripts/platform-billing/simulate-renewal.cjs" data-template-command="node scripts/platform-billing/simulate-renewal.cjs --subscription=sub_... --card=fail">
+            <div class="command-header">
+                <span class="command-type">Fail a renewal</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'renew-fail')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="renew-fail">node scripts/platform-billing/simulate-renewal.cjs --subscription=sub_... --card=fail</div>
+            <div class="command-single-line" id="renew-fail-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="renew-fail-single-code">node scripts/platform-billing/simulate-renewal.cjs --subscription=sub_... --card=fail</code>
+            </div>
+        </div>
+        <div class="command-block setup" data-command-type="setup" data-command-base="node scripts/platform-billing/simulate-renewal.cjs" data-template-command="node scripts/platform-billing/simulate-renewal.cjs --subscription=sub_... --card=ok">
+            <div class="command-header">
+                <span class="command-type">Recover the renewal</span>
+                <div class="command-header-buttons">
+                    <button type="button" class="copy-button-template" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+                    <button type="button" class="copy-button" onclick="copyCommand(this, 'renew-ok')" title="Copy customized command">Copy</button>
+                </div>
+            </div>
+            <div class="command-content" id="renew-ok">node scripts/platform-billing/simulate-renewal.cjs --subscription=sub_... --card=ok</div>
+            <div class="command-single-line" id="renew-ok-single">
+                <div class="command-single-line-label">Windows single-line</div>
+                <code id="renew-ok-single-code">node scripts/platform-billing/simulate-renewal.cjs --subscription=sub_... --card=ok</code>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th scope="col">Parameter</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code class="code-highlight">--subscription</code></td><td>None. Required.</td><td>The subscription id, such as <code class="code-highlight">sub_1UeGVWK5BrggeAHMk7Tyh1vI</code>. It must be a platform billing subscription.</td></tr>
+                <tr><td><code class="code-highlight">--card</code></td><td>fail</td><td><code class="code-highlight">fail</code> puts Stripe's failing test card on the subscription and bills it now. <code class="code-highlight">ok</code> puts the working test card back, pays the open invoice, and removes the failing card.</td></tr>
+            </tbody>
+        </table>
+        <pre class="command-single-line"><code>Subscription sub_1UeGVWK5BrggeAHMk7Tyh1vI now pays with visa 0341.
+Subscription status in Stripe: past_due.
+
+Subscription sub_1UeGVWK5BrggeAHMk7Tyh1vI now pays with visa 4242.
+Invoice in_1UeGWjK5BrggeAHMqguboraN is paid.
+Subscription status in Stripe: active.</code></pre>
+        <div class="info">The script refuses to run unless the Stripe secret key is a test key. Billing a subscription now also moves its billing date to today.</div>
+        <h2>G. Grace lock</h2>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>G1</td><td>With the charge switch off, set <strong>Grace days</strong> to <code class="code-highlight">0</code> and click <strong>Save retail billing</strong>. Turn the switch on.</td><td>Payment due. The line under the title reads grace ends today. Grace days are read when the switch is turned on. Changing them later does not move the grace end.</td></tr>
+                <tr><td>G2</td><td>Reload the page.</td><td>The Retail badge reads Locked. A red line at the top reads “Paid admin tools are locked until this platform fee is paid. The site itself stays online.”</td></tr>
+                <tr><td>G3</td><td>Click <strong>Pay monthly</strong> and pay.</td><td>The Retail card reads Active. The red line is gone after a reload.</td></tr>
+                <tr><td>G4</td><td>Set Grace days back to <code class="code-highlight">14</code> and click <strong>Save retail billing</strong>.</td><td>Saved.</td></tr>
+            </tbody>
+        </table>
+        <div class="warning">A website is not locked while a paid period of the same fee is still running. On a website that already paid a Retail charge this month, step G2 stays Payment due until that paid period ends. In the test on 21 November 2026 the earlier Retail paid periods were ended by hand in the local database so the lock could be seen, and were put back afterward. A paid Event site period does not hold the Retail lock back.</div>
+        <h2>H. US bank account</h2>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>H1</td><td>Click <strong>Pay monthly</strong>. On the Stripe page choose <strong>US bank account</strong>. Type the name <code class="code-highlight">Test User</code>. Click the test bank <strong>Test (Non-OAuth)</strong>.</td><td>A box marked Link Test opens.</td></tr>
+                <tr><td>H2</td><td>Click <strong>Agree and continue</strong>. Leave <strong>Success</strong> selected and click <strong>Connect account</strong>. On “Save account with Link” click <strong>Not now</strong>. Click <strong>Continue</strong>.</td><td>The Stripe page shows Stripebank ending 6789.</td></tr>
+                <tr><td>H3</td><td>Click <strong>Subscribe</strong>.</td><td>For a few seconds the Retail card reads Payment due and Charges has an Open row. A bank debit is not paid at once. Then the card reads Active and Charges shows a Paid row for $2.00.</td></tr>
+            </tbody>
+        </table>
+        <div class="info">Agree and continue accepts Link's terms for the sandbox. No routing or account number is typed. In live mode a bank debit takes several business days to clear, and the card stays Payment due for that time.</div>
+        <h2>I. One charge for the organization</h2>
+        <p>Open <code class="code-highlight">/admin/platform-billing/organization/15</code>.</p>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>I1</td><td>Set Billing scope to <strong>Bill the organization once</strong>. Type <code class="code-highlight">4</code> in Monthly amount. Click <strong>Save billing scope</strong>.</td><td>“This organization now has one subscription.” The top of the page reads Organization and $4.00.</td></tr>
+                <tr><td>I2</td><td>Open the website page <code class="code-highlight">/admin/platform-billing/kcnj_parsippany_8</code>.</td><td>Event site and Retail read Complimentary with “This website is covered by its organization.” Their Pay buttons are gone. A card named Organization subscription reads Payment due, $4.00 per month. Each website subscription is set in Stripe to end at its period end.</td></tr>
+                <tr><td>I3</td><td>Click <strong>Pay monthly</strong> on the Organization subscription card and pay.</td><td>The Stripe page reads Subscribe to Organization portfolio fee, $4.00 per month. The card reads Active. The organization ledger has a Paid row for $4.00 with no website on it.</td></tr>
+                <tr><td>I4</td><td>On the organization page set Billing scope to <strong>Bill each website separately</strong> and click <strong>Save billing scope</strong>.</td><td>“Each website stays complimentary until its own charge switch is turned on.” The top of the page reads Per website with no amount. The organization subscription is set to end at its period end. The Organization subscription card is no longer shown on the website page.</td></tr>
+                <tr><td>I5</td><td>On the website page turn the Retail switch on, choose the plan, and click <strong>Pay monthly</strong>. Do the same for Event site with its fee.</td><td>Checkout does not open, because the website subscription is still running. “The subscription now uses the catalog price.” The badge reads Active at once. In Stripe the subscription no longer ends at its period end.</td></tr>
+            </tbody>
+        </table>
+        <h2>J. Tenant admin</h2>
+        <p>Sign in as a user who is <code class="code-highlight">ADMIN</code> on <code class="code-highlight">kcnj_parsippany_8</code> only. In the test on 21 November 2026 no such user existed, so the super admin's own roles were changed in the local database for the test and put back afterward.</p>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>J1</td><td>Open <code class="code-highlight">/admin/platform-billing/kcnj_parsippany_8</code>.</td><td>You are sent to <code class="code-highlight">/admin</code>. The only workspace is KCNJ Temp, marked ADMIN.</td></tr>
+                <tr><td>J2</td><td>Open <code class="code-highlight">/admin/billing</code>.</td><td>Each card shows the status, Pay monthly, Pay once, Payment methods, and Cancel at period end. There is no charge switch, no plan, no custom fee, no Save button, no Cancel now, and no switch beside a location.</td></tr>
+                <tr><td>J3</td><td>Click <strong>Cancel at period end</strong> on the Retail card.</td><td>“The subscription will cancel at the end of the period.”</td></tr>
+                <tr><td>J4</td><td>As super admin, make the Retail card Locked with steps G1 and G2. Sign in as the tenant admin again and open <code class="code-highlight">/admin</code>.</td><td>You are sent to <code class="code-highlight">/admin/billing?reason=locked</code>. The red line is shown and the Retail badge reads Locked.</td></tr>
+                <tr><td>J5</td><td>Click <strong>Pay monthly</strong> on the Retail card and pay with the saved Visa 4242.</td><td>The Retail card reads Active. <code class="code-highlight">/admin</code> opens again.</td></tr>
+            </tbody>
+        </table>
+        <div class="info">Under <strong>Locations counted in the location fee</strong> a tenant admin sees each location as Included or Not included, with no switch. Only a platform super admin can include or remove a location. This was changed on 21 November 2026, because a tenant admin could lower the fee for their own website. A tenant admin can still click <strong>Update location count</strong>.</div>
+        <h2>K. Only a super admin adds or removes a location</h2>
+        <p>The number of locations sets the fee. A tenant admin who needs a location added or removed contacts the platform team. Open <code class="code-highlight">/admin/retail/locations?tenant=kcnj_parsippany_8</code>.</p>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>K1</td><td>As the tenant admin, look at the page.</td><td>There is no <strong>Add location</strong> button and no delete button on a row. A line reads “To add or remove a location, contact the platform team. You can edit the details of the locations listed here.”</td></tr>
+                <tr><td>K2</td><td>Click the edit button on a row.</td><td>Tenant is greyed out. <strong>Active</strong> and <strong>Counted in the location fee</strong> are not shown.</td></tr>
+                <tr><td>K3</td><td>Type <code class="code-highlight">Test brand</code> in Brand and click <strong>Save</strong>.</td><td>The brand is saved. The location stays active and keeps its place in the fee.</td></tr>
+                <tr><td>K4</td><td>As a platform super admin, open the same page.</td><td><strong>Add location</strong>, the delete button on each row, <strong>Active</strong>, and <strong>Counted in the location fee</strong> are all there.</td></tr>
+            </tbody>
+        </table>
+        <div class="info">The server applies the same rule. For anyone who is not a platform super admin it refuses a new location and a delete, and it ignores Tenant, Active, and Counted in the location fee on an edit. The unused proxy address <code class="code-highlight">/api/proxy/retail-locations</code> now only reads.</div>
+    </div>
+    <div class="section-container usage" id="charge-search">
+        <div class="section-header usage">6. Charge search and change history</div>
+        <p>These steps were run on 21 November 2026 as platform super admin, after sections 4 and 5 had filled the ledger of <code class="code-highlight">kcnj_parsippany_8</code>, organization 15. Open <code class="code-highlight">/admin/platform-billing/charges</code>, or click <strong>Search charges and history</strong> on the platform billing home.</p>
+        <table>
+            <thead><tr><th scope="col">Step</th><th scope="col">Do this</th><th scope="col">Expected</th></tr></thead>
+            <tbody>
+                <tr><td>S1</td><td>Open the page with no filter.</td><td>The 20 newest charges of all organizations. Above the table: the number found, and the count and dollar sum of each status.</td></tr>
+                <tr><td>S2</td><td>Type <code class="code-highlight">kcnj_parsippany_8</code> in <strong>Website id</strong>, choose the fee <strong>Event site</strong>, click <strong>Search</strong>.</td><td>Only Event site charges of that website. The address holds both filters. A reload keeps them.</td></tr>
+                <tr><td>S3</td><td>Click <strong>Clear filters</strong>. Tick <strong>Failed</strong>, click <strong>Today</strong>, click <strong>Search</strong>.</td><td>The failed renewals of the day. A row whose invoice was paid afterward reads “Paid later” under Failed.</td></tr>
+                <tr><td>S4</td><td>Paste an invoice id (<code class="code-highlight">in_</code>) into <strong>Find</strong> and search. Repeat with a subscription id (<code class="code-highlight">sub_</code>) and a payment id (<code class="code-highlight">pi_</code>).</td><td>Each finds its charges. An invoice paid by bank debit shows two rows, Open and Paid.</td></tr>
+                <tr><td>S5</td><td>Type <code class="code-highlight">4</code> in <strong>Amount from</strong> and in <strong>Amount to</strong>.</td><td>The $4.00 Organization fee charge. Its Website column is empty.</td></tr>
+                <tr><td>S6</td><td>Type part of an organization name in <strong>Find</strong>. Then type text that matches nothing.</td><td>The charges of that organization. Then “No charges match this search.” and 0 charges found.</td></tr>
+                <tr><td>S7</td><td>Choose a plan in <strong>Plan</strong>, and <strong>Largest amount first</strong> in <strong>Order</strong>.</td><td>Only charges of that plan, the largest first.</td></tr>
+                <tr><td>S8</td><td>Click a row.</td><td>The Charge details box: organization, website, fee, plan, amount, period, the Stripe ids with Copy and Open in Stripe, the ledger rows of the invoice, and the five newest billing changes of that fee.</td></tr>
+                <tr><td>S9</td><td>Click <strong>Export matching charges</strong>.</td><td>A sheet named <code class="code-highlight">platform-charges.xlsx</code> with every matching charge, up to 5,000, and a line that states how many were exported. This click was not run in the test on 21 November 2026.</td></tr>
+                <tr><td>S10</td><td>Click the tab <strong>Change history</strong>, type <code class="code-highlight">15</code> in Find, click <strong>Search</strong>.</td><td>The billing changes of organization 15, 20 a page, each with what changed, the old and new plan or amount, and the name and email of the user.</td></tr>
+                <tr><td>S11</td><td>On <code class="code-highlight">/admin/platform-billing</code> click the tile <strong>Failed charges</strong>.</td><td>Charge search opens with Failed ticked.</td></tr>
+                <tr><td>S12</td><td>Open <code class="code-highlight">/admin/platform-billing/kcnj_parsippany_8</code> and scroll to <strong>Charges</strong>. Choose the fee Event site, then All fees, then click <strong>Next</strong>.</td><td>The table has the columns Status, Fee, Amount, When, Period, Invoice. The filter narrows the list. Page 2 and later can be reached. Two links, Open in charge search and Change history, open the search for this website.</td></tr>
+                <tr><td>S13</td><td>As a tenant admin of the website, open <code class="code-highlight">/admin/platform-billing/charges</code>, then <code class="code-highlight">/admin/billing</code>.</td><td>The first sends you to <code class="code-highlight">/admin</code>. On the second, the Charges table shows this website only, with the filters and without the two links.</td></tr>
+            </tbody>
+        </table>
+        <div class="info">A website id typed into Find shows the charges of the whole organization that owns the website. Use the Website id box to see one website. The requirement and the list of what was built are in <a href="PLATFORM_BILLING_SEARCH_REQUIREMENTS.html">PLATFORM_BILLING_SEARCH_REQUIREMENTS.html</a>.</div>
     </div>
     <script>
         function flash(button) {

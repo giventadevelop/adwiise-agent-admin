@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { setOrganizationBillingScope } from './websiteActions';
 
 const money = new Intl.NumberFormat('en-US', {
@@ -26,6 +27,7 @@ export default function OrganizationBillingScopeCard({
   const [amount, setAmount] = useState(initialAmount > 0 ? initialAmount.toFixed(2) : '');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   async function save() {
     setBusy(true);
@@ -39,6 +41,8 @@ export default function OrganizationBillingScopeCard({
         monthlyUsd: scope === 'ORGANIZATION' ? numeric : null,
       });
       setMessage(scope === 'ORGANIZATION' ? 'This organization now has one subscription.' : 'Each website stays complimentary until its own charge switch is turned on.');
+      // The scope and amount shown above this card come from the server.
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not save billing scope');
     } finally {
