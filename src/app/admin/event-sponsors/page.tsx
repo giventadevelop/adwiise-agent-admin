@@ -729,6 +729,7 @@ function SponsorForm({
   };
 
   const sponsorTypes = [
+    'Diamond',
     'Platinum',
     'Gold',
     'Silver',

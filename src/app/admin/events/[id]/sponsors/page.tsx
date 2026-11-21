@@ -1649,6 +1649,7 @@ function SponsorForm({ formData, setFormData, onSubmit, onCancel, loading, submi
   };
 
   const sponsorTypes = [
+    'Diamond',
     'Platinum',
     'Gold',
     'Silver',

@@ -112,6 +112,7 @@ export default function SponsorEditClient({
   };
 
   const sponsorTypes = [
+    'Diamond',
     'Platinum',
     'Gold',
     'Silver',
