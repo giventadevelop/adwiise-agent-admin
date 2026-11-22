@@ -5,6 +5,7 @@ import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl, getTenantId } from '@/lib/env';
 import { getAdminProxyBaseUrl } from '@/lib/adminProxyBaseUrl';
+import { resolveTeamMemberPortraitUrl } from '@/app/admin/team-members/ApiServerActions';
 import type { EventSponsorsDTO, EventSponsorsJoinDTO, EventMediaDTO } from '@/types';
 import { mergeById, searchQueryVariants, slicePage } from '@/lib/admin/mergeContainsResults';
 
@@ -597,13 +598,15 @@ export async function uploadEventSponsorMediaServer(
  */
 export async function fetchSponsorMediaServer(
   sponsorId: number,
-  _tenantId?: string
+  tenantId?: string
 ): Promise<EventMediaDTO[]> {
   const baseUrl = await getAdminProxyBaseUrl();
   const params = new URLSearchParams();
 
   // Use sponsorId.equals query parameter (JHipster criteria syntax)
   params.append('sponsorId.equals', String(sponsorId));
+  const tenant = tenantId?.trim();
+  if (tenant) params.append('tenantId.equals', tenant);
 
   // Sort by priority ranking (ascending - lower = higher priority)
   params.append('sort', 'priorityRanking,asc');
@@ -622,13 +625,21 @@ export async function fetchSponsorMediaServer(
 
   const data = await response.json();
 
-  // Handle paginated response (Spring Data REST format)
+  let items: EventMediaDTO[];
   if (data && typeof data === 'object' && '_embedded' in data && 'eventMedias' in data._embedded) {
-    return Array.isArray(data._embedded.eventMedias) ? data._embedded.eventMedias : [];
+    items = Array.isArray(data._embedded.eventMedias) ? data._embedded.eventMedias : [];
+  } else {
+    items = Array.isArray(data) ? data : data ? [data] : [];
   }
 
-  // Handle direct array response
-  return Array.isArray(data) ? data : [data];
+  return Promise.all(items.map((item) => withSponsorMediaPreview(item, tenant)));
+}
+
+/** Root-relative files live on the tenant site. fileUrl stays unchanged so a save does not persist the public origin. */
+async function withSponsorMediaPreview(item: EventMediaDTO, tenantId?: string): Promise<EventMediaDTO> {
+  const preview = await resolveTeamMemberPortraitUrl(item.fileUrl, tenantId);
+  if (!preview || preview === item.fileUrl) return item;
+  return { ...item, previewFileUrl: preview };
 }
 
 /**

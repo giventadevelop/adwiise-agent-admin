@@ -82,11 +82,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (method === "GET") {
-      const fetch = (await import("node-fetch")).default;
-      const apiRes = await fetch(apiUrl, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const tenantEquals = params.get("tenantId.equals");
+      const apiRes = await fetchWithJwtRetry(
+        apiUrl,
+        {
+          method: "GET",
+          omitEnvTenantId: true,
+          headers: tenantEquals ? { "X-Tenant-ID": tenantEquals } : {},
+        },
+        "event-medias-get"
+      );
 
       console.log(`Event media proxy response: ${apiRes.status} ${apiRes.statusText}`);
 

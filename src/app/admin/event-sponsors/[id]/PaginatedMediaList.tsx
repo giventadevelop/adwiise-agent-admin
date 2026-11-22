@@ -9,8 +9,23 @@ import { fetchSponsorMediaServer, updateMediaPriorityRankingServer, updateEventM
 import PriorityRankingEditor from '@/components/sponsors/PriorityRankingEditor';
 import Modal, { ConfirmModal } from '@/components/ui/Modal';
 
+function mediaDisplayUrl(media: EventMediaDTO): string {
+  return media.previewFileUrl || media.fileUrl || '';
+}
+
+function isOtherOrigin(src: string): boolean {
+  if (!/^https?:\/\//i.test(src)) return false;
+  if (typeof window === 'undefined') return true;
+  try {
+    return new URL(src).origin !== window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
 interface PaginatedMediaListProps {
   sponsorId: number;
+  tenantId?: string;
   initialMediaList: EventMediaDTO[];
   totalCount: number;
   currentPage: number;
@@ -21,6 +36,7 @@ interface PaginatedMediaListProps {
 
 export default function PaginatedMediaList({
   sponsorId,
+  tenantId,
   initialMediaList,
   totalCount,
   currentPage,
@@ -47,7 +63,7 @@ export default function PaginatedMediaList({
 
     setLoading(true);
     try {
-      const allMedia = await fetchSponsorMediaServer(sponsorId);
+      const allMedia = await fetchSponsorMediaServer(sponsorId, tenantId);
       const startIndex = currentPage * pageSize;
       const endIndex = startIndex + pageSize;
       const paginatedMedia = allMedia.slice(startIndex, endIndex);
@@ -59,8 +75,7 @@ export default function PaginatedMediaList({
     } finally {
       setLoading(false);
     }
-  }, [sponsorId, currentPage, pageSize, initialMediaList]);
-
+  }, [sponsorId, tenantId, currentPage, pageSize, initialMediaList]);
   // Load media on mount and when page/refreshKey changes
   useEffect(() => {
     loadMedia();
@@ -250,18 +265,26 @@ export default function PaginatedMediaList({
               key={media.id}
               className="bg-muted/50 rounded-lg overflow-hidden border border-border reverent-hover"
             >
-              {media.fileUrl && (
+              {mediaDisplayUrl(media) && (
                 <div
                   className="relative aspect-video cursor-pointer"
                   onClick={(e) => handleMediaClick(media, e)}
                 >
-                  <Image
-                    src={media.fileUrl}
-                    alt={media.altText || media.title || 'Media'}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  />
+                  {isOtherOrigin(mediaDisplayUrl(media)) ? (
+                    <img
+                      src={mediaDisplayUrl(media)}
+                      alt={media.altText || media.title || 'Media'}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={mediaDisplayUrl(media)}
+                      alt={media.altText || media.title || 'Media'}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  )}
                 </div>
               )}
               <div className="p-3">
@@ -385,14 +408,22 @@ export default function PaginatedMediaList({
           }}
         >
           <div className="relative max-w-7xl max-h-[90vh] p-4">
-            {selectedMedia.fileUrl && (
-              <Image
-                src={selectedMedia.fileUrl}
-                alt={selectedMedia.altText || selectedMedia.title || 'Media'}
-                width={1200}
-                height={800}
-                className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              />
+            {mediaDisplayUrl(selectedMedia) && (
+              isOtherOrigin(mediaDisplayUrl(selectedMedia)) ? (
+                <img
+                  src={mediaDisplayUrl(selectedMedia)}
+                  alt={selectedMedia.altText || selectedMedia.title || 'Media'}
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                />
+              ) : (
+                <Image
+                  src={mediaDisplayUrl(selectedMedia)}
+                  alt={selectedMedia.altText || selectedMedia.title || 'Media'}
+                  width={1200}
+                  height={800}
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                />
+              )
             )}
             {selectedMedia.title && (
               <div className="absolute bottom-4 left-4 right-4 bg-black/75 text-white p-3 rounded-lg">

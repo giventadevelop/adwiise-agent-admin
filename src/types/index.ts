@@ -201,6 +201,8 @@ export interface EventMediaDTO {
   eventMediaType: string;
   storageType: string;
   fileUrl?: string;
+  /** Display-only absolute URL for a root-relative fileUrl. Do not persist. */
+  previewFileUrl?: string;
   fileDataContentType?: string;
   contentType?: string;
   fileSize?: number;

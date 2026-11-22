@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCachedApiJwt, generateApiJwt } from '@/lib/api/jwt';
-import { getTenantIdOptional } from '@/lib/env';
+import { getRawBody } from '@/lib/getRawBody';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -74,8 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     console.log('🔗 Backend URL with params:', apiUrlWithParams);
 
-    // Use node-fetch for proper multipart form handling
-    const fetch = (await import("node-fetch")).default;
+    const rawBody = await getRawBody(req);
 
     // Get JWT token
     let token = await getCachedApiJwt();
@@ -83,76 +82,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       token = await generateApiJwt();
     }
 
-    // Copy headers from request, but sanitize them
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
+      'X-Tenant-ID': tenantIdValue,
+      'content-length': String(rawBody.length),
     };
-    const tid = getTenantIdOptional();
-    if (tid) headers['X-Tenant-ID'] = tid;
 
-    // Only copy content-type and content-length if they exist
     if (req.headers['content-type']) {
-      headers['content-type'] = req.headers['content-type'];
-      console.log('🔧 Content-Type from request:', req.headers['content-type']);
-    }
-    if (req.headers['content-length']) {
-      headers['content-length'] = req.headers['content-length'];
-      console.log('🔧 Content-Length from request:', req.headers['content-length']);
+      headers['content-type'] = Array.isArray(req.headers['content-type'])
+        ? req.headers['content-type'][0]
+        : req.headers['content-type'];
+      console.log('🔧 Content-Type from request:', headers['content-type']);
     }
 
     console.log('🔧 Final headers being sent to backend:', headers);
     console.log('🔧 Final URL being called:', apiUrlWithParams);
 
-    // Forward the request to the backend
     const apiRes = await fetch(apiUrlWithParams, {
       method: 'POST',
-      headers: headers,
-      body: req, // Forward the raw request stream
-      duplex: 'half', // Required for streaming body in Node.js fetch
+      headers,
+      body: rawBody,
     });
 
     console.log('🔧 Backend response status:', apiRes.status);
-    console.log('🔧 Backend response headers:', Object.fromEntries(apiRes.headers.entries()));
 
-    // Check response status and handle accordingly
     if (apiRes.status >= 200 && apiRes.status < 300) {
-      // Success - pipe the response
+      const text = await apiRes.text();
       console.log('✅ Sponsor Image Upload Proxy: Backend upload successful - HTTP status:', apiRes.status);
       res.status(apiRes.status);
-
-      // Copy response headers
-      for (const [key, value] of Object.entries(apiRes.headers.raw())) {
-        if (key.toLowerCase() !== 'content-encoding' && key.toLowerCase() !== 'transfer-encoding') {
-          res.setHeader(key, value);
-        }
-      }
-
-      apiRes.body.pipe(res);
-    } else {
-      // Error - return structured error response
-      console.error('❌ Sponsor Image Upload Proxy: Backend upload failed - HTTP status:', apiRes.status);
-
-      // Drain the error response to prevent processing
-      try {
-        // For node-fetch, we need to consume the body differently
-        if (apiRes.body && typeof apiRes.body.destroy === 'function') {
-          apiRes.body.destroy();
-        } else if (apiRes.body && typeof apiRes.body.cancel === 'function') {
-          apiRes.body.cancel();
-        }
-      } catch (drainError) {
-        console.warn('Warning: Could not drain error response body:', drainError);
-      }
-
-      res.status(apiRes.status >= 400 ? apiRes.status : 500);
-      res.setHeader('Content-Type', 'application/json');
-      res.json({
-        error: 'Sponsor image upload failed',
-        status: apiRes.status,
-        message: `Upload operation failed with HTTP status ${apiRes.status}`,
-        success: false
-      });
+      res.setHeader('Content-Type', apiRes.headers.get('content-type') || 'application/json');
+      res.send(text);
+      return;
     }
+
+    let backendDetail = '';
+    try {
+      backendDetail = await apiRes.text();
+    } catch {
+      /* ignore */
+    }
+    console.error('❌ Sponsor Image Upload Proxy: Backend upload failed - HTTP status:', apiRes.status, backendDetail.slice(0, 1000));
+    res.status(apiRes.status >= 400 ? apiRes.status : 500).json({
+      error: 'Sponsor image upload failed',
+      status: apiRes.status,
+      message: backendDetail || `Upload operation failed with HTTP status ${apiRes.status}`,
+      success: false
+    });
   } catch (err) {
     console.error('Sponsor image upload proxy error:', err);
     res.status(500).json({ error: 'Internal server error', details: String(err) });

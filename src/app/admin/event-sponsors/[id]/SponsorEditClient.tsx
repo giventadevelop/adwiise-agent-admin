@@ -17,6 +17,9 @@ import SuccessDialog from '@/components/SuccessDialog';
 
 interface SponsorEditClientProps {
   sponsor: EventSponsorsDTO;
+  bannerPreviewUrl?: string;
+  logoPreviewUrl?: string;
+  heroPreviewUrl?: string;
   initialMediaList: EventMediaDTO[];
   totalMediaCount: number;
   currentPage: number;
@@ -26,6 +29,9 @@ interface SponsorEditClientProps {
 
 export default function SponsorEditClient({
   sponsor: initialSponsor,
+  bannerPreviewUrl,
+  logoPreviewUrl,
+  heroPreviewUrl,
   initialMediaList,
   totalMediaCount,
   currentPage,
@@ -425,7 +431,7 @@ export default function SponsorEditClient({
             <SponsorImageUploadArea
               sponsorId={sponsor.id!}
               imageType="banner"
-              currentImageUrl={sponsor.bannerImageUrl}
+              currentImageUrl={sponsor.bannerImageUrl || bannerPreviewUrl}
               onUploadSuccess={(imageUrl, ocrChars) => handleImageUploadSuccess(imageUrl, 'banner', ocrChars)}
               disabled={loading || !sponsor.id}
             />
@@ -433,14 +439,14 @@ export default function SponsorEditClient({
               <SponsorImageUploadArea
                 sponsorId={sponsor.id!}
                 imageType="logo"
-                currentImageUrl={sponsor.logoUrl}
+                currentImageUrl={sponsor.logoUrl || logoPreviewUrl}
                 onUploadSuccess={(imageUrl, ocrChars) => handleImageUploadSuccess(imageUrl, 'logo', ocrChars)}
                 disabled={loading || !sponsor.id}
               />
               <SponsorImageUploadArea
                 sponsorId={sponsor.id!}
                 imageType="hero"
-                currentImageUrl={sponsor.heroImageUrl}
+                currentImageUrl={sponsor.heroImageUrl || heroPreviewUrl}
                 onUploadSuccess={(imageUrl, ocrChars) => handleImageUploadSuccess(imageUrl, 'hero', ocrChars)}
                 disabled={loading || !sponsor.id}
               />
@@ -496,6 +502,7 @@ export default function SponsorEditClient({
           initialMediaList={initialMediaList}
           totalCount={totalMediaCount}
           currentPage={currentPage}
+          tenantId={sponsor.tenantId}
           pageSize={pageSize}
           totalPages={totalPages}
           refreshKey={mediaRefreshKey}
