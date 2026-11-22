@@ -2,6 +2,7 @@
 
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import React, { useState, useEffect } from 'react';
 import { FaSearch, FaMicrophone, FaAddressBook, FaHandshake, FaEnvelope, FaUserTie, FaClock } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
@@ -505,8 +506,11 @@ export default function EventEmailsPage() {
                   placeholder="🔍 Search emails..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 h-12 w-full text-base border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 text-sm sm:text-base"
+                  className="pl-12 pr-10 h-12 w-full text-base border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 text-sm sm:text-base"
                 />
+                {searchTerm ? (
+                  <SearchFieldClearButton label="Clear email search" onClear={() => setSearchTerm('')} />
+                ) : null}
               </div>
             </div>
             <button
@@ -632,8 +636,11 @@ export default function EventEmailsPage() {
                   placeholder="Search available emails..."
                   value={availableEmailsSearchTerm}
                   onChange={(e) => handleAvailableEmailsSearch(e.target.value)}
-                  className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                  className="pl-12 pr-10 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                 />
+                {availableEmailsSearchTerm ? (
+                  <SearchFieldClearButton label="Clear available email search" onClear={() => handleAvailableEmailsSearch('')} />
+                ) : null}
               </div>
             </div>
           </AdminFilterToolbar>

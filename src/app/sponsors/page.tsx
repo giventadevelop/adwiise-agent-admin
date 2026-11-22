@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { EventSponsorsDTO } from "@/types";
 import { getAppUrl } from '@/lib/env';
 import { SponsorCard } from '@/components/sponsors/SponsorCard';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 
 export default function SponsorsPage() {
   const [sponsors, setSponsors] = useState<EventSponsorsDTO[]>([]);
@@ -188,8 +189,11 @@ export default function SponsorsPage() {
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Search sponsors..."
-                className="block w-full pl-10 pr-3 py-3 border border-border rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring reverent-transition font-body"
+                className="block w-full pl-10 pr-10 py-3 border border-border rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring reverent-transition font-body"
               />
+              {searchTerm ? (
+                <SearchFieldClearButton label="Clear sponsor search" onClear={() => handleSearch('')} />
+              ) : null}
             </div>
           </div>
 

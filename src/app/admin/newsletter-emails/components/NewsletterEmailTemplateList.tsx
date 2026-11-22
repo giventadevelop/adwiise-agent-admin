@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import Link from 'next/link';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import type { PromotionEmailTemplateDTO, EventDetailsDTO } from '@/types';
 import { FaEdit, FaTrashAlt, FaCopy, FaEnvelope, FaEnvelopeOpen, FaBan, FaUsers } from 'react-icons/fa';
 import {
@@ -441,13 +442,18 @@ export default function NewsletterEmailTemplateList({
                 💡 Tip: Search by promotion name or title
               </p>
             </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name or subject..."
-              className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-2 text-base"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name or subject..."
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 pr-10 py-2 text-base"
+              />
+              {searchTerm ? (
+                <SearchFieldClearButton label="Clear template search" onClear={() => setSearchTerm('')} />
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

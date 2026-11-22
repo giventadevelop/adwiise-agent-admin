@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom';
 import * as XLSX from 'xlsx';
 import { useAdminAccess, useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { fetchUsersServer, patchUserProfileServer, bulkUploadUsersServer } from './ApiServerActions';
 import { fetchAssignableAccessRoles } from '@/app/admin/access-catalogs/ApiServerActions';
 import AdminNavigation from '@/components/AdminNavigation';
@@ -844,13 +845,18 @@ export default function ManageUsageClient({ adminProfile }: { adminProfile: User
               >
                 {SEARCH_FIELDS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
-              <input
-                type="text"
-                placeholder={`Search by ${SEARCH_FIELDS.find(f => f.value === searchField)?.label}...`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="box-border block h-12 w-full min-w-0 border border-gray-400 rounded-r-xl focus:ring-blue-500 focus:border-blue-500 px-4 text-base bg-white"
-              />
+              <div className="relative min-w-0 flex-1">
+                <input
+                  type="text"
+                  placeholder={`Search by ${SEARCH_FIELDS.find(f => f.value === searchField)?.label}...`}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="box-border block h-12 w-full min-w-0 border border-gray-400 rounded-r-xl focus:ring-blue-500 focus:border-blue-500 px-4 pr-10 text-base bg-white"
+                />
+                {search ? (
+                  <SearchFieldClearButton label="Clear user search" onClear={() => setSearch('')} />
+                ) : null}
+              </div>
             </div>
           </div>
 

@@ -3,6 +3,7 @@ import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import { EventTicketTransactionDTO, EventTicketTransactionStatisticsDTO, EventDetailsDTO, EventTicketTypeDTO } from '@/types';
 import Link from 'next/link';
 import TicketTableClient from './TicketTableClient';
+import { ClearNativeFieldButton } from '@/components/admin/SearchFieldClearButton';
 import BatchRefundSection from './BatchRefundSection';
 import { fetchEventDetailsServer } from '@/app/admin/ApiServerActions';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -462,8 +463,9 @@ export default async function TicketListPage({ params, searchParams }: { params:
                 type="text"
                 placeholder="Search by email"
                 defaultValue={email}
-                className="mt-1 block w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 pl-10 pr-4 py-3 text-base"
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 pl-10 pr-10 py-3 text-base"
               />
+              <ClearNativeFieldButton inputId="email" label="Clear email search" />
             </div>
           </div>
           <div className="flex-1 min-w-[200px]">
@@ -498,8 +500,9 @@ export default async function TicketListPage({ params, searchParams }: { params:
                 type="text"
                 placeholder="Search by name"
                 defaultValue={name}
-                className="mt-1 block w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 pl-10 pr-4 py-3 text-base"
+                className="mt-1 block w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 pl-10 pr-10 py-3 text-base"
               />
+              <ClearNativeFieldButton inputId="name" label="Clear name search" />
             </div>
           </div>
           <button

@@ -2,6 +2,7 @@
 
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import React, { useState, useEffect, useRef } from 'react';
 import { FaSearch, FaEdit, FaTrashAlt, FaUpload, FaImages, FaUnlink, FaTicketAlt, FaPercent, FaMicrophone, FaAddressBook, FaHandshake, FaEnvelope, FaUserTie, FaClock } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
@@ -811,8 +812,11 @@ export default function EventPerformersPage() {
                 placeholder="Search performers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="pl-12 pr-10 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
+              {searchTerm ? (
+                <SearchFieldClearButton label="Clear performer search" onClear={() => setSearchTerm('')} />
+              ) : null}
             </div>
           </div>
           <button
@@ -980,8 +984,11 @@ export default function EventPerformersPage() {
                   placeholder="Search available performers..."
                   value={availablePerformersSearchTerm}
                   onChange={(e) => handleAvailablePerformersSearch(e.target.value)}
-                  className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-12 pr-10 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                {availablePerformersSearchTerm ? (
+                  <SearchFieldClearButton label="Clear available performer search" onClear={() => handleAvailablePerformersSearch('')} />
+                ) : null}
               </div>
             </div>
           </AdminFilterToolbar>

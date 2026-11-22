@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaSearch, FaGlobe, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { useAuth } from '@clerk/nextjs';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import Modal from '@/components/ui/Modal';
@@ -423,8 +424,11 @@ export default function SatelliteDomainsPage() {
                     placeholder="Search by name, key, hostname, or tenant..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full h-12 pl-12 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-12 pl-12 pr-10 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  {searchTerm ? (
+                    <SearchFieldClearButton label="Clear domain search" onClear={() => setSearchTerm('')} />
+                  ) : null}
                 </div>
               </div>
             </AdminFilterToolbar>

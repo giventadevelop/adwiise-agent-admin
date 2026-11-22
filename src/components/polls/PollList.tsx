@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Search, Users, Clock, MessageSquare } from 'lucide-react';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import type { EventPollDTO, EventPollOptionDTO } from '@/types';
 import { fetchEventPollsServer, fetchEventPollOptionsServer } from '@/app/admin/polls/ApiServerActions';
 
@@ -215,8 +216,11 @@ export function PollList({ eventId, userId, onPollSelect }: PollListProps) {
               placeholder="Search polls..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-12 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition-all"
+              className="pl-12 pr-10 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition-all"
             />
+            {searchTerm ? (
+              <SearchFieldClearButton label="Clear poll search" onClear={() => handleSearchChange('')} />
+            ) : null}
           </div>
         </>
       )}

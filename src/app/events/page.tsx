@@ -13,6 +13,7 @@ import { resolveBuyTicketsTarget, resolveRegisterTarget } from '@/lib/eventcube/
 import { BUNDLED_EMERGENCY_HERO_IMAGE } from '@/lib/hero/defaultHeroImages';
 import { useHeroFallbackUrl } from '@/hooks/useHeroFallbackUrl';
 import EventCardResultsPanel from '@/components/competitions/EventCardResultsPanel';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 // import { formatInTimeZone } from 'date-fns-tz';
 
 const EVENTS_PAGE_SIZE = 20; // Minimum events to display per page
@@ -791,20 +792,25 @@ export default function EventsPage() {
         <div className="w-full mb-8">
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Search Events</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid gap-4 items-end [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
               {/* Title Search */}
               <div className="space-y-2">
                 <label htmlFor="searchTitle" className="block text-sm font-medium text-gray-700">
                   Search by Title
                 </label>
-                <input
-                  type="text"
-                  id="searchTitle"
-                  value={searchTitle}
-                  onChange={(e) => setSearchTitle(e.target.value)}
-                  placeholder="Enter event title..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="searchTitle"
+                    value={searchTitle}
+                    onChange={(e) => setSearchTitle(e.target.value)}
+                    placeholder="Enter event title..."
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  />
+                  {searchTitle ? (
+                    <SearchFieldClearButton label="Clear event title search" onClear={() => setSearchTitle('')} />
+                  ) : null}
+                </div>
               </div>
 
               {/* Date Range - Grouped Together */}
@@ -812,7 +818,7 @@ export default function EventsPage() {
                 <label className="block text-sm font-medium text-gray-700">
                   Date Range
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label htmlFor="searchDateFrom" className="block text-xs text-gray-600 mb-1">
                       From

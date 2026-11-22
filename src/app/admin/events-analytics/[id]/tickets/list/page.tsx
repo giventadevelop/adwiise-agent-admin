@@ -3,6 +3,7 @@ import { EventTicketTransactionDTO, EventTicketTransactionStatisticsDTO, EventDe
 import { FaSearch, FaTicketAlt, FaEnvelope, FaUser, FaHashtag, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaUsers, FaPhotoVideo, FaTags, FaPercent, FaHome, FaInfoCircle } from 'react-icons/fa';
 import Link from 'next/link';
 import TicketTableClient from './TicketTableClient';
+import { ClearNativeFieldButton } from '@/components/admin/SearchFieldClearButton';
 import { fetchEventDetailsServer } from '@/app/admin/ApiServerActions';
 import { formatInTimeZone } from 'date-fns-tz';
 
@@ -337,7 +338,10 @@ export default async function TicketListPage({ params, searchParams }: { params:
         <form className="flex flex-wrap gap-2 items-center bg-white rounded-lg shadow px-4 py-2" method="get">
           <div className="flex items-center gap-1">
             <FaEnvelope className="text-gray-400" />
-            <input name="email" placeholder="Search by email" defaultValue={email} className="border rounded px-2 py-1 text-sm" />
+            <div className="relative">
+              <input id="analytics-ticket-email" name="email" placeholder="Search by email" defaultValue={email} className="border rounded px-2 pr-8 py-1 text-sm" />
+              <ClearNativeFieldButton inputId="analytics-ticket-email" label="Clear email search" />
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <FaHashtag className="text-gray-400" />

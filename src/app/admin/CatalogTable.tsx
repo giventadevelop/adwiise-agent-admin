@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 
 const PAGE_SIZE = 10;
 
@@ -39,17 +40,28 @@ export function CatalogTable<T>({
     <div>
       <label className="mb-4 block">
         <span className="mb-1 block text-base font-medium">Search {itemLabel}</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setPage(0);
-          }}
-          placeholder={`Search by name or code`}
-          className="w-full rounded-xl border border-gray-400 px-4 py-3 text-base"
-          aria-label={`Search ${itemLabel}`}
-        />
+        <div className="relative">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(0);
+            }}
+            placeholder={`Search by name or code`}
+            className="w-full rounded-xl border border-gray-400 px-4 pr-10 py-3 text-base"
+            aria-label={`Search ${itemLabel}`}
+          />
+          {query ? (
+            <SearchFieldClearButton
+              label={`Clear ${itemLabel} search`}
+              onClear={() => {
+                setQuery('');
+                setPage(0);
+              }}
+            />
+          ) : null}
+        </div>
       </label>
       {children(pageRows)}
       <div className="mt-8">

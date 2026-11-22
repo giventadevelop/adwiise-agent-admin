@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { FaPlus } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import AdminNavigation from '@/components/AdminNavigation';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import Modal from '@/components/ui/Modal';
 import AdminTableActionButtons from '@/components/admin/AdminTableActionButtons';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
@@ -424,13 +425,18 @@ export default function TenantEmailAddressesPage() {
         {/* Search */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-          <input
-            type="text"
-            placeholder="Search by email, display name, or type..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search by email, display name, or type..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            />
+            {searchTerm ? (
+              <SearchFieldClearButton label="Clear email search" onClear={() => setSearchTerm('')} />
+            ) : null}
+          </div>
         </div>
 
         <div className="bg-white shadow-md rounded-lg overflow-hidden">

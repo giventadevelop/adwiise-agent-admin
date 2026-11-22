@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 
 interface GallerySearchProps {
   onSearch: (filters: {
@@ -26,22 +27,6 @@ export function GallerySearch({ onSearch, loading = false }: GallerySearchProps)
     });
   };
 
-  const handleClear = () => {
-    setSearchTerm('');
-    setStartDate('');
-    setEndDate('');
-    setShowDateFilters(false);
-    // Explicitly call onSearch with empty filters to reset gallery
-    // Use empty string for searchTerm to ensure state change is detected
-    onSearch({
-      searchTerm: '',
-      startDate: undefined,
-      endDate: undefined,
-    });
-  };
-
-  const hasFilters = searchTerm || startDate || endDate;
-
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-background via-muted to-background border border-border/30 sacred-shadow-lg mb-8">
       {/* Search Section Container with Conservative Gradient Background - Per media_gallery_grid_style.mdc */}
@@ -66,32 +51,25 @@ export function GallerySearch({ onSearch, loading = false }: GallerySearchProps)
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search events by title..."
                 className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
               />
-              {hasFilters && (
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  {/* Clear Button - Medium Action Icon Pattern per icons_buttons_styles.mdc */}
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    data-testid="clear-search-button"
-                    className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-300 hover:scale-110"
-                    title="Clear search"
-                    aria-label="Clear search"
-                    disabled={loading}
-                  >
-                    {/* X/Close Icon - Inline SVG per icons_buttons_styles.mdc */}
-                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+              {searchTerm ? (
+                <SearchFieldClearButton
+                  label="Clear gallery search"
+                  onClear={() => {
+                    setSearchTerm('');
+                    onSearch({
+                      searchTerm: '',
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
+                    });
+                  }}
+                />
+              ) : null}
             </div>
           </div>
 
           {/* Date filter toggle and Search button */}
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Date Filters Button - Medium Action Icon Pattern per icons_buttons_styles.mdc */}
             <button
               type="button"
@@ -99,7 +77,6 @@ export function GallerySearch({ onSearch, loading = false }: GallerySearchProps)
               className="flex-shrink-0 h-12 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 px-4"
               title="Toggle Date Filters"
               aria-label="Toggle Date Filters"
-              disabled={loading}
             >
               <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-gray-200 flex items-center justify-center">
                 {/* Calendar Icon - Inline SVG per icons_buttons_styles.mdc */}
@@ -146,7 +123,6 @@ export function GallerySearch({ onSearch, loading = false }: GallerySearchProps)
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={loading}
                 />
               </div>
               <div>
@@ -159,7 +135,6 @@ export function GallerySearch({ onSearch, loading = false }: GallerySearchProps)
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={loading}
                 />
               </div>
             </div>

@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { EventList } from '@/components/EventList';
 // Icons removed - using inline SVGs instead
 import Link from 'next/link';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import AdminNavigation from '@/components/AdminNavigation';
 import Image from 'next/image';
@@ -502,16 +503,27 @@ export default function ManageEventsPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">{searchField.charAt(0).toUpperCase() + searchField.slice(1)}</label>
-              <input
-                type="text"
-                className="border px-3 py-2 rounded w-48"
-                value={searchField === 'title' ? searchTitle : searchCaption}
-                onChange={e => {
-                  if (searchField === 'title') setSearchTitle(e.target.value);
-                  else setSearchCaption(e.target.value);
-                }}
-                placeholder={`Search by ${searchField}`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  className="border px-3 py-2 pr-8 rounded w-48"
+                  value={searchField === 'title' ? searchTitle : searchCaption}
+                  onChange={e => {
+                    if (searchField === 'title') setSearchTitle(e.target.value);
+                    else setSearchCaption(e.target.value);
+                  }}
+                  placeholder={`Search by ${searchField}`}
+                />
+                {(searchField === 'title' ? searchTitle : searchCaption) ? (
+                  <SearchFieldClearButton
+                    label="Clear event search"
+                    onClear={() => {
+                      if (searchField === 'title') setSearchTitle('');
+                      else setSearchCaption('');
+                    }}
+                  />
+                ) : null}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Start Date</label>

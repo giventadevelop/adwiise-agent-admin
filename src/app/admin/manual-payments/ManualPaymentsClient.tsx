@@ -6,6 +6,7 @@ import DateRangeSelector, { type DateRange } from '@/components/admin/DateRangeS
 import EventSearchSelector from '@/components/admin/EventSearchSelector';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import {
   fetchManualPaymentsServer,
   fetchManualPaymentSummaryServer,
@@ -830,8 +831,11 @@ export default function ManualPaymentsClient({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by ID, handle, or instructions..."
-                  className="pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:border-blue-500 focus:ring-blue-500 w-full sm:w-64"
+                  className="pl-10 pr-10 py-2 border border-gray-400 rounded-lg focus:border-blue-500 focus:ring-blue-500 w-full sm:w-64"
                 />
+                {searchQuery ? (
+                  <SearchFieldClearButton label="Clear payment search" onClear={() => setSearchQuery('')} />
+                ) : null}
               </div>
               {/* Status Filter */}
               <select

@@ -4,6 +4,8 @@ import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { mergeById, searchQueryVariants, slicePage } from '@/lib/admin/mergeContainsResults';
 import AdminNavigation from '@/components/AdminNavigation';
 import AdminTenantFilterBar from '@/components/admin/AdminTenantFilterBar';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import FocusGroupSearchField from './FocusGroupSearchField';
 import DeleteFocusGroupButton from './DeleteFocusGroupButton';
 // Icons removed - using inline SVGs instead
 
@@ -148,21 +150,17 @@ export default async function AdminFocusGroupsPage({ searchParams }: { searchPar
 
         <AdminTenantFilterBar />
 
-        <form action="/admin/focus-groups" method="get" className="mb-4">
-          {tenantId ? <input type="hidden" name="tenant" value={tenantId} /> : null}
-          <input type="hidden" name="sort" value={sort} />
-          <input type="hidden" name="size" value={String(size)} />
-          <label htmlFor="focus-group-search" className="block text-sm font-medium text-gray-700 mb-1">
-            Search
-          </label>
-          <input
-            id="focus-group-search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search name, image text, or search text"
-            className="w-full max-w-xl h-12 px-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </form>
+        <AdminFilterToolbar className="mb-4">
+          <form action="/admin/focus-groups" method="get" className="min-w-0">
+            {tenantId ? <input type="hidden" name="tenant" value={tenantId} /> : null}
+            <input type="hidden" name="sort" value={sort} />
+            <input type="hidden" name="size" value={String(size)} />
+            <label htmlFor="focus-group-search" className="block text-sm font-medium text-gray-700 mb-1">
+              Search
+            </label>
+            <FocusGroupSearchField initialQuery={q} />
+          </form>
+        </AdminFilterToolbar>
 
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
           <div className="user-table-scroll-container">

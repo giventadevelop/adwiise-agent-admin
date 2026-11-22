@@ -13,6 +13,8 @@ import {
 import Image from 'next/image';
 import { Modal } from '@/components/Modal';
 import AdminTenantFilterField from '../../AdminTenantFilterField';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { useAdminTenantId } from '../../AdminTenantContext';
 import type { GalleryCategoryDTO } from '@/types';
 import {
@@ -28,10 +30,11 @@ import ErrorDialog from '@/components/ErrorDialog';
 import { FormApiErrorBanner } from '@/components/FormApiErrorBanner';
 import { formatUnknownError, type FormattedBackendError } from '@/lib/api/formatBackendError';
 
-type SearchField = 'title' | 'description' | 'id' | 'ocrText' | 'searchText';
+type SearchField = 'all' | 'title' | 'description' | 'id' | 'ocrText' | 'searchText';
 type VisibilityFilter = 'all' | 'public' | 'private';
 
 const SEARCH_FIELDS: { value: SearchField; label: string }[] = [
+  { value: 'all', label: 'All' },
   { value: 'title', label: 'Title' },
   { value: 'description', label: 'Description' },
   { value: 'ocrText', label: 'Image text' },
@@ -66,7 +69,8 @@ function buildAlbumListFilters(
   const q = searchQuery.trim();
   if (!q) return filters;
 
-  if (searchField === 'id') filters.id = q;
+  if (searchField === 'all') filters.allText = q;
+  else if (searchField === 'id') filters.id = q;
   else if (searchField === 'title') filters.title = q;
   else if (searchField === 'description') filters.description = q;
   else if (searchField === 'ocrText') filters.ocrText = q;
@@ -94,8 +98,9 @@ function AdminAlbumListClientInner({
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const [searchField, setSearchField] = useState<SearchField>('title');
+  const [searchField, setSearchField] = useState<SearchField>('all');
   const [searchQuery, setSearchQuery] = useState(initialSearchTerm);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearchTerm.trim());
   const [visibility, setVisibility] = useState<VisibilityFilter>('all');
   const [sort, setSort] = useState('displayOrder,asc');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -116,8 +121,13 @@ function AdminAlbumListClientInner({
   const [categories, setCategories] = useState<GalleryCategoryDTO[]>([]);
   const pageSize = 12;
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const filterSignatureRef = useRef('');
-  const filterSignature = [tenantId ?? '', searchField, searchQuery, visibility, sort].join('|');
+  const filterSignature = [tenantId ?? '', searchField, debouncedSearch, visibility, sort].join('|');
 
   useEffect(() => {
     if (filterSignatureRef.current === filterSignature) return;
@@ -133,7 +143,7 @@ function AdminAlbumListClientInner({
         const filters = buildAlbumListFilters(
           tenantId ?? undefined,
           searchField,
-          searchQuery,
+          debouncedSearch,
           visibility,
           sort
         );
@@ -146,7 +156,7 @@ function AdminAlbumListClientInner({
         setLoading(false);
       }
     },
-    [tenantId, searchField, searchQuery, visibility, sort, pageSize]
+    [tenantId, searchField, debouncedSearch, visibility, sort, pageSize]
   );
 
   useEffect(() => {
@@ -265,7 +275,7 @@ function AdminAlbumListClientInner({
   const hasNextPage = currentPage < totalPages - 1;
   const startItem = totalCount > 0 ? currentPage * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize + albums.length, totalCount);
-  const searchFieldLabel = SEARCH_FIELDS.find((f) => f.value === searchField)?.label ?? 'Title';
+  const searchFieldLabel = SEARCH_FIELDS.find((f) => f.value === searchField)?.label ?? 'All';
 
   return (
     <div className="space-y-6">
@@ -332,24 +342,24 @@ function AdminAlbumListClientInner({
 
       <div className="bg-white shadow-md rounded-lg p-4 sm:p-6 mb-6">
         <div className="text-base font-semibold text-blue-800 mb-4">Search &amp; filters</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-end">
+        <AdminFilterToolbar>
           <AdminTenantFilterField />
 
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 gap-2">
             <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap leading-5">
               Search
             </label>
-            <div className="flex h-12 min-w-0">
-              <select
-                value={searchField}
-                onChange={(e) => setSearchField(e.target.value as SearchField)}
-                className="box-border h-12 shrink-0 border border-gray-400 border-r-0 rounded-l-xl focus:ring-blue-500 focus:border-blue-500 px-3 text-base bg-white"
-                aria-label="Search by field"
-              >
-                {SEARCH_FIELDS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
+            <select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value as SearchField)}
+              className="box-border h-12 w-full border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-3 text-base bg-white"
+              aria-label="Search by field"
+            >
+              {SEARCH_FIELDS.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+            <div className="relative">
               <input
                 type={searchField === 'id' ? 'number' : 'text'}
                 placeholder={
@@ -359,9 +369,12 @@ function AdminAlbumListClientInner({
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="box-border block h-12 w-full min-w-0 border border-gray-400 rounded-r-xl focus:ring-blue-500 focus:border-blue-500 px-4 text-base bg-white"
-                disabled={loading}
+                className="box-border block h-12 w-full min-w-0 border border-gray-400 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 pr-10 text-base bg-white"
+                aria-label="Search albums"
               />
+              {searchQuery ? (
+                <SearchFieldClearButton label="Clear album search" onClear={() => setSearchQuery('')} />
+              ) : null}
             </div>
           </div>
 
@@ -398,7 +411,7 @@ function AdminAlbumListClientInner({
               ))}
             </select>
           </div>
-        </div>
+        </AdminFilterToolbar>
       </div>
 
       {error && (

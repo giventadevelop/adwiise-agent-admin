@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import Link from 'next/link';
 import { useRouter, useParams } from "next/navigation";
 import { Modal } from "@/components/Modal";
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { getTenantId } from '@/lib/env';
 import { formatInTimeZone } from 'date-fns-tz';
 
@@ -678,14 +679,19 @@ export default function EventMediaListPage() {
             <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
               Search by Title
             </label>
-            <input
-              id="search-input"
-              type="text"
-              placeholder="Enter media title to search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                id="search-input"
+                type="text"
+                placeholder="Enter media title to search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {searchTerm ? (
+                <SearchFieldClearButton label="Clear media search" onClear={() => setSearchTerm('')} />
+              ) : null}
+            </div>
           </div>
 
           {/* Scroll to serial number */}

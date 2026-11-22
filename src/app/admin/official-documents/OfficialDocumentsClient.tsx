@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type {
@@ -1178,17 +1179,22 @@ export default function OfficialDocumentsClient({
                     </option>
                   ))}
                 </select>
-                <input
-                  type={searchField === 'id' ? 'number' : 'text'}
-                  placeholder={`Search by ${DOCUMENT_SEARCH_FIELDS.find((f) => f.value === searchField)?.label ?? 'field'}…`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void reloadDocuments(0);
-                  }}
-                  className="block w-full border border-gray-400 border-l-0 rounded-r-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-2.5 text-sm min-h-[44px]"
-                  aria-label="Search term"
-                />
+                <div className="relative min-w-0 flex-1">
+                  <input
+                    type={searchField === 'id' ? 'number' : 'text'}
+                    placeholder={`Search by ${DOCUMENT_SEARCH_FIELDS.find((f) => f.value === searchField)?.label ?? 'field'}…`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void reloadDocuments(0);
+                    }}
+                    className="block w-full border border-gray-400 border-l-0 rounded-r-xl focus:ring-blue-500 focus:border-blue-500 px-4 pr-10 py-2.5 text-sm min-h-[44px]"
+                    aria-label="Search term"
+                  />
+                  {searchTerm ? (
+                    <SearchFieldClearButton label="Clear document search" onClear={() => setSearchTerm('')} />
+                  ) : null}
+                </div>
               </div>
             </div>
             <div>

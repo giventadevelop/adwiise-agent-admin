@@ -13,6 +13,7 @@ import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import {
   fetchEventProgramDirectorsServer,
   createEventProgramDirectorServer,
@@ -337,8 +338,11 @@ export default function GlobalEventProgramDirectorsPage() {
                     placeholder="Search directors..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full h-12 pl-12 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-12 pl-12 pr-10 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  {searchTerm ? (
+                    <SearchFieldClearButton label="Clear director search" onClear={() => setSearchTerm('')} />
+                  ) : null}
                 </div>
               </div>
               <select

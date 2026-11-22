@@ -19,6 +19,7 @@ import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 export default function GlobalEventEmailsPage() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -261,8 +262,11 @@ export default function GlobalEventEmailsPage() {
                     placeholder="Search emails..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full h-12 pl-12 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-12 pl-12 pr-10 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  {searchTerm ? (
+                    <SearchFieldClearButton label="Clear email search" onClear={() => setSearchTerm('')} />
+                  ) : null}
                 </div>
               </div>
             </AdminFilterToolbar>

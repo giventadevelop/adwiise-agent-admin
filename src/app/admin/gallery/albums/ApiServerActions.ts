@@ -30,6 +30,8 @@ export type GalleryAlbumListFilters = {
   id?: string;
   ocrText?: string;
   searchText?: string;
+  /** Matches title, description, image text, and search text together. */
+  allText?: string;
   isPublic?: boolean;
   sort?: string;
 };
@@ -155,6 +157,30 @@ export async function fetchAlbumsServer(
     params.append('sort', sort);
     if (!sort.startsWith('createdAt')) {
       params.append('sort', 'createdAt,desc');
+    }
+
+    const allQ = filters.allText?.trim();
+    if (allQ) {
+      const fields = ['title.contains', 'description.contains', 'ocrText.contains', 'searchText.contains'];
+      const lists = await Promise.all(
+        searchQueryVariants(allQ).flatMap((variant) =>
+          fields.map(async (field) => {
+            const scanParams = new URLSearchParams(params);
+            scanParams.set('page', '0');
+            scanParams.set('size', '200');
+            scanParams.append(field, variant);
+            const scanRes = await fetchWithJwtRetry(`${API_BASE_URL}/api/gallery-albums?${scanParams.toString()}`, {
+              cache: 'no-store',
+              headers: await headersForTenantScope(filters.tenantId),
+            });
+            if (!scanRes.ok) return [] as GalleryAlbumDTO[];
+            const body = await scanRes.json();
+            return Array.isArray(body) ? (body as GalleryAlbumDTO[]) : [];
+          }),
+        ),
+      );
+      const merged = slicePage(mergeById(lists), page, size);
+      return { albums: merged.data, totalCount: merged.totalCount };
     }
 
     const scanField = ocrQ ? 'ocrText.contains' : searchQ ? 'searchText.contains' : '';

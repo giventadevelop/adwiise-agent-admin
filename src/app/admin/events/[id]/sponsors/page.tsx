@@ -2,6 +2,7 @@
 
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { textMatchesSearch } from '@/lib/admin/mergeContainsResults';
 import React, { useState, useEffect, useRef } from 'react';
 import { FaPlus, FaSearch, FaUserPlus, FaHandshake, FaImage, FaImages, FaUpload, FaUnlink, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent, FaMicrophone, FaAddressBook, FaEnvelope, FaUserTie, FaClock } from 'react-icons/fa';
@@ -974,8 +975,11 @@ export default function EventSponsorsPage() {
                 placeholder="Search event sponsors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="pl-12 pr-10 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
+              {searchTerm ? (
+                <SearchFieldClearButton label="Clear event sponsor search" onClear={() => setSearchTerm('')} />
+              ) : null}
             </div>
           </div>
           <button
@@ -1147,8 +1151,11 @@ export default function EventSponsorsPage() {
                   placeholder="Search available sponsors..."
                   value={availableSponsorsSearchTerm}
                   onChange={(e) => handleAvailableSponsorsSearch(e.target.value)}
-                  className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-12 pr-10 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                {availableSponsorsSearchTerm ? (
+                  <SearchFieldClearButton label="Clear available sponsor search" onClear={() => handleAvailableSponsorsSearch('')} />
+                ) : null}
               </div>
             </div>
           </AdminFilterToolbar>

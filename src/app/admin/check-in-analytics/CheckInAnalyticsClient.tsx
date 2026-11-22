@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DateRangeSelector, { DateRange } from '@/components/admin/DateRangeSelector';
 import EventSearchSelector from '@/components/admin/EventSearchSelector';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { fetchCheckInHistoryServer, fetchCheckInAnalyticsServer, type CheckInAnalytics } from './ApiServerActions';
 import type { EventTicketTransactionDTO } from '@/types';
 import { FaCheckCircle, FaUsers, FaChartLine, FaSpinner, FaDownload, FaSearch } from 'react-icons/fa';
@@ -278,8 +279,11 @@ export default function CheckInAnalyticsClient({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, email, or ID..."
-                  className="pl-12 pr-4 py-3 border-2 border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 w-full sm:w-64 text-base transition-all"
+                  className="pl-12 pr-10 py-3 border-2 border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 w-full sm:w-64 text-base transition-all"
                 />
+                {searchQuery ? (
+                  <SearchFieldClearButton label="Clear check-in search" onClear={() => setSearchQuery('')} />
+                ) : null}
               </div>
               {/* Export Button */}
               {history.length > 0 && (

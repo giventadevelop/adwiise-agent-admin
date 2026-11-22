@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DateRangeSelector, { type DateRange } from '@/components/admin/DateRangeSelector';
 import EventSearchSelector from '@/components/admin/EventSearchSelector';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import { fetchSalesDataServer, calculateSalesMetricsServer, triggerStripeFeesTaxUpdateServer, fetchEventDetailsForPaymentFlow, type SalesMetrics, type StripeFeesTaxUpdateRequest, type StripeFeesTaxUpdateResponse } from './ApiServerActions';
 import type { EventTicketTransactionDTO, EventDetailsDTO } from '@/types';
 import { FaDollarSign, FaChartLine, FaSpinner, FaDownload, FaSearch, FaPercent, FaMoneyBillWave, FaSync, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
@@ -1152,8 +1153,11 @@ export default function SalesAnalyticsClient({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, email, or ID..."
-                  className="pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:border-blue-500 focus:ring-blue-500 w-full sm:w-64"
+                  className="pl-10 pr-10 py-2 border border-gray-400 rounded-lg focus:border-blue-500 focus:ring-blue-500 w-full sm:w-64"
                 />
+                {searchQuery ? (
+                  <SearchFieldClearButton label="Clear sales search" onClear={() => setSearchQuery('')} />
+                ) : null}
               </div>
               {/* Export Buttons */}
               {salesData.length > 0 && (

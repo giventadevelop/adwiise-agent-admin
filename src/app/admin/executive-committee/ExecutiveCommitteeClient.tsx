@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FaPlus, FaEdit, FaTrashAlt, FaEye } from 'react-icons/fa';
 import type { ExecutiveCommitteeTeamMemberDTO } from '@/types/executiveCommitteeTeamMember';
 import ExecutiveCommitteeForm from './ExecutiveCommitteeForm';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import ExecutiveCommitteeList from './ExecutiveCommitteeList';
 import ImageUploadDialog from './ImageUploadDialog';
 import { Modal } from '@/components/Modal';
@@ -184,15 +185,20 @@ export default function ExecutiveCommitteeClient({
               <label className="block text-xs font-semibold mb-1">
                 {searchField === 'id' ? 'Member ID' : 'Contains'}
               </label>
-              <input
-                id="exec-committee-search"
-                type={searchField === 'id' ? 'number' : 'text'}
-                className="border px-3 py-2 rounded w-48 min-w-[12rem]"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={searchField === 'id' ? 'Numeric id' : `Search ${searchField}`}
-                aria-label="Search team members"
-              />
+              <div className="relative">
+                <input
+                  id="exec-committee-search"
+                  type={searchField === 'id' ? 'number' : 'text'}
+                  className="border px-3 py-2 pr-8 rounded w-48 min-w-[12rem]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={searchField === 'id' ? 'Numeric id' : `Search ${searchField}`}
+                  aria-label="Search team members"
+                />
+                {searchQuery ? (
+                  <SearchFieldClearButton label="Clear member search" onClear={() => setSearchQuery('')} />
+                ) : null}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Status</label>

@@ -25,6 +25,7 @@ import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
 import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 export default function EventSponsorsPage() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -442,8 +443,11 @@ export default function EventSponsorsPage() {
                   placeholder="Search sponsors..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 h-12 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
+                  className="pl-12 pr-10 h-12 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 />
+                {searchTerm ? (
+                  <SearchFieldClearButton label="Clear sponsor search" onClear={() => setSearchTerm('')} />
+                ) : null}
               </div>
             </div>
 

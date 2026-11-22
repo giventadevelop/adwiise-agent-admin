@@ -2,6 +2,7 @@
 
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
 import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import SearchFieldClearButton from '@/components/admin/SearchFieldClearButton';
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaSearch, FaEdit, FaTrashAlt, FaUpload, FaImages, FaUnlink, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent, FaMicrophone, FaAddressBook, FaHandshake, FaEnvelope, FaUserTie, FaClock } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
@@ -554,8 +555,11 @@ export default function EventProgramDirectorsPage() {
                 placeholder="🔍 Search program directors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-4 h-12 w-full text-base border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 text-base"
+                className="pl-12 pr-10 h-12 w-full text-base border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 text-base"
               />
+              {searchTerm ? (
+                <SearchFieldClearButton label="Clear director search" onClear={() => setSearchTerm('')} />
+              ) : null}
             </div>
           </div>
           <button
@@ -723,8 +727,11 @@ export default function EventProgramDirectorsPage() {
                   placeholder="Search available program directors..."
                   value={availableDirectorsSearchTerm}
                   onChange={(e) => handleAvailableDirectorsSearch(e.target.value)}
-                  className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-12 pr-10 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                {availableDirectorsSearchTerm ? (
+                  <SearchFieldClearButton label="Clear available director search" onClear={() => handleAvailableDirectorsSearch('')} />
+                ) : null}
               </div>
             </div>
           </AdminFilterToolbar>
