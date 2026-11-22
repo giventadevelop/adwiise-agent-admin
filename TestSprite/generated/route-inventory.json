@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-15T21:40:39.750Z",
+  "generatedAt": "2026-11-22T03:55:42.143Z",
   "root": "src/app",
-  "totalPages": 211,
-  "totalUniqueRoutes": 211,
+  "totalPages": 213,
+  "totalUniqueRoutes": 213,
   "byKind": {
     "public": 79,
-    "admin": 132
+    "admin": 134
   },
   "routes": [
     {
@@ -728,6 +728,22 @@
         "tenantId"
       ],
       "sourceFile": "src/app/admin/platform-billing/[tenantId]/page.tsx"
+    },
+    {
+      "path": "/admin/platform-billing/charges",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/platform-billing/charges/page.tsx"
+    },
+    {
+      "path": "/admin/platform-billing/organization/[organizationId]",
+      "kind": "admin",
+      "dynamic": true,
+      "dynamicParams": [
+        "organizationId"
+      ],
+      "sourceFile": "src/app/admin/platform-billing/organization/[organizationId]/page.tsx"
     },
     {
       "path": "/admin/platform-billing/plans",

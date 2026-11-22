@@ -10,6 +10,7 @@ import AdminNavigation from '@/components/AdminNavigation';
 import type { SatelliteDomainDTO } from '@/types';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 import {
   fetchSatelliteDomainsServer,
   createSatelliteDomainServer,
@@ -412,21 +413,21 @@ export default function SatelliteDomainsPage() {
 
           <div className="p-6">
             {/* Search and Filter */}
-            <div className="mb-6 flex flex-wrap gap-4 items-end">
-              <AdminTenantFilterField />
-              <div className="flex-1 min-w-64">
+            <AdminFilterToolbar className="mb-6">
+              <AdminTenantFilterField className="w-full" />
+              <div className="w-full min-w-0">
                 <div className="relative">
-                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <FaSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search by name, key, hostname, or tenant..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-12 pl-12 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
-            </div>
+            </AdminFilterToolbar>
 
             {/* Error message */}
             {error && (

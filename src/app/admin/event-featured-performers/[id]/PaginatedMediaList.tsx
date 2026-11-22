@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FaChevronLeft, FaChevronRight, FaSpinner, FaImage, FaEdit, FaSave, FaBan, FaTrashAlt } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaSpinner, FaImage, FaEdit, FaTrashAlt } from 'react-icons/fa';
 import Image from 'next/image';
 import type { EventMediaDTO } from '@/types';
 import { fetchPerformerMediaServer, updateMediaPriorityRankingServer, updateEventMediaServer } from '../ApiServerActions';
@@ -514,36 +514,46 @@ export default function PaginatedMediaList({
               )}
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4 border-t border-border">
+            <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-border">
               <button
                 type="button"
                 onClick={() => {
                   setEditingMedia(null);
                   setEditForm({});
                 }}
-                className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-muted reverent-transition"
+                className="h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6 disabled:opacity-50"
                 disabled={saving}
+                title="Cancel"
+                aria-label="Cancel"
               >
-                <FaBan className="w-4 h-4 inline mr-2" />
-                Cancel
+                <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </span>
+                <span className="font-semibold text-blue-700">Cancel</span>
               </button>
               <button
                 type="button"
                 onClick={handleSaveEdit}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary border border-transparent rounded-md hover:bg-primary/90 reverent-transition disabled:opacity-50 flex items-center"
+                className="h-14 rounded-xl bg-green-100 hover:bg-green-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                title={saving ? 'Saving...' : 'Save Changes'}
+                aria-label={saving ? 'Saving...' : 'Save Changes'}
               >
-                {saving ? (
-                  <>
-                    <FaSpinner className="animate-spin w-4 h-4 inline mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <FaSave className="w-4 h-4 inline mr-2" />
-                    Save Changes
-                  </>
-                )}
+                <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center">
+                  {saving ? (
+                    <svg className="animate-spin w-6 h-6 text-green-700" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                <span className="font-semibold text-green-700">{saving ? 'Saving...' : 'Save Changes'}</span>
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaEdit, FaTrash, FaFilter, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaPlus, FaSearch, FaEdit, FaTrash, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import DataTable, { Column } from '@/components/ui/DataTable';
@@ -23,6 +23,8 @@ import {
 import { fetchAdminProfileServer } from '../manage-usage/ApiServerActions';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 export default function EventSponsorsPage() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -80,19 +82,41 @@ export default function EventSponsorsPage() {
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterActive, setFilterActive] = useState<string>('all');
+  const [sponsorTypes, setSponsorTypes] = useState<string[]>([]);
+  const sponsorTooltip = useAdminHoverDetails<EventSponsorsDTO>();
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     if (userId) {
       checkUserRole();
-      loadSponsors();
     }
-  }, [userId, page]);
+  }, [userId]);
+
+  const listQueryKey = `${debouncedSearch}|${filterType}|${filterActive}|${tenantId ?? ''}`;
+  const listQueryKeyRef = useRef(listQueryKey);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (listQueryKeyRef.current !== listQueryKey) {
+      listQueryKeyRef.current = listQueryKey;
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+    }
+    loadSponsors();
+  }, [userId, page, listQueryKey]);
 
   const checkUserRole = async () => {
     if (!userId) return;
@@ -116,9 +140,22 @@ export default function EventSponsorsPage() {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchEventSponsorsServer(page, pageSize, tenantId);
-      setSponsors(result.data || []);
+      const isActive =
+        filterActive === 'active' ? true : filterActive === 'inactive' ? false : null;
+      const result = await fetchEventSponsorsServer(page, pageSize, tenantId, {
+        search: debouncedSearch,
+        type: filterType || undefined,
+        isActive,
+      });
+      const nextSponsors = result.data || [];
+      setSponsors(nextSponsors);
       setTotalCount(result.totalCount || 0);
+      if (!filterType) {
+        setSponsorTypes((prev) => {
+          const merged = new Set([...prev, ...nextSponsors.map((sponsor) => sponsor.type).filter(Boolean)]);
+          return Array.from(merged).sort();
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load sponsors');
       setToastMessage({ type: 'error', message: err.message || 'Failed to load sponsors' });
@@ -296,29 +333,7 @@ export default function EventSponsorsPage() {
     setSortDirection(direction);
   };
 
-  // Filter sponsors based on search and filters
-  const filteredSponsors = sponsors.filter(sponsor => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm ||
-      sponsor.name?.toLowerCase().includes(q) ||
-      sponsor.companyName?.toLowerCase().includes(q) ||
-      sponsor.type?.toLowerCase().includes(q) ||
-      sponsor.description?.toLowerCase().includes(q) ||
-      sponsor.tagline?.toLowerCase().includes(q) ||
-      sponsor.searchText?.toLowerCase().includes(q) ||
-      sponsor.ocrText?.toLowerCase().includes(q) ||
-      sponsor.contactEmail?.toLowerCase().includes(q);
-
-    const matchesType = !filterType || sponsor.type === filterType;
-    const matchesActive = filterActive === 'all' ||
-      (filterActive === 'active' && sponsor.isActive) ||
-      (filterActive === 'inactive' && !sponsor.isActive);
-
-    return matchesSearch && matchesType && matchesActive;
-  });
-
-  // Sort filtered sponsors
-  const sortedSponsors = [...filteredSponsors].sort((a, b) => {
+  const sortedSponsors = [...sponsors].sort((a, b) => {
     if (!sortKey) return 0;
 
     const aVal = a[sortKey as keyof EventSponsorsDTO];
@@ -334,14 +349,21 @@ export default function EventSponsorsPage() {
     }
   });
 
-  // Get unique sponsor types for filter
-  const sponsorTypes = Array.from(new Set(sponsors.map(s => s.type).filter(Boolean))).sort();
-
   const columns: Column<EventSponsorsDTO>[] = [
     {
       key: 'name',
       label: 'Sponsor Name',
-      sortable: true
+      sortable: true,
+      render: (value, sponsor) => (
+        <div
+          onMouseEnter={(event) => sponsorTooltip.handleMouseEnter(sponsor, event)}
+          onMouseLeave={sponsorTooltip.handleMouseLeave}
+          className="cursor-pointer hover:text-blue-600 transition-colors"
+          title="Hover to view full details"
+        >
+          {value || '-'}
+        </div>
+      ),
     },
     {
       key: 'type',
@@ -410,48 +432,45 @@ export default function EventSponsorsPage() {
 
         {/* Search and Filter Bar */}
         <div className="mb-4 sm:mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center flex-wrap">
-            <AdminTenantFilterField />
-            <div className="flex-1 min-w-0">
+          <AdminFilterToolbar>
+            <AdminTenantFilterField className="w-full" />
+            <div className="w-full min-w-0">
               <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                <FaSearch className="pointer-events-none absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search sponsors..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
+                  className="pl-12 pr-4 h-12 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 />
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 items-stretch sm:items-center">
-              <FaFilter className="text-gray-400 dark:text-gray-500 hidden sm:block" />
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
-              >
-                <option value="">All Types</option>
-                {sponsorTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full h-12 text-base border border-gray-300 dark:border-gray-600 rounded-lg px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All Types</option>
+              {sponsorTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
 
-              <select
-                value={filterActive}
-                onChange={(e) => setFilterActive(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            <select
+              value={filterActive}
+              onChange={(e) => setFilterActive(e.target.value)}
+              className="w-full h-12 text-base border border-gray-300 dark:border-gray-600 rounded-lg px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
 
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex-shrink-0 h-12 sm:h-14 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 px-3 sm:px-6"
+              className="w-full h-14 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
               title="Add Sponsor"
               aria-label="Add Sponsor"
               type="button"
@@ -459,9 +478,9 @@ export default function EventSponsorsPage() {
               <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
                 <FaPlus className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-300" />
               </div>
-              <span className="font-semibold text-blue-700 dark:text-blue-300 text-xs sm:text-sm lg:text-base whitespace-nowrap">Add Sponsor</span>
+              <span className="font-semibold text-blue-700 dark:text-blue-300 text-base">Add Sponsor</span>
             </button>
-          </div>
+          </AdminFilterToolbar>
         </div>
 
         {error && (
@@ -481,6 +500,25 @@ export default function EventSponsorsPage() {
           sortKey={sortKey}
           sortDirection={sortDirection}
           emptyMessage="No sponsors found"
+        />
+        <AdminHoverDetailsCard
+          title={sponsorTooltip.item?.name || 'Sponsor Details'}
+          anchorRect={sponsorTooltip.item ? sponsorTooltip.anchorRect : null}
+          onClose={sponsorTooltip.close}
+          details={[
+            { label: 'Name', value: sponsorTooltip.item?.name },
+            { label: 'Type', value: sponsorTooltip.item?.type },
+            { label: 'Company', value: sponsorTooltip.item?.companyName },
+            { label: 'Tagline', value: sponsorTooltip.item?.tagline },
+            { label: 'Description', value: sponsorTooltip.item?.description },
+            { label: 'Email', value: sponsorTooltip.item?.contactEmail },
+            { label: 'Image text', value: sponsorTooltip.item?.ocrText },
+            { label: 'Search text', value: sponsorTooltip.item?.searchText },
+            { label: 'Phone', value: sponsorTooltip.item?.contactPhone },
+            { label: 'Website', value: sponsorTooltip.item?.websiteUrl },
+            { label: 'Priority', value: sponsorTooltip.item?.priorityRanking },
+            { label: 'Active', value: sponsorTooltip.item?.isActive },
+          ]}
         />
 
         {/* Pagination Controls - Always visible, matching admin page style */}
@@ -1057,7 +1095,10 @@ function SponsorForm({
                 {formData.bannerImageUrl && (
                   <img src={formData.bannerImageUrl} alt="Banner" className="mb-3 h-32 w-auto rounded-xl border-2 border-amber-200 bg-white object-contain" />
                 )}
-                <button type="button" onClick={onBannerUploadClick} className="h-10 rounded-xl bg-amber-100 hover:bg-amber-200 px-4 font-semibold text-amber-800" disabled={loading || !formData.id}>
+                <button type="button" onClick={onBannerUploadClick} className="h-14 rounded-xl bg-amber-100 hover:bg-amber-200 px-4 font-semibold text-amber-800 flex items-center gap-3 disabled:opacity-50" disabled={loading || !formData.id} title="Upload banner poster" aria-label="Upload banner poster">
+                  <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </span>
                   {formData.bannerImageUrl ? 'Change banner poster' : 'Upload banner poster'}
                 </button>
               </div>
@@ -1068,7 +1109,10 @@ function SponsorForm({
                   {formData.logoUrl && (
                     <img src={formData.logoUrl} alt="Logo" className="mb-3 h-24 w-auto rounded-xl border-2 border-indigo-200 bg-white object-contain" />
                   )}
-                  <button type="button" onClick={onLogoUploadClick} className="h-10 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-4 font-semibold text-indigo-800" disabled={loading || !formData.id}>
+                  <button type="button" onClick={onLogoUploadClick} className="h-14 rounded-xl bg-indigo-100 hover:bg-indigo-200 px-4 font-semibold text-indigo-800 flex items-center gap-3 disabled:opacity-50" disabled={loading || !formData.id} title="Upload logo" aria-label="Upload logo">
+                    <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </span>
                     {formData.logoUrl ? 'Change logo' : 'Upload logo'}
                   </button>
                 </div>
@@ -1078,7 +1122,10 @@ function SponsorForm({
                   {formData.heroImageUrl && (
                     <img src={formData.heroImageUrl} alt="Hero" className="mb-3 h-24 w-auto rounded-xl border-2 border-purple-200 bg-white object-contain" />
                   )}
-                  <button type="button" onClick={onHeroUploadClick} className="h-10 rounded-xl bg-purple-100 hover:bg-purple-200 px-4 font-semibold text-purple-800" disabled={loading || !formData.id}>
+                  <button type="button" onClick={onHeroUploadClick} className="h-14 rounded-xl bg-purple-100 hover:bg-purple-200 px-4 font-semibold text-purple-800 flex items-center gap-3 disabled:opacity-50" disabled={loading || !formData.id} title="Upload hero image" aria-label="Upload hero image">
+                    <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </span>
                     {formData.heroImageUrl ? 'Change hero image' : 'Upload hero image'}
                   </button>
                 </div>
@@ -1110,16 +1157,16 @@ function SponsorForm({
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+          className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
           title="Cancel"
           aria-label="Cancel"
         >
-          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
-            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </span>
-          <span className="font-semibold text-red-700">Cancel</span>
+          <span className="font-semibold text-blue-700">Cancel</span>
         </button>
         <button
           type="submit"

@@ -28,12 +28,14 @@ import ErrorDialog from '@/components/ErrorDialog';
 import { FormApiErrorBanner } from '@/components/FormApiErrorBanner';
 import { formatUnknownError, type FormattedBackendError } from '@/lib/api/formatBackendError';
 
-type SearchField = 'title' | 'description' | 'id';
+type SearchField = 'title' | 'description' | 'id' | 'ocrText' | 'searchText';
 type VisibilityFilter = 'all' | 'public' | 'private';
 
 const SEARCH_FIELDS: { value: SearchField; label: string }[] = [
   { value: 'title', label: 'Title' },
   { value: 'description', label: 'Description' },
+  { value: 'ocrText', label: 'Image text' },
+  { value: 'searchText', label: 'Search text' },
   { value: 'id', label: 'Album ID' },
 ];
 
@@ -67,6 +69,8 @@ function buildAlbumListFilters(
   if (searchField === 'id') filters.id = q;
   else if (searchField === 'title') filters.title = q;
   else if (searchField === 'description') filters.description = q;
+  else if (searchField === 'ocrText') filters.ocrText = q;
+  else if (searchField === 'searchText') filters.searchText = q;
 
   return filters;
 }

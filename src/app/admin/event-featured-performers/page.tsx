@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaFilter, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaPlus, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import DataTable, { Column } from '@/components/ui/DataTable';
@@ -12,6 +12,8 @@ import AdminNavigation from '@/components/AdminNavigation';
 import type { EventFeaturedPerformersDTO, EventDetailsDTO } from '@/types';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 import {
   fetchEventFeaturedPerformersServer,
   createEventFeaturedPerformerServer,
@@ -62,15 +64,36 @@ export default function EventFeaturedPerformersPage() {
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const performerTooltip = useAdminHoverDetails<EventFeaturedPerformersDTO>();
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     if (userId) {
-      loadPerformers();
       loadEvents();
     }
-  }, [userId, page, tenantId]);
+  }, [userId, tenantId]);
+
+  const listQueryKey = `${debouncedSearch}|${eventFilter}|${tenantId ?? ''}`;
+  const listQueryKeyRef = useRef(listQueryKey);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (listQueryKeyRef.current !== listQueryKey) {
+      listQueryKeyRef.current = listQueryKey;
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+    }
+    loadPerformers();
+  }, [userId, page, listQueryKey]);
 
   const loadEvents = async () => {
     try {
@@ -89,7 +112,10 @@ export default function EventFeaturedPerformersPage() {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchEventFeaturedPerformersServer(undefined, page, pageSize, tenantId);
+      const eventId = eventFilter ? Number(eventFilter) : undefined;
+      const result = await fetchEventFeaturedPerformersServer(eventId, page, pageSize, tenantId, {
+        search: debouncedSearch,
+      });
       setPerformers(result.data);
       setTotalCount(result.totalCount);
     } catch (err: any) {
@@ -209,18 +235,22 @@ export default function EventFeaturedPerformersPage() {
     setPerformers(sorted);
   };
 
-  const filteredPerformers = performers.filter(performer => {
-    const matchesSearch = performer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      performer.stageName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      performer.role?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesEventFilter = !eventFilter || performer.event?.id?.toString() === eventFilter;
-
-    return matchesSearch && matchesEventFilter;
-  });
-
   const columns: Column<EventFeaturedPerformersDTO>[] = [
-    { key: 'name', label: 'Name', sortable: true },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (value, performer) => (
+        <div
+          onMouseEnter={(event) => performerTooltip.handleMouseEnter(performer, event)}
+          onMouseLeave={performerTooltip.handleMouseLeave}
+          className="cursor-pointer hover:text-blue-600 transition-colors"
+          title="Hover to view full details"
+        >
+          {value || '-'}
+        </div>
+      ),
+    },
     {
       key: 'stageName',
       label: 'Stage Name',
@@ -292,28 +322,25 @@ export default function EventFeaturedPerformersPage() {
 
         {/* Search and Filter Bar */}
         <div className="mb-4 sm:mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center flex-wrap">
-            <AdminTenantFilterField />
-            <div className="flex-1 min-w-0">
+          <AdminFilterToolbar>
+            <AdminTenantFilterField className="w-full" />
+            <div className="w-full min-w-0">
               <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                <FaSearch className="pointer-events-none absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search performers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
+                  className="pl-12 pr-4 h-12 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 />
               </div>
             </div>
-            <div className="min-w-0 sm:min-w-48">
-              <div className="relative">
-                <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                <select
-                  value={eventFilter}
-                  onChange={(e) => setEventFilter(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
-                >
+            <select
+              value={eventFilter}
+              onChange={(e) => setEventFilter(e.target.value)}
+              className="w-full h-12 text-base border border-gray-300 dark:border-gray-600 rounded-lg px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
                   <option value="">All Events</option>
                   {events.map(event => (
                     <option key={event.id} value={event.id?.toString()}>
@@ -321,11 +348,9 @@ export default function EventFeaturedPerformersPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex-shrink-0 h-12 sm:h-14 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 px-3 sm:px-6"
+              className="w-full h-14 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
               title="Add Performer"
               aria-label="Add Performer"
               type="button"
@@ -333,9 +358,9 @@ export default function EventFeaturedPerformersPage() {
               <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
                 <FaPlus className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-300" />
               </div>
-              <span className="font-semibold text-blue-700 dark:text-blue-300 text-xs sm:text-sm lg:text-base whitespace-nowrap">Add Performer</span>
+              <span className="font-semibold text-blue-700 dark:text-blue-300 text-base">Add Performer</span>
             </button>
-          </div>
+          </AdminFilterToolbar>
         </div>
 
         {error && (
@@ -345,7 +370,7 @@ export default function EventFeaturedPerformersPage() {
         )}
 
         <DataTable
-          data={filteredPerformers}
+          data={performers}
           columns={columns}
           loading={loading}
           onSort={handleSort}
@@ -354,6 +379,24 @@ export default function EventFeaturedPerformersPage() {
           sortKey={sortKey}
           sortDirection={sortDirection}
           emptyMessage="No performers found"
+        />
+        <AdminHoverDetailsCard
+          title={performerTooltip.item?.name || performerTooltip.item?.stageName || 'Performer Details'}
+          anchorRect={performerTooltip.item ? performerTooltip.anchorRect : null}
+          onClose={performerTooltip.close}
+          details={[
+            { label: 'Name', value: performerTooltip.item?.name },
+            { label: 'Stage Name', value: performerTooltip.item?.stageName },
+            { label: 'Role', value: performerTooltip.item?.role },
+            { label: 'Bio', value: performerTooltip.item?.bio },
+            { label: 'Email', value: performerTooltip.item?.email },
+            { label: 'Phone', value: performerTooltip.item?.phone },
+            { label: 'Website', value: performerTooltip.item?.websiteUrl },
+            { label: 'Headliner', value: performerTooltip.item?.isHeadliner },
+            { label: 'Active', value: performerTooltip.item?.isActive },
+            { label: 'Order', value: performerTooltip.item?.performanceOrder },
+            { label: 'Event', value: performerTooltip.item?.event?.title },
+          ]}
         />
 
         {/* Pagination Controls - Always visible, matching admin page style */}

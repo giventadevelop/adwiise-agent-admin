@@ -185,11 +185,13 @@ export default function ExecutiveCommitteeClient({
                 {searchField === 'id' ? 'Member ID' : 'Contains'}
               </label>
               <input
+                id="exec-committee-search"
                 type={searchField === 'id' ? 'number' : 'text'}
                 className="border px-3 py-2 rounded w-48 min-w-[12rem]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchField === 'id' ? 'Numeric id' : `Search ${searchField}`}
+                aria-label="Search team members"
               />
             </div>
             <div>

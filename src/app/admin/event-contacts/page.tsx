@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaPlus, FaSearch } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import DataTable, { Column } from '@/components/ui/DataTable';
@@ -11,6 +11,8 @@ import AdminNavigation from '@/components/AdminNavigation';
 import type { EventContactsDTO, EventDetailsDTO } from '@/types';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 import {
   fetchEventContactsServer,
   createEventContactServer,
@@ -50,6 +52,7 @@ export default function EventContactsPage() {
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const contactTooltip = useAdminHoverDetails<EventContactsDTO>();
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -223,7 +226,21 @@ export default function EventContactsPage() {
   }, [searchTerm, eventFilter]);
 
   const columns: Column<EventContactsDTO>[] = [
-    { key: 'name', label: 'Name', sortable: true },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (value, contact) => (
+        <div
+          onMouseEnter={(event) => contactTooltip.handleMouseEnter(contact, event)}
+          onMouseLeave={contactTooltip.handleMouseLeave}
+          className="cursor-pointer hover:text-blue-600 transition-colors"
+          title="Hover to view full details"
+        >
+          {value || '-'}
+        </div>
+      ),
+    },
     {
       key: 'phone',
       label: 'Phone',
@@ -292,40 +309,35 @@ export default function EventContactsPage() {
 
         {/* Search and Filter Bar */}
         <div className="mb-4 sm:mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center flex-wrap">
-            <AdminTenantFilterField />
-            <div className="flex-1 min-w-0">
+          <AdminFilterToolbar>
+            <AdminTenantFilterField className="w-full" />
+            <div className="w-full min-w-0">
               <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                <FaSearch className="pointer-events-none absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search contacts..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
+                  className="pl-12 pr-4 h-12 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 />
               </div>
             </div>
-            <div className="min-w-0 sm:min-w-48">
-              <div className="relative">
-                <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                <select
-                  value={eventFilter}
-                  onChange={(e) => setEventFilter(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
-                >
+            <select
+              value={eventFilter}
+              onChange={(e) => setEventFilter(e.target.value)}
+              className="w-full h-12 text-base border border-gray-300 dark:border-gray-600 rounded-lg px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
                   <option value="">All Events</option>
                   {events.map(event => (
                     <option key={event.id} value={event.id?.toString()}>
                       {event.title}
                     </option>
                   ))}
-                </select>
-              </div>
-            </div>
+            </select>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex-shrink-0 h-12 sm:h-14 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 px-3 sm:px-6"
+              className="w-full h-14 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
               title="Add Contact"
               aria-label="Add Contact"
               type="button"
@@ -333,9 +345,9 @@ export default function EventContactsPage() {
               <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
                 <FaPlus className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-300" />
               </div>
-              <span className="font-semibold text-blue-700 dark:text-blue-300 text-xs sm:text-sm lg:text-base whitespace-nowrap">Add Contact</span>
+              <span className="font-semibold text-blue-700 dark:text-blue-300 text-base">Add Contact</span>
             </button>
-          </div>
+          </AdminFilterToolbar>
         </div>
 
         {error && (
@@ -354,6 +366,17 @@ export default function EventContactsPage() {
           sortKey={sortKey}
           sortDirection={sortDirection}
           emptyMessage="No contacts found"
+        />
+        <AdminHoverDetailsCard
+          title={contactTooltip.item?.name || 'Contact Details'}
+          anchorRect={contactTooltip.item ? contactTooltip.anchorRect : null}
+          onClose={contactTooltip.close}
+          details={[
+            { label: 'Name', value: contactTooltip.item?.name },
+            { label: 'Phone', value: contactTooltip.item?.phone },
+            { label: 'Email', value: contactTooltip.item?.email },
+            { label: 'Event', value: contactTooltip.item?.event?.title },
+          ]}
         />
 
         {/* Pagination Controls - Always visible, matching admin page style */}

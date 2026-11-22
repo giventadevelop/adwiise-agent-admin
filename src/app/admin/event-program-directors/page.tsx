@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaPlus, FaSearch } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import DataTable, { Column } from '@/components/ui/DataTable';
@@ -11,6 +11,8 @@ import AdminNavigation from '@/components/AdminNavigation';
 import type { EventProgramDirectorsDTO, EventDetailsDTO } from '@/types';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 import {
   fetchEventProgramDirectorsServer,
   createEventProgramDirectorServer,
@@ -51,17 +53,38 @@ export default function GlobalEventProgramDirectorsPage() {
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const directorTooltip = useAdminHoverDetails<EventProgramDirectorsDTO>();
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     if (userId) {
-      loadDirectors();
       loadEvents();
     }
-  }, [userId, page, tenantId]);
+  }, [userId, tenantId]);
+
+  const listQueryKey = `${debouncedSearch}|${eventFilter}|${tenantId ?? ''}`;
+  const listQueryKeyRef = useRef(listQueryKey);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (listQueryKeyRef.current !== listQueryKey) {
+      listQueryKeyRef.current = listQueryKey;
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+    }
+    loadDirectors();
+  }, [userId, page, listQueryKey]);
 
   const loadEvents = async () => {
     try {
@@ -79,7 +102,10 @@ export default function GlobalEventProgramDirectorsPage() {
   const loadDirectors = async () => {
     try {
       setLoading(true);
-      const result = await fetchEventProgramDirectorsServer(undefined, page, pageSize, tenantId);
+      const eventId = eventFilter ? Number(eventFilter) : undefined;
+      const result = await fetchEventProgramDirectorsServer(eventId, page, pageSize, tenantId, {
+        search: debouncedSearch,
+      });
       setDirectors(result.data);
       setTotalCount(result.totalCount);
     } catch (err: any) {
@@ -186,13 +212,7 @@ export default function GlobalEventProgramDirectorsPage() {
     setIsDeleteModalOpen(true);
   };
 
-  // Filter and sort directors
-  const filteredDirectors = directors.filter(director =>
-    director.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    director.bio?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const sortedDirectors = [...filteredDirectors].sort((a, b) => {
+  const sortedDirectors = [...directors].sort((a, b) => {
     if (!sortKey) return 0;
 
     const aValue = a[sortKey as keyof EventProgramDirectorsDTO];
@@ -204,7 +224,21 @@ export default function GlobalEventProgramDirectorsPage() {
   });
 
   const columns: Column<EventProgramDirectorsDTO>[] = [
-    { key: 'name', label: 'Name', sortable: true },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (value, director) => (
+        <div
+          onMouseEnter={(event) => directorTooltip.handleMouseEnter(director, event)}
+          onMouseLeave={directorTooltip.handleMouseLeave}
+          className="cursor-pointer hover:text-blue-600 transition-colors"
+          title="Hover to view full details"
+        >
+          {value || '-'}
+        </div>
+      ),
+    },
     {
       key: 'bio',
       label: 'Bio',
@@ -293,38 +327,33 @@ export default function GlobalEventProgramDirectorsPage() {
 
           <div className="p-6">
             {/* Search and Filter */}
-            <div className="mb-6 flex flex-wrap gap-4 items-end">
-              <AdminTenantFilterField />
-              <div className="flex-1 min-w-64">
+            <AdminFilterToolbar className="mb-6">
+              <AdminTenantFilterField className="w-full" />
+              <div className="w-full min-w-0">
                 <div className="relative">
-                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <FaSearch className="pointer-events-none absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search directors..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-12 pl-12 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
-              <div className="min-w-48">
-                <div className="relative">
-                  <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <select
-                    value={eventFilter}
-                    onChange={(e) => setEventFilter(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                  >
+              <select
+                value={eventFilter}
+                onChange={(e) => setEventFilter(e.target.value)}
+                className="w-full h-12 text-base px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              >
                     <option value="">All Events</option>
                     {events.map(event => (
                       <option key={event.id} value={event.id?.toString()}>
                         {event.title}
                       </option>
                     ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+              </select>
+            </AdminFilterToolbar>
 
             {/* Data Table */}
             <DataTable
@@ -338,6 +367,17 @@ export default function GlobalEventProgramDirectorsPage() {
                 setSortKey(key);
                 setSortDirection(direction);
               }}
+            />
+            <AdminHoverDetailsCard
+              title={directorTooltip.item?.name || 'Director Details'}
+              anchorRect={directorTooltip.item ? directorTooltip.anchorRect : null}
+              onClose={directorTooltip.close}
+              details={[
+                { label: 'Name', value: directorTooltip.item?.name },
+                { label: 'Bio', value: directorTooltip.item?.bio },
+                { label: 'Photo URL', value: directorTooltip.item?.photoUrl },
+                { label: 'Event', value: directorTooltip.item?.event?.title },
+              ]}
             />
 
             {/* Pagination Controls - Always visible, matching admin page style */}

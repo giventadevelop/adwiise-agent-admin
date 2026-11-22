@@ -6,46 +6,100 @@ import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl, getTenantId } from '@/lib/env';
 import { getAdminProxyBaseUrl } from '@/lib/adminProxyBaseUrl';
 import type { EventSponsorsDTO, EventSponsorsJoinDTO, EventMediaDTO } from '@/types';
+import { mergeById, searchQueryVariants, slicePage } from '@/lib/admin/mergeContainsResults';
 
 const API_BASE_URL = getApiBaseUrl();
 const baseUrl = getAppUrl();
 
-export async function fetchEventSponsorsServer(page: number = 0, pageSize: number = 10, tenantId?: string) {
-  const params = new URLSearchParams();
-  params.append('page', String(page));
-  params.append('size', String(pageSize));
-  params.append('sort', 'priorityRanking,asc');
-  await appendAdminTenantFilter(params, tenantId);
+export type EventSponsorListFilters = {
+  search?: string;
+  type?: string;
+  isActive?: boolean | null;
+};
 
+const SPONSOR_SEARCH_FIELDS = [
+  'searchText.contains',
+  'ocrText.contains',
+  'name.contains',
+  'companyName.contains',
+  'contactEmail.contains',
+];
+const SPONSOR_SEARCH_PAGE_SIZE = 200;
+
+function readSponsorList(data: unknown): EventSponsorsDTO[] {
+  if (data && typeof data === 'object' && '_embedded' in data) {
+    const embedded = (data as { _embedded?: { eventSponsors?: EventSponsorsDTO[] } })._embedded;
+    if (Array.isArray(embedded?.eventSponsors)) return embedded.eventSponsors;
+  }
+  if (Array.isArray(data)) return data as EventSponsorsDTO[];
+  if (data && typeof data === 'object') return [data as EventSponsorsDTO];
+  return [];
+}
+
+async function requestSponsors(params: URLSearchParams, tenantId?: string) {
+  await appendAdminTenantFilter(params, tenantId);
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/event-sponsors?${params.toString()}`, {
     cache: 'no-store',
   });
-
   if (!response.ok) {
     throw new Error(`Failed to fetch event sponsors: ${response.statusText}`);
   }
-
-  // Prefer backend-provided total count header for correct pagination.
-  // Some backend responses return a plain array; in that case JSON body length
-  // is only the page size, which breaks pagination.
   const totalCountHeader = response.headers.get('x-total-count');
   const parsedHeaderTotalCount =
     totalCountHeader && !Number.isNaN(Number(totalCountHeader))
       ? Number(totalCountHeader)
       : null;
-
   const data = await response.json();
+  const sponsors = readSponsorList(data);
+  const totalCount =
+    parsedHeaderTotalCount ??
+    Number((data as { page?: { totalElements?: number } })?.page?.totalElements ?? sponsors.length);
+  return { data: sponsors, totalCount };
+}
 
-  // Handle paginated response (Spring Data REST format)
-  if (data && typeof data === 'object' && '_embedded' in data && 'eventSponsors' in data._embedded) {
-    const sponsors = Array.isArray(data._embedded.eventSponsors) ? data._embedded.eventSponsors : [];
-    const totalCount = parsedHeaderTotalCount ?? Number(data.page?.totalElements ?? sponsors.length);
-    return { data: sponsors, totalCount };
+function sponsorCriteriaParams(filters?: EventSponsorListFilters) {
+  const params = new URLSearchParams();
+  params.append('sort', 'priorityRanking,asc');
+  if (filters?.type) params.append('type.equals', filters.type);
+  if (filters?.isActive === true) params.append('isActive.equals', 'true');
+  if (filters?.isActive === false) params.append('isActive.equals', 'false');
+  return params;
+}
+
+export async function fetchEventSponsorsServer(
+  page: number = 0,
+  pageSize: number = 10,
+  tenantId?: string,
+  filters?: EventSponsorListFilters,
+) {
+  const search = filters?.search?.trim() || '';
+  if (!search) {
+    const params = sponsorCriteriaParams(filters);
+    params.append('page', String(page));
+    params.append('size', String(pageSize));
+    return requestSponsors(params, tenantId);
   }
 
-  // Handle direct array response (fallback)
-  const sponsors = Array.isArray(data) ? data : [data];
-  return { data: sponsors, totalCount: parsedHeaderTotalCount ?? sponsors.length };
+  const variants = searchQueryVariants(search);
+  const settled = await Promise.allSettled(
+    variants.flatMap((variant) =>
+      SPONSOR_SEARCH_FIELDS.map((field) => {
+        const params = sponsorCriteriaParams(filters);
+        params.append('page', '0');
+        params.append('size', String(SPONSOR_SEARCH_PAGE_SIZE));
+        params.append(field, variant);
+        return requestSponsors(params, tenantId);
+      }),
+    ),
+  );
+  const groups = settled
+    .filter((result): result is PromiseFulfilledResult<{ data: EventSponsorsDTO[]; totalCount: number }> => result.status === 'fulfilled')
+    .map((result) => result.value.data);
+  if (groups.length === 0) {
+    const rejected = settled.find((result) => result.status === 'rejected') as PromiseRejectedResult | undefined;
+    throw rejected?.reason ?? new Error('Failed to search event sponsors');
+  }
+  return slicePage(mergeById(groups), page, pageSize);
 }
 
 export async function fetchEventSponsorServer(id: number) {
@@ -248,7 +302,21 @@ export async function deleteEventSponsorJoinServer(id: number) {
  * (same pattern as executive team members) to support sponsor images without event ID.
  * When eventId is 0 or not provided, the image is associated only with the sponsor.
  */
-export type SponsorImageUploadResult = EventMediaDTO & { ocrChars?: number };
+export type SponsorImageUploadResult = EventMediaDTO & { ocrChars?: number; ocrError?: string };
+
+function readableImageScanError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  try {
+    const parsed = JSON.parse(raw) as { detail?: string; title?: string };
+    const detail = parsed.detail || parsed.title || '';
+    const quoted = detail.match(/"([^"]+)"/);
+    if (quoted?.[1]) return quoted[1];
+    if (detail) return detail;
+  } catch {
+    // The backend body is not JSON.
+  }
+  return raw || 'Image text scan failed';
+}
 
 export async function uploadSponsorImageServer(
   sponsorId: number,
@@ -330,15 +398,17 @@ export async function uploadSponsorImageServer(
       try {
         const result = await response.json();
         let ocrChars = 0;
+        let ocrError: string | undefined;
 
         try {
           const { refreshImageSearchText } = await import('@/lib/search/refreshImageSearchText');
           ocrChars = await refreshImageSearchText('event_sponsors', sponsorId);
-        } catch (ocrError) {
+        } catch (scanError) {
+          ocrError = readableImageScanError(scanError);
           console.error('[SponsorOCR] post-upload failed:', ocrError);
         }
 
-        return { ...result, ocrChars };
+        return { ...result, ocrChars, ocrError };
       } catch (parseError) {
         console.error('❌ Failed to parse successful upload response:', parseError);
         throw new Error('Upload succeeded but response parsing failed');

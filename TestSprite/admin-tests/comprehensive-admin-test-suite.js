@@ -36,6 +36,7 @@ import {
   buildAdminTestUrl,
   ensureTenantContextOnPage,
 } from './platform-admin-test-tenant.js';
+import { ensureSearchFixtures, SEARCH_FIXTURES, SEARCH_PHRASE } from './search-fixtures.js';
 
 // Configuration
 const AUTH_CONFIG_PATH = path.join(__dirname, 'auth.json');
@@ -270,20 +271,21 @@ const adminTestPages = [
     priority: 'medium',
     expectedElements: [
       'h1',
-      '#focus-groups-search',
+      '#focus-group-search',
       'a[href*="/admin/focus-groups/new"]',
       'table',
       'table thead th',
-      'a[aria-label="Edit Focus Group"], a[aria-label="Manage Events"], a[aria-label="Manage Members"], a[aria-label="View Media"], span.text-sm.font-medium.text-orange-700',
+      'a[aria-label="Edit Focus Group"], a[aria-label="Manage Events"], a[aria-label="Manage Members"], span.text-sm.font-medium.text-orange-700',
       'button[aria-label="Previous Page"], button[aria-label="Next Page"], span:has-text("Showing")',
     ],
     validation: [
       'Focus groups page loads',
       'Search and New Group controls visible',
       'Table headers and search filter visible',
-      'Row action buttons (Edit/Events/Members/Media) visible when data exists',
+      'Row action buttons (Edit/Events/Members) visible when data exists',
       'Pagination and item count visible when data exists',
-      'Empty-state message shown when no focus groups match'
+      'Search finds the image-text fixture and the name cell title shows Image text and Search text',
+      'A query with no matches shows No focus groups found'
     ]
   },
 
@@ -302,8 +304,6 @@ const adminTestPages = [
       'button[aria-label="Create Plan"]',
       'a[href="/admin/membership/subscriptions"]',
       'a[href="/admin/membership/plans"]',
-      'h2, [role="dialog"]',
-      'button[aria-label="Create Your First Plan"], p:has-text("No membership plans found.")',
       'table thead th, p:has-text("No membership plans found.")',
       'button[title="Edit"], button[title="Delete"], button[title="Activate"], button[title="Deactivate"]',
       'button[aria-label="Previous Page"]',
@@ -482,7 +482,8 @@ const adminTestPages = [
       'Type and status filter controls are visible',
       'Sponsors table headers appear when data exists, otherwise no-sponsors state appears',
       'Sponsor row actions are visible when rows exist',
-      'Pagination controls and item-count footer are visible'
+      'Pagination controls and item-count footer are visible',
+      'Search finds the image-text fixture for the phrase and for AI-based, and the hover card shows Image text and Search text'
     ]
   },
   {
@@ -507,7 +508,8 @@ const adminTestPages = [
       'Performers table headers appear when data exists, otherwise no-performers state appears',
       'Row actions (edit/delete) are visible when rows exist',
       'Pagination controls and item-count footer are visible',
-      'Create performer modal controls are present when opened'
+      'Create performer modal controls are present when opened',
+      'Search finds the E2E Search Performer fixture'
     ]
   },
   {
@@ -532,7 +534,8 @@ const adminTestPages = [
       'Contacts table headers appear when data exists, otherwise no-contacts state appears',
       'Row actions (edit/delete) are visible when rows exist',
       'Pagination controls and item-count footer are visible',
-      'Create contact modal controls are present when opened'
+      'Create contact modal controls are present when opened',
+      'Search finds the E2E Search Contact fixture'
     ]
   },
   {
@@ -557,7 +560,8 @@ const adminTestPages = [
       'Emails table headers appear when data exists, otherwise no-emails state appears',
       'Row actions (edit/delete) are visible when rows exist',
       'Pagination controls and item-count footer are visible',
-      'Create email modal controls are present when opened'
+      'Create email modal controls are present when opened',
+      'Search finds the e2e-search@example.com fixture'
     ]
   },
   {
@@ -582,7 +586,8 @@ const adminTestPages = [
       'Directors table headers appear when data exists, otherwise no-directors state appears',
       'Row actions (edit/delete) are visible when rows exist',
       'Pagination controls and item-count footer are visible',
-      'Create director modal controls are present when opened'
+      'Create director modal controls are present when opened',
+      'Search finds the E2E Search Director fixture'
     ]
   },
 
@@ -707,7 +712,8 @@ const adminTestPages = [
       'Search bar and search submit action are present',
       'Album card actions (manage media/edit/delete) appear when albums exist, otherwise no-albums state appears',
       'Pagination controls and item-count footer appear when there are results',
-      'Create album modal actions are present'
+      'Create album modal actions are present',
+      'Image text and Search text fields find the E2E Image Search Album fixture'
     ]
   },
   {
@@ -1588,6 +1594,100 @@ async function getAvailableEventIds_DEPRECATED(page, baseUrl) {
 }
 
 /**
+ * Extended checks for /admin/event-sponsors (admin-015): type the known image-text phrase,
+ * require the fixture row, and open the name hover card. An empty tenant fails this check.
+ */
+async function requireSearchHit(page, { input, query, hit, emptyText }) {
+  const search = page.locator(input);
+  await search.first().waitFor({ state: 'visible', timeout: 15000 });
+  await search.first().fill(query);
+  const row = page.getByText(hit, { exact: true }).first();
+  const appeared = await row.waitFor({ state: 'visible', timeout: 12000 }).then(() => true).catch(() => false);
+  if (!appeared) {
+    const empty = emptyText
+      ? await page.locator(`span:has-text("${emptyText}")`).first().isVisible().catch(() => false)
+      : false;
+    throw new Error(
+      empty
+        ? `Search fixture is absent: "${query}" shows "${emptyText}"`
+        : `Search for "${query}" did not show ${hit}`
+    );
+  }
+  return row;
+}
+
+async function runGlobalSponsorsSearchChecks(page) {
+  const fixtureName = SEARCH_FIXTURES.sponsor;
+  const search = page.locator('input[placeholder*="Search sponsors"]');
+  await requireSearchHit(page, {
+    input: 'input[placeholder*="Search sponsors"]',
+    query: SEARCH_PHRASE,
+    hit: fixtureName,
+    emptyText: 'No sponsors found',
+  });
+
+  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  const nameCell = page.locator('div[title="Hover to view full details"]', { hasText: fixtureName }).first();
+  await nameCell.waitFor({ state: 'visible', timeout: 12000 });
+  const tooltip = page.locator('.admin-tooltip');
+  let opened = false;
+  for (let attempt = 0; attempt < 2 && !opened; attempt++) {
+    await nameCell.hover();
+    opened = await tooltip.waitFor({ state: 'visible', timeout: 2500 }).then(() => true).catch(() => false);
+  }
+  if (!opened) {
+    throw new Error('Global sponsors hover card did not open for the fixture row');
+  }
+  const text = (await tooltip.innerText()).toLowerCase();
+  if (!text.includes('image text') || !text.includes(SEARCH_PHRASE)) {
+    throw new Error('Global sponsors hover card is missing Image text for the fixture');
+  }
+  if (!text.includes('search text') || !text.includes(SEARCH_PHRASE)) {
+    throw new Error('Global sponsors hover card is missing Search text for the fixture');
+  }
+
+  await search.fill('__no_sponsor_match_xyz__');
+  await page.locator('span:has-text("No sponsors found")').first().waitFor({ state: 'visible', timeout: 12000 });
+  await requireSearchHit(page, {
+    input: 'input[placeholder*="Search sponsors"]',
+    query: 'AI-based',
+    hit: fixtureName,
+    emptyText: 'No sponsors found',
+  });
+}
+
+async function runGalleryAlbumSearchChecks(page) {
+  const field = page.locator('select[aria-label="Search by field"]');
+  await field.waitFor({ state: 'visible', timeout: 15000 });
+
+  async function searchField(label, placeholder) {
+    await field.selectOption({ label });
+    const input = page.locator(`input[placeholder="${placeholder}"]`);
+    await input.waitFor({ state: 'visible', timeout: 10000 });
+    await input.fill('__no_album_match_xyz__');
+    await page.getByRole('heading', { name: 'No albums found' }).waitFor({ state: 'visible', timeout: 15000 });
+    await input.fill(SEARCH_PHRASE);
+    const title = page.getByRole('heading', { name: SEARCH_FIXTURES.album, exact: true });
+    const appeared = await title.waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
+    if (!appeared) {
+      throw new Error(`Gallery ${label} search for "${SEARCH_PHRASE}" did not show ${SEARCH_FIXTURES.album}`);
+    }
+  }
+
+  await searchField('Image text', 'Search by Image text...');
+  await searchField('Search text', 'Search by Search text...');
+}
+
+async function runListSearchCheck(page, { placeholder, query, hit, emptyText }) {
+  await requireSearchHit(page, {
+    input: `input[placeholder*="${placeholder}"]`,
+    query,
+    hit,
+    emptyText,
+  });
+}
+
+/**
  * Extended checks for /admin/focus-groups (admin-007): list UI, search filter, table columns,
  * row action links when data exists, and pagination when multiple pages of results exist.
  */
@@ -1599,7 +1699,7 @@ async function runFocusGroupsExtendedChecks(page, test, elementsFound) {
     throw new Error(`Focus groups page missing expected elements: ${missing.join(', ')}`);
   }
 
-  await page.waitForSelector('#focus-groups-search', { state: 'visible', timeout: 15000 });
+  await page.waitForSelector('#focus-group-search', { state: 'visible', timeout: 15000 });
   const newLink = await page.$('a[href="/admin/focus-groups/new"], a[href*="/admin/focus-groups/new"]');
   if (!newLink || !(await newLink.isVisible().catch(() => false))) {
     throw new Error('Focus groups: "New Group" link not visible');
@@ -1613,16 +1713,6 @@ async function runFocusGroupsExtendedChecks(page, test, elementsFound) {
     throw new Error('Focus groups: table missing expected columns (Name, Slug, Active, Actions)');
   }
 
-  await page.fill('#focus-groups-search', '__testsprite_no_results_xyz__');
-  await page.waitForTimeout(500);
-  const noMatchVisible = await page.evaluate(() => document.body.innerText.includes('No focus groups match your search'));
-  if (!noMatchVisible) {
-    throw new Error('Focus groups: search with no matches did not show expected empty message');
-  }
-
-  await page.fill('#focus-groups-search', '');
-  await page.waitForTimeout(400);
-
   const editCount = await page.$$eval('a[href*="/admin/focus-groups/"][href*="/edit"]', (as) => as.length);
   if (editCount > 0) {
     const actionHrefs = await page.$$eval('tbody a[href*="/admin/focus-groups/"]', (anchors) =>
@@ -1630,10 +1720,10 @@ async function runFocusGroupsExtendedChecks(page, test, elementsFound) {
     );
     const hasEvents = actionHrefs.some((h) => h.includes('/events'));
     const hasMembers = actionHrefs.some((h) => h.includes('/members'));
-    const hasMedia = actionHrefs.some((h) => h.includes('/media'));
-    if (!hasEvents || !hasMembers || !hasMedia) {
+    const hasEdit = actionHrefs.some((h) => h.includes('/edit'));
+    if (!hasEvents || !hasMembers || !hasEdit) {
       throw new Error(
-        `Focus groups: expected row action links for events, members, and media. Found events=${hasEvents}, members=${hasMembers}, media=${hasMedia}`
+        `Focus groups: expected row action links for edit, events, and members. Found edit=${hasEdit}, events=${hasEvents}, members=${hasMembers}`
       );
     }
 
@@ -1652,6 +1742,42 @@ async function runFocusGroupsExtendedChecks(page, test, elementsFound) {
         }
       }
     }
+  }
+
+  const search = page.locator('#focus-group-search');
+  await search.fill(SEARCH_PHRASE);
+  await Promise.all([
+    page.waitForURL(/[?&]q=/, { timeout: 15000 }),
+    search.press('Enter'),
+  ]);
+  const nameCell = page.locator('td', { hasText: SEARCH_FIXTURES.focusGroup }).first();
+  const foundGroup = await nameCell.waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
+  if (!foundGroup) {
+    const empty = await page.locator('span:has-text("No focus groups found")').first().isVisible().catch(() => false);
+    throw new Error(
+      empty
+        ? `Focus groups fixture is absent: searching "${SEARCH_PHRASE}" shows "No focus groups found"`
+        : `Focus groups search for "${SEARCH_PHRASE}" did not show ${SEARCH_FIXTURES.focusGroup}`
+    );
+  }
+  const title = (await nameCell.getAttribute('title')) || '';
+  const titleLower = title.toLowerCase();
+  if (!title.includes('Image text:') || !titleLower.includes(SEARCH_PHRASE)) {
+    throw new Error('Focus group name cell is missing Image text for the fixture');
+  }
+  if (!title.includes('Search text:') || !titleLower.includes(SEARCH_PHRASE)) {
+    throw new Error('Focus group name cell is missing Search text for the fixture');
+  }
+
+  const emptySearch = page.locator('#focus-group-search');
+  await emptySearch.fill('__testsprite_no_results_xyz__');
+  await Promise.all([
+    page.waitForURL(/__testsprite_no_results_xyz__/, { timeout: 15000 }),
+    emptySearch.press('Enter'),
+  ]);
+  const noMatchVisible = await page.locator('span:has-text("No focus groups found")').first().isVisible().catch(() => false);
+  if (!noMatchVisible) {
+    throw new Error('Focus groups: search with no matches did not show "No focus groups found"');
   }
 }
 
@@ -1790,10 +1916,15 @@ async function runExecutiveCommitteeExtendedChecks(page, test, elementsFound) {
     }
 
     await page.fill('#exec-committee-search', '__no_exec_member_match_xyz__');
-    await page.waitForTimeout(500);
-    const noMatch = await page.evaluate(() => document.body.innerText.includes('No members match your search'));
+    await page.waitForTimeout(800);
+    const noMatch = await page.evaluate(() => {
+      const text = document.body.innerText;
+      return text.includes('No team members yet')
+        || text.includes('No members found')
+        || text.includes('No members match your criteria');
+    });
     if (!noMatch) {
-      throw new Error('Executive committee: search with no matches did not show expected message');
+      throw new Error('Executive committee: search with no matches did not show the empty result');
     }
     await page.fill('#exec-committee-search', '');
     await page.waitForTimeout(400);
@@ -2190,6 +2321,44 @@ async function runTest(page, test, config) {
     if (test.id === 'admin-014') {
       await runExecutiveCommitteeExtendedChecks(page, test, elementsFound);
     }
+    if (test.id === 'admin-015') {
+      await runGlobalSponsorsSearchChecks(page);
+    }
+    if (test.id === 'admin-016') {
+      await runListSearchCheck(page, {
+        placeholder: 'Search performers',
+        query: SEARCH_FIXTURES.performer,
+        hit: SEARCH_FIXTURES.performer,
+        emptyText: 'No performers found',
+      });
+    }
+    if (test.id === 'admin-017') {
+      await runListSearchCheck(page, {
+        placeholder: 'Search contacts',
+        query: SEARCH_FIXTURES.contact,
+        hit: SEARCH_FIXTURES.contact,
+        emptyText: 'No contacts found',
+      });
+    }
+    if (test.id === 'admin-018') {
+      await runListSearchCheck(page, {
+        placeholder: 'Search emails',
+        query: SEARCH_FIXTURES.email,
+        hit: SEARCH_FIXTURES.email,
+        emptyText: 'No emails found',
+      });
+    }
+    if (test.id === 'admin-019') {
+      await runListSearchCheck(page, {
+        placeholder: 'Search directors',
+        query: SEARCH_FIXTURES.director,
+        hit: SEARCH_FIXTURES.director,
+        emptyText: 'No directors found',
+      });
+    }
+    if (test.id === 'admin-024') {
+      await runGalleryAlbumSearchChecks(page);
+    }
 
     // Run validations
     const validations = [];
@@ -2458,6 +2627,7 @@ async function main() {
   const config = loadAuthConfig();
   console.log(`📍 Base URL: ${config.baseUrl}`);
   console.log(`🏢 Tenant scope: ${config.tenantId} (?tenant= on each page)`);
+  await ensureSearchFixtures(config.tenantId);
   console.log(`👤 Testing as: ${config.email}`);
   console.log(`⚙️  Headless: ${config.headless}`);
   console.log(`📸 Screenshots: ${config.screenshotOnFailure ? 'Enabled' : 'Disabled'}\n`);

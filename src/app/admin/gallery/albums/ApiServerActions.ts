@@ -7,6 +7,7 @@ import { withTenantId } from '@/lib/withTenantId';
 import { youtubeThumbnailUrl, YOUTUBE_GALLERY_MEDIA_TYPE } from '@/lib/gallery/youtubeMedia';
 import type { GalleryAlbumDTO, EventMediaDTO, GalleryCategoryDTO } from '@/types';
 import { throwFormattedBackendError } from '@/lib/api/formatBackendError';
+import { mergeById, searchQueryVariants, slicePage } from '@/lib/admin/mergeContainsResults';
 
 const API_BASE_URL = getApiBaseUrl();
 
@@ -27,6 +28,8 @@ export type GalleryAlbumListFilters = {
   title?: string;
   description?: string;
   id?: string;
+  ocrText?: string;
+  searchText?: string;
   isPublic?: boolean;
   sort?: string;
 };
@@ -136,6 +139,9 @@ export async function fetchAlbumsServer(
     const descQ = filters.description?.trim();
     if (descQ) params.append('description.contains', descQ);
 
+    const ocrQ = filters.ocrText?.trim();
+    const searchQ = filters.searchText?.trim();
+
     const idQ = filters.id?.trim();
     if (idQ && !Number.isNaN(Number(idQ))) {
       params.append('id.equals', String(Number(idQ)));
@@ -149,6 +155,28 @@ export async function fetchAlbumsServer(
     params.append('sort', sort);
     if (!sort.startsWith('createdAt')) {
       params.append('sort', 'createdAt,desc');
+    }
+
+    const scanField = ocrQ ? 'ocrText.contains' : searchQ ? 'searchText.contains' : '';
+    const scanRaw = ocrQ || searchQ || '';
+    if (scanField && scanRaw) {
+      const lists = await Promise.all(
+        searchQueryVariants(scanRaw).map(async (variant) => {
+          const scanParams = new URLSearchParams(params);
+          scanParams.set('page', '0');
+          scanParams.set('size', '200');
+          scanParams.append(scanField, variant);
+          const scanRes = await fetchWithJwtRetry(`${API_BASE_URL}/api/gallery-albums?${scanParams.toString()}`, {
+            cache: 'no-store',
+            headers: await headersForTenantScope(filters.tenantId),
+          });
+          if (!scanRes.ok) return [] as GalleryAlbumDTO[];
+          const body = await scanRes.json();
+          return Array.isArray(body) ? (body as GalleryAlbumDTO[]) : [];
+        }),
+      );
+      const merged = slicePage(mergeById(lists), page, size);
+      return { albums: merged.data, totalCount: merged.totalCount };
     }
 
     const url = `${API_BASE_URL}/api/gallery-albums?${params.toString()}`;

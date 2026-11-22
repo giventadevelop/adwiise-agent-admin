@@ -1,5 +1,7 @@
 import { appendAdminTenantFilter } from '@/app/admin/adminAccessServer';
-import { getAppUrl, appendTenantIfPresent, effectiveTenantId } from '@/lib/env';
+import { getAppUrl, getApiBaseUrl, appendTenantIfPresent, effectiveTenantId } from '@/lib/env';
+import { fetchWithJwtRetry } from '@/lib/proxyHandler';
+import { mergeById, searchQueryVariants, slicePage } from '@/lib/admin/mergeContainsResults';
 import AdminNavigation from '@/components/AdminNavigation';
 import AdminTenantFilterBar from '@/components/admin/AdminTenantFilterBar';
 import DeleteFocusGroupButton from './DeleteFocusGroupButton';
@@ -21,10 +23,45 @@ export default async function AdminFocusGroupsPage({ searchParams }: { searchPar
     typeof resolvedSearchParams?.tenant === 'string' && resolvedSearchParams.tenant.trim()
       ? resolvedSearchParams.tenant.trim()
       : undefined;
+  const q = typeof resolvedSearchParams?.q === 'string' ? resolvedSearchParams.q.trim() : '';
 
   let groups: any[] = [];
   let total = 0;
   try {
+    if (q) {
+      const fields = ['name.contains', 'slug.contains', 'description.contains', 'ocrText.contains', 'searchText.contains'];
+      const settled = await Promise.allSettled(
+        searchQueryVariants(q).flatMap((variant) =>
+          fields.map(async (field) => {
+            const params = new URLSearchParams();
+            params.set('page', '0');
+            params.set('size', '200');
+            params.set('sort', sort);
+            params.append(field, variant);
+            await appendAdminTenantFilter(params, tenantId);
+            const res = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/focus-groups?${params.toString()}`, {
+              cache: 'no-store',
+            });
+            if (!res.ok) throw new Error(res.statusText);
+            const data = await res.json();
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data?.content)) return data.content;
+            return [];
+          }),
+        ),
+      );
+      const merged = slicePage(
+        mergeById(
+          settled
+            .filter((result): result is PromiseFulfilledResult<any[]> => result.status === 'fulfilled')
+            .map((result) => result.value),
+        ),
+        page,
+        size,
+      );
+      groups = merged.data;
+      total = merged.totalCount;
+    } else {
     const params = new URLSearchParams();
     params.set('page', String(page));
     params.set('size', String(size));
@@ -79,6 +116,7 @@ export default async function AdminFocusGroupsPage({ searchParams }: { searchPar
       const errorText = await res.text();
       console.error('[FocusGroups] API error:', res.status, errorText);
     }
+    }
   } catch (err) {
     console.error('[FocusGroups] Error fetching focus groups:', err);
   }
@@ -110,6 +148,22 @@ export default async function AdminFocusGroupsPage({ searchParams }: { searchPar
 
         <AdminTenantFilterBar />
 
+        <form action="/admin/focus-groups" method="get" className="mb-4">
+          {tenantId ? <input type="hidden" name="tenant" value={tenantId} /> : null}
+          <input type="hidden" name="sort" value={sort} />
+          <input type="hidden" name="size" value={String(size)} />
+          <label htmlFor="focus-group-search" className="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <input
+            id="focus-group-search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search name, image text, or search text"
+            className="w-full max-w-xl h-12 px-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </form>
+
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
           <div className="user-table-scroll-container">
             <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600 border border-gray-300 dark:border-gray-600" style={{ minWidth: '800px', width: '100%' }}>
@@ -124,7 +178,12 @@ export default async function AdminFocusGroupsPage({ searchParams }: { searchPar
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-300 dark:divide-gray-600">
             {groups.map((g, index) => (
               <tr key={g.id} className={`${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-700'} hover:bg-yellow-100 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-300 dark:border-gray-600`}>
-                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600">{g.name}</td>
+                <td
+                  className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600"
+                  title={[g.ocrText ? `Image text: ${g.ocrText}` : '', g.searchText ? `Search text: ${g.searchText}` : ''].filter(Boolean).join('\n')}
+                >
+                  {g.name}
+                </td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-600">{g.slug}</td>
                 <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm border-r border-gray-200 dark:border-gray-600">
                   {g.isActive ? (
@@ -186,7 +245,8 @@ export default async function AdminFocusGroupsPage({ searchParams }: { searchPar
           const displayPage = page + 1;
           const startItem = total > 0 ? page * size + 1 : 0;
           const endItem = total > 0 ? page * size + Math.min(size, total - page * size) : 0;
-          const qs = (p: number) => `?page=${p}&size=${size}&sort=${encodeURIComponent(sort)}${tenantQuery}`;
+          const qParam = q ? `&q=${encodeURIComponent(q)}` : '';
+          const qs = (p: number) => `?page=${p}&size=${size}&sort=${encodeURIComponent(sort)}${tenantQuery}${qParam}`;
           
           return (
             <div className="mt-8">

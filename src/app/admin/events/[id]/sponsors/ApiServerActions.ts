@@ -3,6 +3,7 @@ import { getApiBaseUrl, getAppUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
 import type { EventSponsorsDTO, EventSponsorsJoinDTO } from '@/types';
+import { mergeById, searchQueryVariants, slicePage } from '@/lib/admin/mergeContainsResults';
 
 // Event Sponsors (available sponsors) - with pagination and filtering
 export async function fetchEventSponsorsServer(page = 0, size = 10, searchTerm = '') {
@@ -19,7 +20,35 @@ export async function fetchEventSponsorsServer(page = 0, size = 10, searchTerm =
     });
 
     if (searchTerm.trim()) {
-      params.append('name.contains', searchTerm.trim());
+      const fields = ['searchText.contains', 'ocrText.contains', 'name.contains', 'companyName.contains', 'contactEmail.contains'];
+      const settled = await Promise.allSettled(
+        searchQueryVariants(searchTerm).flatMap((variant) =>
+          fields.map(async (field) => {
+            const searchParams = new URLSearchParams({ page: '0', size: '200', sort: 'name,asc' });
+            searchParams.append(field, variant);
+            const searchResponse = await fetchWithJwtRetry(
+              `${getApiBaseUrl()}/api/event-sponsors?${searchParams.toString()}`,
+              { cache: 'no-store' },
+            );
+            if (!searchResponse.ok) throw new Error(searchResponse.statusText);
+            const body = await searchResponse.json();
+            if (Array.isArray(body)) return body as EventSponsorsDTO[];
+            const embedded = body?._embedded?.eventSponsors;
+            return Array.isArray(embedded) ? (embedded as EventSponsorsDTO[]) : [];
+          }),
+        ),
+      );
+      const groups = settled
+        .filter((result): result is PromiseFulfilledResult<EventSponsorsDTO[]> => result.status === 'fulfilled')
+        .map((result) => result.value);
+      const merged = slicePage(mergeById(groups), page, size);
+      return {
+        content: merged.data,
+        totalElements: merged.totalCount,
+        totalPages: Math.ceil(merged.totalCount / size) || 0,
+        currentPage: page,
+        pageSize: size,
+      };
     }
 
     const response = await fetch(`${baseUrl}/api/proxy/event-sponsors?${params.toString()}`, {

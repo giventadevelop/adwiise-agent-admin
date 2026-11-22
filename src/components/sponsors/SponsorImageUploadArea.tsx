@@ -2,6 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { uploadSponsorImageServer } from '@/app/admin/event-sponsors/ApiServerActions';
+import SuccessDialog from '@/components/SuccessDialog';
+import ErrorDialog from '@/components/ErrorDialog';
 
 interface SponsorImageUploadAreaProps {
   /** Required for immediate upload; omit when deferUpload is true (create form). */
@@ -106,6 +108,11 @@ export default function SponsorImageUploadArea({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorDialogMessage, setErrorDialogMessage] = useState('');
+  const [errorDialogDetail, setErrorDialogDetail] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const style = IMAGE_STYLES[imageType];
   const isBanner = imageType === 'banner';
@@ -201,10 +208,27 @@ export default function SponsorImageUploadArea({
       setSelectedFile(null);
       setPreviewUrl(null);
       setUploadProgress(0);
+
+      if (media.ocrError) {
+        setErrorDialogMessage(`${style.title} was saved. Reading the words on it failed, so search text was not updated.`);
+        setErrorDialogDetail(media.ocrError);
+        setShowErrorDialog(true);
+      } else {
+        const words = media.ocrChars ?? 0;
+        setSuccessMessage(
+          words > 0
+            ? `${style.title} uploaded. Saved ${words} words from the image for search.`
+            : `${style.title} uploaded. No readable words were found in the image.`,
+        );
+        setShowSuccessDialog(true);
+      }
     } catch (err: unknown) {
       console.error('Upload failed:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Failed to upload ${imageType} image: ${message}`);
+      setErrorDialogMessage(`Failed to upload the ${style.title.toLowerCase()}.`);
+      setErrorDialogDetail(message);
+      setShowErrorDialog(true);
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -296,12 +320,12 @@ export default function SponsorImageUploadArea({
                     e.stopPropagation();
                     handleRemove();
                   }}
-                  className="flex-shrink-0 h-10 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 px-3"
+                  className="flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
                   title="Remove image"
                   aria-label="Remove image"
                 >
-                  <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-red-200 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </span>
@@ -326,12 +350,12 @@ export default function SponsorImageUploadArea({
                     e.stopPropagation();
                     handleUpload();
                   }}
-                  className="flex-shrink-0 h-10 rounded-xl bg-green-100 hover:bg-green-200 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 px-3"
+                  className="flex-shrink-0 h-14 rounded-xl bg-green-100 hover:bg-green-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
                   title="Upload image"
                   aria-label="Upload image"
                 >
-                  <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-green-200 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                   </span>
@@ -343,12 +367,12 @@ export default function SponsorImageUploadArea({
                     e.stopPropagation();
                     handleRemove();
                   }}
-                  className="flex-shrink-0 h-10 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 px-3"
+                  className="flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
                   title="Remove image"
                   aria-label="Remove image"
                 >
-                  <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-red-200 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </span>
@@ -391,6 +415,22 @@ export default function SponsorImageUploadArea({
           {error}
         </div>
       )}
+
+      <SuccessDialog
+        isOpen={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        title={`${style.title} uploaded`}
+        message={successMessage}
+        buttonText="OK"
+        showRefreshButton={false}
+      />
+      <ErrorDialog
+        isOpen={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="Image update problem"
+        message={errorDialogMessage}
+        detail={errorDialogDetail}
+      />
     </div>
   );
 }

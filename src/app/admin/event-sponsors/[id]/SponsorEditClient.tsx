@@ -91,19 +91,12 @@ export default function SponsorEditClient({
     }
   };
 
-  const handleImageUploadSuccess = (imageUrl: string, imageType: 'logo' | 'hero' | 'banner', ocrChars?: number) => {
+  const handleImageUploadSuccess = (imageUrl: string, imageType: 'logo' | 'hero' | 'banner', _ocrChars?: number) => {
     const urlField = imageType === 'logo' ? 'logoUrl' : imageType === 'hero' ? 'heroImageUrl' : 'bannerImageUrl';
-    const label = imageType === 'banner' ? 'Banner poster' : imageType === 'logo' ? 'Logo' : 'Hero image';
     const updatedSponsor = { ...sponsor, [urlField]: imageUrl };
     setSponsor(updatedSponsor);
     setFormData({ ...formData, [urlField]: imageUrl });
-    const textNote =
-      typeof ocrChars === 'number'
-        ? ocrChars > 0
-          ? ` Read ${ocrChars} characters of text from the image.`
-          : ' No text was found in the image.'
-        : '';
-    setToastMessage({ type: 'success', message: `${label} uploaded successfully.${textNote}` });
+    // The upload area shows the confirmation or error dialog. Keep this handler to the saved URL.
 
     // Refresh media list
     setMediaRefreshKey(prev => prev + 1);
@@ -458,16 +451,16 @@ export default function SponsorEditClient({
             <button
               type="button"
               onClick={() => router.push('/admin/event-sponsors')}
-              className="flex-shrink-0 h-14 rounded-xl bg-red-100 hover:bg-red-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+              className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
               title="Cancel"
               aria-label="Cancel"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <span className="font-semibold text-red-700">Cancel</span>
+              <span className="font-semibold text-blue-700">Cancel</span>
             </button>
             <button
               type="submit"

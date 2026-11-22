@@ -397,7 +397,7 @@ export default function AdminTenantFilterField({
   const isCompact = variant === 'compact';
 
   return (
-    <div ref={containerRef} className={`relative flex flex-col min-w-0 ${className}`}>
+    <div ref={containerRef} className={`relative flex flex-col w-full ${isCompact ? 'min-w-0' : ''} ${className}`}>
       {!isCompact && (
         <label
           htmlFor={inputId}

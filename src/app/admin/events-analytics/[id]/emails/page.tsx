@@ -1,6 +1,7 @@
 'use client';
 
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaSearch, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
@@ -237,27 +238,27 @@ export default function EventEmailsPage() {
 
       {/* Search and Filter Bar */}
       <div className="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-64">
+        <AdminFilterToolbar>
+          <div className="w-full min-w-0">
             <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <FaSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search emails..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow font-bold flex items-center gap-2 hover:bg-blue-700 transition"
+            className="w-full h-14 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold flex items-center justify-center gap-3 px-6"
           >
             <FaPlus />
             Add Email
           </button>
-        </div>
+        </AdminFilterToolbar>
       </div>
 
       {error && (

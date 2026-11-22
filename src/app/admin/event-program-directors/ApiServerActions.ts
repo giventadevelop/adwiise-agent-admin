@@ -4,48 +4,80 @@ import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl } from '@/lib/env';
 import { withTenantId } from '@/lib/withTenantId';
 import type { EventProgramDirectorsDTO, EventMediaDTO } from '@/types';
+import { mergeById, slicePage } from '@/lib/admin/mergeContainsResults';
 
 const API_BASE_URL = getApiBaseUrl();
 const baseUrl = getAppUrl();
+
+export type DirectorListFilters = {
+  search?: string;
+};
+
+const DIRECTOR_SEARCH_FIELDS = ['name.contains', 'bio.contains'];
+const DIRECTOR_SEARCH_PAGE_SIZE = 200;
+
+function readDirectorList(data: unknown): EventProgramDirectorsDTO[] {
+  if (data && typeof data === 'object' && '_embedded' in data) {
+    const embedded = (data as { _embedded?: { eventProgramDirectors?: EventProgramDirectorsDTO[] } })._embedded;
+    if (Array.isArray(embedded?.eventProgramDirectors)) return embedded.eventProgramDirectors;
+  }
+  if (Array.isArray(data)) return data as EventProgramDirectorsDTO[];
+  if (data && typeof data === 'object') return [data as EventProgramDirectorsDTO];
+  return [];
+}
+
+async function requestDirectors(params: URLSearchParams, tenantId?: string) {
+  await appendAdminTenantFilter(params, tenantId);
+  const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-program-directors?${params.toString()}`, {
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch event program directors: ${response.statusText}`);
+  }
+  const data = await response.json();
+  const directors = readDirectorList(data);
+  const totalCount = parseInt(response.headers.get('x-total-count') || String(directors.length), 10);
+  return { data: directors, totalCount };
+}
 
 export async function fetchEventProgramDirectorsServer(
   eventId?: number,
   page: number = 0,
   size: number = 10,
-  tenantId?: string
+  tenantId?: string,
+  filters?: DirectorListFilters,
 ) {
-  const params = new URLSearchParams();
-  if (eventId) {
-    params.append('eventId.equals', eventId.toString());
-  }
-  params.append('page', page.toString());
-  params.append('size', size.toString());
-  await appendAdminTenantFilter(params, tenantId);
-
-  const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-program-directors?${params.toString()}`, {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch event program directors: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const totalCount = parseInt(response.headers.get('x-total-count') || '0', 10);
-
-  // Handle Spring Data REST paginated response format
-  if (data._embedded && data._embedded.eventProgramDirectors) {
-    return {
-      data: data._embedded.eventProgramDirectors,
-      totalCount,
-    };
-  }
-
-  // Handle direct array response
-  return {
-    data: Array.isArray(data) ? data : [data],
-    totalCount: Array.isArray(data) ? data.length : 1,
+  const search = filters?.search?.trim() || '';
+  const base = () => {
+    const params = new URLSearchParams();
+    if (eventId) params.append('eventId.equals', eventId.toString());
+    return params;
   };
+
+  if (!search) {
+    const params = base();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    return requestDirectors(params, tenantId);
+  }
+
+  const settled = await Promise.allSettled(
+    DIRECTOR_SEARCH_FIELDS.map((field) => {
+      const params = base();
+      params.append('page', '0');
+      params.append('size', String(DIRECTOR_SEARCH_PAGE_SIZE));
+      params.append(field, search);
+      return requestDirectors(params, tenantId);
+    }),
+  );
+  const groups = settled
+    .filter((result): result is PromiseFulfilledResult<{ data: EventProgramDirectorsDTO[]; totalCount: number }> => result.status === 'fulfilled')
+    .map((result) => result.value.data);
+  if (groups.length === 0) {
+    const rejected = settled.find((result) => result.status === 'rejected') as PromiseRejectedResult | undefined;
+    throw rejected?.reason ?? new Error('Failed to search program directors');
+  }
+  return slicePage(mergeById(groups), page, size);
 }
 
 export async function fetchEventProgramDirectorServer(id: number) {

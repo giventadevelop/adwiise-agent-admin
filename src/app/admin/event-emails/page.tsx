@@ -17,6 +17,8 @@ import {
 } from './ApiServerActions';
 import { useAdminTenantId } from '../AdminTenantContext';
 import AdminTenantFilterField from '../AdminTenantFilterField';
+import AdminHoverDetailsCard, { useAdminHoverDetails } from '@/components/admin/AdminHoverDetailsCard';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
 export default function GlobalEventEmailsPage() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -43,6 +45,7 @@ export default function GlobalEventEmailsPage() {
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const emailTooltip = useAdminHoverDetails<EventEmailsDTO>();
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -181,7 +184,21 @@ export default function GlobalEventEmailsPage() {
   }, [searchTerm]);
 
   const columns: Column<EventEmailsDTO>[] = [
-    { key: 'email', label: 'Email', sortable: true },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      render: (value, email) => (
+        <div
+          onMouseEnter={(event) => emailTooltip.handleMouseEnter(email, event)}
+          onMouseLeave={emailTooltip.handleMouseLeave}
+          className="cursor-pointer hover:text-blue-600 transition-colors"
+          title="Hover to view full details"
+        >
+          {value || '-'}
+        </div>
+      ),
+    },
   ];
 
   if (loading && emails.length === 0) {
@@ -234,23 +251,21 @@ export default function GlobalEventEmailsPage() {
           </div>
 
           <div className="p-6">
-            {/* Tenant ID filter – combine with search */}
-            <div className="mb-4">
-              <AdminTenantFilterField />
-            </div>
-            {/* Search */}
-            <div className="mb-6">
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search emails..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+            <AdminFilterToolbar className="mb-6">
+              <AdminTenantFilterField className="w-full" />
+              <div className="w-full min-w-0">
+                <div className="relative">
+                  <FaSearch className="pointer-events-none absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search emails..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full h-12 pl-12 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
-            </div>
+            </AdminFilterToolbar>
 
             {/* Data Table */}
             <DataTable
@@ -264,6 +279,15 @@ export default function GlobalEventEmailsPage() {
                 setSortKey(key);
                 setSortDirection(direction);
               }}
+            />
+            <AdminHoverDetailsCard
+              title={emailTooltip.item?.email || 'Email Details'}
+              anchorRect={emailTooltip.item ? emailTooltip.anchorRect : null}
+              onClose={emailTooltip.close}
+              details={[
+                { label: 'Email', value: emailTooltip.item?.email },
+                { label: 'Event', value: emailTooltip.item?.event?.title },
+              ]}
             />
 
             {/* Pagination Controls - Always visible, matching admin page style */}

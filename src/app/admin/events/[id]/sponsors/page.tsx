@@ -1,6 +1,8 @@
 'use client';
 
 import EventSectionTiles from '@/components/admin/EventSectionTiles';
+import AdminFilterToolbar from '@/components/admin/AdminFilterToolbar';
+import { textMatchesSearch } from '@/lib/admin/mergeContainsResults';
 import React, { useState, useEffect, useRef } from 'react';
 import { FaPlus, FaSearch, FaUserPlus, FaHandshake, FaImage, FaImages, FaUpload, FaUnlink, FaHome, FaUsers, FaCalendarAlt, FaPhotoVideo, FaTags, FaTicketAlt, FaPercent, FaMicrophone, FaAddressBook, FaEnvelope, FaUserTie, FaClock } from 'react-icons/fa';
 import { useAuth } from '@clerk/nextjs';
@@ -587,9 +589,12 @@ export default function EventSponsorsPage() {
       return false;
     }
 
-    return sponsor.sponsor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sponsor.sponsor?.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sponsor.sponsor?.companyName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const row = sponsor.sponsor;
+    return textMatchesSearch(row?.name, searchTerm) ||
+      textMatchesSearch(row?.type, searchTerm) ||
+      textMatchesSearch(row?.companyName, searchTerm) ||
+      textMatchesSearch(row?.ocrText, searchTerm) ||
+      textMatchesSearch(row?.searchText, searchTerm);
   });
 
   // Pagination calculations for main sponsors table
@@ -699,6 +704,8 @@ export default function EventSponsorsPage() {
       { label: 'Company Name', value: sponsor.companyName },
       { label: 'Tagline', value: sponsor.tagline },
       { label: 'Description', value: sponsor.description },
+      { label: 'Image text', value: sponsor.ocrText },
+      { label: 'Search text', value: sponsor.searchText },
       { label: 'Website URL', value: sponsor.websiteUrl },
       { label: 'Contact Email', value: sponsor.contactEmail },
       { label: 'Contact Phone', value: sponsor.contactPhone },
@@ -958,22 +965,22 @@ export default function EventSponsorsPage() {
 
       {/* Search and Filter Bar */}
       <div className="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-64">
+        <AdminFilterToolbar>
+          <div className="w-full min-w-0">
             <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <FaSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search event sponsors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
           <button
             onClick={() => setIsCreateSponsorModalOpen(true)}
-            className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
+            className="w-full h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
             title="Add Sponsor"
             aria-label="Add Sponsor"
             type="button"
@@ -985,7 +992,7 @@ export default function EventSponsorsPage() {
             </div>
             <span className="font-semibold text-blue-700">Add Sponsor</span>
           </button>
-        </div>
+        </AdminFilterToolbar>
       </div>
 
       {error && (
@@ -1131,20 +1138,20 @@ export default function EventSponsorsPage() {
 
         {/* Search Bar for Available Sponsors */}
         <div className="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-64">
+          <AdminFilterToolbar>
+            <div className="w-full min-w-0">
               <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <FaSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search available sponsors..."
                   value={availableSponsorsSearchTerm}
                   onChange={(e) => handleAvailableSponsorsSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-12 pr-4 h-12 w-full text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-          </div>
+          </AdminFilterToolbar>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">

@@ -6,48 +6,80 @@ import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl, getAppUrl, get
 import { stampCreateTimestamps } from '@/lib/api/createTimestamps';
 import { withTenantId } from '@/lib/withTenantId';
 import type { EventFeaturedPerformersDTO, EventMediaDTO } from '@/types';
+import { mergeById, slicePage } from '@/lib/admin/mergeContainsResults';
 
 const API_BASE_URL = getApiBaseUrl();
 const baseUrl = getAppUrl();
+
+export type PerformerListFilters = {
+  search?: string;
+};
+
+const PERFORMER_SEARCH_FIELDS = ['name.contains', 'stageName.contains', 'role.contains'];
+const PERFORMER_SEARCH_PAGE_SIZE = 200;
+
+function readPerformerList(data: unknown): EventFeaturedPerformersDTO[] {
+  if (data && typeof data === 'object' && '_embedded' in data) {
+    const embedded = (data as { _embedded?: { eventFeaturedPerformers?: EventFeaturedPerformersDTO[] } })._embedded;
+    if (Array.isArray(embedded?.eventFeaturedPerformers)) return embedded.eventFeaturedPerformers;
+  }
+  if (Array.isArray(data)) return data as EventFeaturedPerformersDTO[];
+  if (data && typeof data === 'object') return [data as EventFeaturedPerformersDTO];
+  return [];
+}
+
+async function requestPerformers(params: URLSearchParams, tenantId?: string) {
+  await appendAdminTenantFilter(params, tenantId);
+  const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-featured-performers?${params.toString()}`, {
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch event featured performers: ${response.statusText}`);
+  }
+  const data = await response.json();
+  const performers = readPerformerList(data);
+  const totalCount = parseInt(response.headers.get('x-total-count') || String(performers.length), 10);
+  return { data: performers, totalCount };
+}
 
 export async function fetchEventFeaturedPerformersServer(
   eventId?: number,
   page: number = 0,
   size: number = 10,
-  tenantId?: string
+  tenantId?: string,
+  filters?: PerformerListFilters,
 ) {
-  const params = new URLSearchParams();
-  if (eventId) {
-    params.append('eventId.equals', eventId.toString());
-  }
-  params.append('page', page.toString());
-  params.append('size', size.toString());
-  await appendAdminTenantFilter(params, tenantId);
-
-  const response = await fetchWithJwtRetry(`${API_BASE_URL}/api/event-featured-performers?${params.toString()}`, {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch event featured performers: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const totalCount = parseInt(response.headers.get('x-total-count') || '0', 10);
-
-  // Handle Spring Data REST paginated response format
-  if (data._embedded && data._embedded.eventFeaturedPerformers) {
-    return {
-      data: data._embedded.eventFeaturedPerformers,
-      totalCount,
-    };
-  }
-
-  // Handle direct array response
-  return {
-    data: Array.isArray(data) ? data : [data],
-    totalCount: Array.isArray(data) ? data.length : 1,
+  const search = filters?.search?.trim() || '';
+  const base = () => {
+    const params = new URLSearchParams();
+    if (eventId) params.append('eventId.equals', eventId.toString());
+    return params;
   };
+
+  if (!search) {
+    const params = base();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    return requestPerformers(params, tenantId);
+  }
+
+  const settled = await Promise.allSettled(
+    PERFORMER_SEARCH_FIELDS.map((field) => {
+      const params = base();
+      params.append('page', '0');
+      params.append('size', String(PERFORMER_SEARCH_PAGE_SIZE));
+      params.append(field, search);
+      return requestPerformers(params, tenantId);
+    }),
+  );
+  const groups = settled
+    .filter((result): result is PromiseFulfilledResult<{ data: EventFeaturedPerformersDTO[]; totalCount: number }> => result.status === 'fulfilled')
+    .map((result) => result.value.data);
+  if (groups.length === 0) {
+    const rejected = settled.find((result) => result.status === 'rejected') as PromiseRejectedResult | undefined;
+    throw rejected?.reason ?? new Error('Failed to search performers');
+  }
+  return slicePage(mergeById(groups), page, size);
 }
 
 export async function fetchEventFeaturedPerformerServer(id: number) {
