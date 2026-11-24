@@ -144,4 +144,19 @@ export const HOW_TO_CHUNKS: AdminHelpChunk[] = [
     keywords: ['squad', 'sports', 'band', 'roster', 'players'],
     pathPrefixes: ['/admin/team-groups', '/admin/team-members', '/admin/tournaments'],
   },
+  {
+    id: 'howto:school',
+    featureKey: 'school-site',
+    title: 'How to manage a school site',
+    body: [
+      'Open School site (/admin/school) for the selected school organization.',
+      'Staff holds teachers and other people. Email and phone live on the staff row, along with category (Administration, Teaching, Supporting), stage (KG, LP, UP, HS, HSS), designation, subject, and class teacher assignment.',
+      'Do not put teachers on Executive Committee. That list is for public officers, not school staff.',
+      'Departments, Facilities, Activities (club, sport, or program), Pages (such as a principal message), and Highlights (merit names) are separate tabs on the same screen.',
+      'Fee invoices are the Fees tab: admission, tuition, transport, or other. Payer name, payer email, and payer phone are stored on the invoice, with amount due, currency, due date, and status (Draft, Open, Paid).',
+      'A new or edited row is saved on that tab. Inactive rows stay in admin and can be left off the public school pages.',
+    ].join(' '),
+    keywords: ['school', 'teacher', 'teachers', 'staff', 'fees', 'fee invoice', 'admissions', 'departments', 'facilities', 'contacts', 'phone', 'email'],
+    pathPrefixes: ['/admin/school'],
+  },
 ];

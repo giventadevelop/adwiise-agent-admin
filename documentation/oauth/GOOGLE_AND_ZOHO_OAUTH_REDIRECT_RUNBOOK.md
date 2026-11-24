@@ -14,23 +14,25 @@ Google sign-in on every site (hub and satellites) goes through Clerk. Google sen
 
 | Item | Value |
 |---|---|
-| Console | [Google Cloud Console → Google Auth Platform → Clients](https://console.cloud.google.com/auth/clients) |
-| Project | **OauthLocal** (project id `oauthlocal-310103`) |
-| OAuth client | **kccna_app** (Web application, created Oct 17, 2021) |
+| Console | [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials) |
+| Project | **OauthLocal** (project id `oauthlocal-310103`), selected in the top project picker |
+| OAuth client | **kccna_app** under **OAuth 2.0 Client IDs** (Web application, created Oct 17, 2021) |
 | Client ID | `303554160954-0nkuttb13bjlfkpsu02sbm5dr3r5bp1m.apps.googleusercontent.com` |
 | Not used | `Web client 1` in the same project |
 | Consumer | Clerk Dashboard → production instance → Configure → SSO connections → Google (custom credentials) |
 
 ### Steps
 
-1. Open [Google Cloud Console](https://console.cloud.google.com/) and select the **OauthLocal** project in the project picker.
-2. Go to **Google Auth Platform → Clients** and click **kccna_app**.
-3. Under **Authorized redirect URIs**, click **+ Add URI** and enter:
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and select **OauthLocal** in the project picker at the top.
+2. On the left, open **Credentials** under **APIs & Services**.
+3. Under **OAuth 2.0 Client IDs**, click **kccna_app**. Do not open **Web client 1**.
+4. **Authorized redirect URIs** already contain these values. Do not add them again. A new satellite does not need a new URI, so leave the list unchanged:
    ```
    https://clerk.adwiiseagent.ai/v1/oauth_callback
+   https://humble-monkey-3.clerk.accounts.dev/v1/oauth_callback
    ```
-4. Click **Save**. Google notes it can take from 5 minutes to a few hours to take effect.
-5. Test: sign out, open `https://www.adwiiseagent.ai/sign-in`, choose **Continue with Google**, and confirm you land back signed in.
+5. Leave **Authorized JavaScript origins** as they are. Do not add the satellite hostname.
+6. Do not click **Save** unless some other value on the client was changed.
 
 ### Current redirect URIs (Oct 13, 2026)
 
@@ -45,7 +47,8 @@ Google sign-in on every site (hub and satellites) goes through Clerk. Google sen
 
 ### Notes
 
-- Satellites (mosc-temp, giventa, kcnj, and others) do **not** need their own redirect URIs. Sign-in happens on the primary domain, and Clerk hands the session back to the satellite.
+- These two redirect URIs are already on **kccna_app**. Do not add them again: `https://clerk.adwiiseagent.ai/v1/oauth_callback` and `https://humble-monkey-3.clerk.accounts.dev/v1/oauth_callback`.
+- Satellites (mosc-temp, giventa, kcnj, bst-school-demo, and others) do **not** need their own redirect URIs. Sign-in happens on the primary domain, and Clerk hands the session back to the satellite.
 - Authorized JavaScript origins are not required for the Clerk-hosted flow; leave the existing entries alone.
 - If Clerk's production domain changes again, the new value is always `https://clerk.<primary-bare-domain>/v1/oauth_callback`. Confirm it under Clerk Dashboard → Domains → Frontend API.
 - The client secret is stored only in the Clerk Dashboard Google connection. If you rotate it in Google Cloud, paste the new secret into Clerk the same day.

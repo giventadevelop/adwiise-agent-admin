@@ -24,8 +24,10 @@ Each domain is judged on its own published HTML. Another property's rejection do
 
 - **ads.txt matches the publisher ID**
   - `public/ads.txt` is served at `https://DOMAIN/ads.txt` and returns HTTP 200 with `Content-Type: text/plain`.
+  - In `next.config` `headers()`, set `Content-Type: text/plain; charset=utf-8` for `source: '/ads.txt'`.
   - Fetch the live URL. A file in the repo does not count until that URL returns the line.
-  - If the bare host redirects to `www`, follow that one hop and confirm the same path still returns the file. Google treats "Not found" as the crawler's last fetch, which can lag behind a file that is already live. Use **Check for updates** in the sites table after the file is correct.
+  - If the bare host redirects to `www`, follow that one hop and confirm the same path still returns the file. One same-site redirect is allowed.
+  - A correct live file can still show **Not found** until Google recrawls. Use **Check for updates** in the sites table. Do not delete the site and add it again.
 
 - **Account meta tag and verification script**
   - `src/app/layout.tsx` includes `<meta name="google-adsense-account" content="ca-pub-...">`.
@@ -61,6 +63,7 @@ Each domain is judged on its own published HTML. Another property's rejection do
 
 - **Public routes**
   - `src/middleware.ts` keeps `/`, `/ads.txt`, `/privacy(.*)`, `/terms(.*)`, `/about(.*)`, and `/contact(.*)` off the sign-in wall.
+  - The middleware matcher does not skip `.txt`, so Clerk runs on `/ads.txt`. The public matcher must include the literal `'/ads.txt'`. Without it, `auth.protect()` can send Google a sign-in page and the sites table stays **Not found**.
   - A signed-out request must not be sent to sign-in. `auth.protect()` must not run for these paths. A crawler that lands on the sign-in page fails ownership and ads.txt.
 
 - **Cookie choice before ad units**

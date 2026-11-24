@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="How Admin Help chat stays current when new admin pages, including school, are added.">
+  <title>Admin Help knowledge coverage</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1100px; margin: 0 auto; padding: 20px; background: #fafbfc; }
+    h1 { font-size: 2rem; color: #0d3b66; border-bottom: 3px solid #0066cc; padding-bottom: 10px; }
+    h2 { font-size: 1.35rem; color: #0d3b66; }
+    code, .code-highlight { background: #e8f4f8; color: #0d3b66; padding: 2px 6px; border-radius: 3px; border: 1px solid #b8d4e3; font-family: 'Courier New', monospace; }
+    pre, pre code { background: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; padding: 15px; border-radius: 5px; display: block; }
+    pre code { border: 0; padding: 0; }
+    .section-intro { background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 16px 18px; margin: 16px 0; }
+    .section-container { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .section-container.usage { background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%); border-left-color: #9c27b0; }
+    .section-container.parameters { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left-color: #ff9800; }
+    .section-container.output { background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%); border-left-color: #28a745; }
+    .section-header { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #fff; padding: 12px 20px; margin: -20px -20px 16px -20px; border-radius: 8px 8px 0 0; font-weight: bold; }
+    .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+    .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+    .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+    .script-name { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 4px 10px; border-radius: 5px; font-family: 'Courier New', monospace; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: #fff; }
+    tr:nth-child(even) { background: #f8f9fa; }
+    tr:hover { background: #e3f2fd; }
+    .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px 14px; border-radius: 4px; }
+    .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 14px; border-radius: 4px; }
+    .command-block { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #2196f3; border-radius: 8px; margin: 16px 0; }
+    .command-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; }
+    .command-header-buttons { display: flex; gap: 8px; }
+    .copy-button, .copy-button-template { border: 0; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .copy-button { background: #0066cc; }
+    .copy-button-template { background: #6c757d; }
+    .copy-button.copied, .copy-button-template.copied { background: #28a745; }
+    .command-content, .command-single-line { margin: 0 14px 14px; }
+    .command-single-line { background: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; border-radius: 4px; padding: 12px 15px; }
+    .command-single-line-label { color: #555; font-size: 0.85em; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Admin Help knowledge coverage</h1>
+  <div class="section-intro">
+    <p>Admin Help answers from a stamped knowledge pack in this repository. New pages, including <code class="code-highlight">/admin/school</code>, stay invisible to the chat until those files name them. The chat does not call <code class="code-highlight">adwiise-agent-service</code>.</p>
+  </div>
+
+  <div class="section-container">
+    <div class="section-header">Call path</div>
+    <p>The floating Help button posts to <code class="code-highlight">/api/admin/help-chat</code>. That route matches the question against curated chunks, then calls Bedrock <code class="code-highlight">InvokeModel</code> in <code class="code-highlight">us-east-1</code>.</p>
+    <p>Default model: <code class="code-highlight">us.anthropic.claude-sonnet-5-5</code>. The same model id is used for image-text scanning in the Java service and for retail Ask, but those are different prompts and different callers.</p>
+    <div class="warning"><strong>Do not route Help through the backend image scanner or through the AI engine <code class="code-highlight">/v1/chat</code>.</strong> Retail Ask is Admin, then Spring, then the AI engine, then Bedrock. Help stays in this Next.js app.</div>
+  </div>
+
+  <div class="section-container usage">
+    <div class="section-header usage">What is stored</div>
+    <p>There is no vector database. Long-term context is TypeScript:</p>
+    <ul>
+      <li><code class="code-highlight">src/lib/adminHelp/knowledge/hubGuides.ts</code> — one summary per Admin Home tile</li>
+      <li><code class="code-highlight">src/lib/adminHelp/knowledge/routeMap.ts</code> — path, tasks, and suggested questions</li>
+      <li><code class="code-highlight">src/lib/adminHelp/knowledge/howTos.ts</code> — step-by-step answers, including school contacts</li>
+    </ul>
+    <p>The model is instructed to use only the chunks that the keyword lookup selected.</p>
+  </div>
+
+  <div class="section-container parameters">
+    <div class="section-header parameters">School page</div>
+    <table>
+      <thead>
+        <tr><th>Tab</th><th>What Help should say</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Staff</td><td>Teachers and other people. Email and phone are on this row. Not Executive Committee.</td></tr>
+        <tr><td>Departments</td><td>Named departments and the head staff id.</td></tr>
+        <tr><td>Facilities</td><td>Campus places.</td></tr>
+        <tr><td>Activities</td><td>Club, sport, or program.</td></tr>
+        <tr><td>Pages</td><td>Campus pages such as a principal message.</td></tr>
+        <tr><td>Highlights</td><td>Merit names for an academic year.</td></tr>
+        <tr><td>Fee invoices</td><td>Admission, tuition, transport, or other. Payer name, email, and phone live on the invoice.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-container output">
+    <div class="section-header output">Check for missing tiles</div>
+    <p>After adding an Admin Home tile, run <code class="script-name">check-admin-help-coverage.mjs</code>. It prints every tile label, path, and summary, and exits with an error when a key has no hub guide or route.</p>
+    <div class="command-block setup" data-command-base="node scripts/check-admin-help-coverage.mjs" data-template-command="node scripts/check-admin-help-coverage.mjs">
+      <div class="command-header">
+        <span>Coverage check</span>
+        <div class="command-header-buttons">
+          <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+          <button class="copy-button" type="button" onclick="copyCommand(this, 'help-coverage')" title="Copy command">Copy</button>
+        </div>
+      </div>
+      <div class="command-content" id="help-coverage">node scripts/check-admin-help-coverage.mjs</div>
+      <div class="command-single-line">
+        <div class="command-single-line-label">Windows single-line</div>
+        <code id="help-coverage-single-code">node scripts/check-admin-help-coverage.mjs</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function copyText(button, text, idleLabel) {
+      navigator.clipboard.writeText(text).then(function () {
+        button.classList.add('copied');
+        button.textContent = 'Copied';
+        setTimeout(function () {
+          button.classList.remove('copied');
+          button.textContent = idleLabel;
+        }, 2000);
+      });
+    }
+    function copyTemplateCommand(button) {
+      var block = button.closest('.command-block');
+      var template = (block.getAttribute('data-template-command') || '').replace(/&quot;/g, '"');
+      copyText(button, template, 'Template');
+    }
+    function copyCommand(button, commandId) {
+      var el = document.getElementById(commandId);
+      if (!el) return;
+      copyText(button, el.textContent.trim(), 'Copy');
+    }
+  </script>
+</body>
+</html>

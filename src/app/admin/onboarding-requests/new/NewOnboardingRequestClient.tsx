@@ -33,6 +33,16 @@ import AdminBackButton from '@/components/admin/AdminBackButton';
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
+/** bst_software -> bst_demo_software. Inserts before the last word so the prefix still ends with a letter. */
+function prefixInsertExample(prefix: string): string {
+  const parts = prefix.split('_').filter(Boolean);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    return `${parts.slice(0, -1).join('_')}_demo_${last}`;
+  }
+  return 'bst_demo_software';
+}
+
 export default function NewOnboardingRequestClient({
   initialOrganization = null,
 }: {
@@ -47,6 +57,7 @@ export default function NewOnboardingRequestClient({
   const [sourceTenantId, setSourceTenantId] = useState('');
   const [sourceOrganizationId, setSourceOrganizationId] = useState<number | null>(null);
   const [draft, setDraft] = useState<OnboardingSiteProvisionDraft>(EMPTY_SITE_PROVISION_DRAFT);
+  const [suggestedPrefix, setSuggestedPrefix] = useState('');
   const [planOptions, setPlanOptions] = useState<{ code: string; label: string }[]>([
     { code: 'BASIC', label: 'Basic' },
     { code: 'PROFESSIONAL', label: 'Professional' },
@@ -149,6 +160,7 @@ export default function NewOnboardingRequestClient({
     setSourceOrganizationId(org.id ?? null);
     setValues((prev) => mapTenantOrganizationToOnboardingFields(org, prev));
     const suggested = suggestTenantIdPrefixFromName(org.organizationName || '');
+    setSuggestedPrefix(suggested);
     setDraft((prev) => ({
       ...prev,
       sourceTenantId: tid,
@@ -176,6 +188,7 @@ export default function NewOnboardingRequestClient({
   const onClearExistingOrganization = useCallback(() => {
     setSourceTenantId('');
     setSourceOrganizationId(null);
+    setSuggestedPrefix('');
     // Keep organizationName — the combobox owns search text via onChangeName.
     setValues((prev) => ({
       ...prev,
@@ -334,6 +347,26 @@ export default function NewOnboardingRequestClient({
                 <label htmlFor="tenantPrefix" className="block text-sm font-medium text-gray-700">
                   Name prefix (you supply) *
                 </label>
+                <div className="mt-1 mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  {suggestedPrefix ? (
+                    <>
+                      This is prepopulated as{' '}
+                      <span className="font-mono font-semibold">{suggestedPrefix}</span> from the
+                      organization you selected above.
+                    </>
+                  ) : (
+                    <>
+                      This is prepopulated from the organization you selected above, for example{' '}
+                      <span className="font-mono font-semibold">bst_software</span>.
+                    </>
+                  )}{' '}
+                  You cannot add an underscore at the end. Add an underscore or other characters
+                  before the last word, for example{' '}
+                  <span className="font-mono font-semibold">
+                    {suggestedPrefix ? prefixInsertExample(suggestedPrefix) : 'bst_demo_software'}
+                  </span>
+                  .
+                </div>
                 <input
                   ref={registerRef('tenantPrefix')}
                   id="tenantPrefix"
