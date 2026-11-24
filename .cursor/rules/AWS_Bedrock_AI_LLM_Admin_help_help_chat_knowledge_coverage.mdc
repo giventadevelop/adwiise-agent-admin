@@ -40,3 +40,5 @@ The script prints every Admin Home tile, its path, and its summary, then says wh
 `/admin/school` (`school-site`) covers Staff, Departments, Facilities, Activities, Pages, Highlights, and Fee invoices. Staff holds teacher email and phone. Fee invoices hold payer name, email, and phone.
 
 Full guide: [AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html](mdc:documentation/admin_help_chat/AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html).
+
+Vector database and RAG stay out of this design. Analysis: [AWS_Bedrock_AI_LLM_vector_database_RAG_analysis.html](mdc:documentation/admin_help_chat/AWS_Bedrock_AI_LLM_vector_database_RAG_analysis.html).

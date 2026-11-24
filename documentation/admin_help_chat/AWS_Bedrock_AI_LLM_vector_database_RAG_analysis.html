@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Why Admin Help, image scanning, and retail Ask keep one Bedrock model and three prompts, and why a managed vector database or RAG index is not added.">
+  <title>Vector database and RAG analysis</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+    }
+    h1 { font-size: 2.5em; color: #0d3b66; border-bottom: 3px solid #0066cc; padding-bottom: 10px; }
+    h2 { font-size: 1.8em; color: #0d3b66; border-left: 4px solid #0066cc; padding-left: 15px; }
+    h3 { font-size: 1.4em; color: #333; }
+    a { color: #0066cc; }
+    a:focus { outline: 2px solid #0066cc; outline-offset: 2px; }
+    code, .code-highlight {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    pre, pre code, .code-block {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 15px;
+      border-radius: 5px;
+      border: 1px solid #b8d4e3;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+    pre code { background-color: transparent; border: 0; padding: 0; }
+    .script-name {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      display: inline-block;
+      box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    }
+    .section-intro {
+      background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%);
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+    }
+    .section-container {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+    }
+    .section-container.parameters {
+      background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+      border-left-color: #ff9800;
+    }
+    .section-container.output {
+      background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%);
+      border-left-color: #28a745;
+    }
+    .section-container.usage {
+      background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%);
+      border-left-color: #9c27b0;
+    }
+    .section-header {
+      background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+      color: #fff;
+      padding: 12px 20px;
+      margin: -20px -20px 20px -20px;
+      border-radius: 8px 8px 0 0;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+    .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+    .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+    .toc {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    .toc ol { margin: 0; }
+    .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px 14px; border-radius: 4px; margin: 12px 0; }
+    .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 14px; border-radius: 4px; margin: 12px 0; }
+    .success { background: #d4edda; border-left: 4px solid #28a745; padding: 12px 14px; border-radius: 4px; margin: 12px 0; }
+    .error { background: #f8d7da; border-left: 4px solid #dc3545; padding: 12px 14px; border-radius: 4px; margin: 12px 0; }
+    .info code, .warning code, .success code, .error code,
+    .info .code-highlight, .warning .code-highlight, .success .code-highlight, .error .code-highlight {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+      font-family: 'Courier New', monospace;
+    }
+    .parameters-list {
+      background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+      border-left: 4px solid #ff9800;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin: 15px 0;
+    }
+    .parameters-list strong { color: #c56a00; }
+    .parameters-list code {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+    }
+    table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }
+    th {
+      background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+      color: #fff;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 0.9em;
+      letter-spacing: 0.5px;
+    }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    tr:hover { background-color: #e3f2fd; transition: background-color 0.2s ease; }
+    td code {
+      background-color: #e8f4f8;
+      color: #0d3b66;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid #b8d4e3;
+      font-family: 'Courier New', monospace;
+    }
+    .command-block {
+      border-radius: 8px;
+      margin: 16px 0;
+      overflow: hidden;
+      border: 1px solid #2196f3;
+    }
+    .command-block.verify {
+      background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+      border-color: #4caf50;
+    }
+    .command-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; flex-wrap: wrap; }
+    .command-type { font-weight: bold; color: #1e7e34; }
+    .command-header-buttons { display: flex; gap: 8px; }
+    .copy-button, .copy-button-template {
+      border: 0;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-weight: bold;
+    }
+    .copy-button { background-color: #0066cc; }
+    .copy-button:hover { background-color: #0052a3; }
+    .copy-button-template { background-color: #6c757d; }
+    .copy-button-template:hover { background-color: #5a6268; }
+    .copy-button.copied, .copy-button-template.copied { background-color: #28a745; }
+    .copy-button:focus, .copy-button-template:focus { outline: 2px solid #0d3b66; outline-offset: 2px; }
+    .command-parameters { padding: 15px; background: rgba(255, 255, 255, 0.5); border-bottom: 1px solid rgba(0, 0, 0, 0.1); }
+    .command-parameters h5 { margin: 0 0 8px 0; font-size: 0.9em; color: #333; }
+    .command-content { margin: 14px; font-family: 'Courier New', monospace; color: #0d3b66; word-break: break-word; }
+    .command-single-line {
+      margin: 0 14px 14px;
+      background: #e8f4f8;
+      color: #0d3b66;
+      border: 1px solid #b8d4e3;
+      border-radius: 4px;
+      padding: 12px 15px;
+    }
+    .command-single-line-label { color: #555; font-size: 0.85em; margin-bottom: 6px; }
+    .command-single-line code { background: transparent; border: 0; padding: 0; color: #0d3b66; }
+    .flow {
+      background: #e8f4f8;
+      color: #0d3b66;
+      border: 1px solid #b8d4e3;
+      border-radius: 5px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      h1 { font-size: 1.8em; }
+      .command-block { font-size: 0.85em; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Vector database and RAG analysis</h1>
+  <div class="section-intro">
+    <p>Admin Help, image scanning, and retail Ask already share one Bedrock model, <code class="code-highlight">us.anthropic.claude-sonnet-5-5</code> in <code class="code-highlight">us-east-1</code>. They do not share context. Only Admin Help retrieves documents before the call, and that retrieval is a keyword score over TypeScript files in this repository.</p>
+    <p>A managed vector database stays out of this design. It would add a monthly floor without making the same model more accurate on the questions these three callers already answer.</p>
+  </div>
+
+  <nav class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#decision">Decision</a></li>
+      <li><a href="#callers">What each project sends the model</a></li>
+      <li><a href="#paths">The three call paths</a></li>
+      <li><a href="#where">Where retrieval already works</a></li>
+      <li><a href="#cost">Cost of adding a vector store</a></li>
+      <li><a href="#future">How new pages stay current</a></li>
+      <li><a href="#revisit">The only later retrieval case</a></li>
+    </ol>
+  </nav>
+
+  <div class="section-container output" id="decision">
+    <div class="section-header output">Decision</div>
+    <div class="success">
+      <strong>Keep the three call paths.</strong> Admin Help keeps stamped chunks. Image scanning stays a direct model call from Java. Retail Ask stays a direct model call with the one saved brief. The model id stays the same.
+    </div>
+    <p>Fine-tuning the same model on new pages is the expensive, stale option. A page change would require another training job. The help prompt already answers only from the chunks that were retrieved. Adding a hub guide is the update path.</p>
+    <p>Related guide: <a href="AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html">Admin Help knowledge coverage</a>.</p>
+  </div>
+
+  <div class="section-container usage" id="callers">
+    <div class="section-header usage">What each project sends the model</div>
+    <p>The three projects share the model family. Each caller builds its own prompt. Admin Help does not go through the Java service. The Java Bedrock setting is only <code class="code-highlight">image-text-model-id</code>. Retail Ask does go through the Java service, and Spring only forwards to the engine. The engine is what calls Bedrock.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Call</th>
+          <th>What is in the prompt</th>
+          <th>Retrieval</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>adwiise-agent-admin Admin Help</td>
+          <td>Next.js server <code>InvokeModel</code> in <code>src/lib/adminHelp/bedrock.ts</code></td>
+          <td>System rules plus up to 8 stamped chunks from <code>src/lib/adminHelp/retrieve.ts</code></td>
+          <td>Keyword score over TypeScript in <code>src/lib/adminHelp/knowledge/</code>. This is already retrieve-then-answer. It is not a vector index.</td>
+        </tr>
+        <tr>
+          <td>adwiise-agent-service</td>
+          <td>Java <code>BedrockImageTextService</code> <code>InvokeModel</code> with the image bytes</td>
+          <td>One image plus a short “read the words” prompt, max 400 tokens</td>
+          <td>None. The pixels are the context.</td>
+        </tr>
+        <tr>
+          <td>adwiise-agent-ai-engine</td>
+          <td>Spring <code>RetailEngineClient</code> <code>POST /v1/chat</code>, then the engine calls Bedrock in <code>bedrock.py</code></td>
+          <td>The saved brief JSON for that store and day, max 300 tokens</td>
+          <td>Lookup by brief id. This is one record, not a search across history.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-container" id="paths">
+    <div class="section-header">The three call paths</div>
+    <div class="flow" role="img" aria-label="Help, retail, and image scan each reach the same Bedrock model on their own path">Admin Help chat
+  → Next.js help-chat
+  → keyword chunks
+  → Bedrock Claude
+
+Retail Ask
+  → Spring RetailEngineClient
+  → AI engine POST /v1/chat
+  → Bedrock Claude
+
+Image scan
+  → Java BedrockImageTextService
+  → Bedrock Claude</div>
+    <div class="warning">
+      <strong>Keep the prompts separate.</strong> A shared vector index across help text, images, and retail briefs would mix how-to steps with store numbers and OCR words. Separate prompts are the multi-use design: one model, three contexts.
+    </div>
+  </div>
+
+  <div class="section-container parameters" id="where">
+    <div class="section-header parameters">Where retrieval already works</div>
+    <div class="parameters-list">
+      <p><strong>Admin Help</strong> is already retrieve-then-generate. The pack is about 55 tiles plus short how-tos. Eight chunks fit in the prompt. A vector database does not make that more correct for questions whose words match the guides.</p>
+      <p>A vector index would help only when someone asks with different words than the keywords, for example “tuition bill” when the chunk says “fee invoice”. That miss is fixed by adding those words to the chunk. The school how-to already does this.</p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Caller</th>
+          <th>What a vector store would change</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Admin Help</td>
+          <td>The current keyword pack already answers matching questions. Synonym misses are fixed in the knowledge files.</td>
+        </tr>
+        <tr>
+          <td>Image scanning</td>
+          <td>There is no document to search. The model has to see the image. RAG does not apply.</td>
+        </tr>
+        <tr>
+          <td>Retail Ask</td>
+          <td>The right brief is already in the prompt. A store of past briefs would add questions across many days or stores, such as which shop was short on milk last month. It would not improve today’s single-brief answer.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-container" id="cost">
+    <div class="section-header">Cost of adding a vector store</div>
+    <p>Help traffic is small. A few thousand input tokens and a few hundred output tokens per question, at Sonnet-class Bedrock rates, is on the order of cents per question and tens of dollars a month even at a few thousand questions. Embeddings of the current pack would be a one-time fraction of a dollar.</p>
+    <p>The cost that matters is the store.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Monthly floor</th>
+          <th>Use here</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Bedrock Knowledge Bases on OpenSearch Serverless</td>
+          <td>On the order of a few hundred dollars even when idle. Larger than the help-chat model bill.</td>
+          <td>Leave it out.</td>
+        </tr>
+        <tr>
+          <td>Pinecone or another hosted vector index</td>
+          <td>A similar idle floor.</td>
+          <td>Leave it out.</td>
+        </tr>
+        <tr>
+          <td><code>pgvector</code> on the Postgres already in use, or a JSON file of embeddings next to the chunks</td>
+          <td>No new monthly floor.</td>
+          <td>The only shape that stays cheap, and only if a later product need appears.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="error">
+      <strong>Do not add a managed vector database for this change.</strong>
+    </div>
+  </div>
+
+  <div class="section-container output" id="future">
+    <div class="section-header output">How new pages stay current</div>
+    <p>When an Admin Home tile is added, update the knowledge files and run <code class="script-name">check-admin-help-coverage.mjs</code>. That script compares tile keys in <code class="code-highlight">src/app/admin/page.tsx</code> with hub guides and route-map feature keys. It prints every tile label, path, and summary. Exit code 0 means every tile is covered.</p>
+    <div class="parameters-list">
+      <p><strong>Parameters:</strong> this script reads the repository. It has no command-line flags.</p>
+      <ul>
+        <li><code>src/lib/adminHelp/knowledge/hubGuides.ts</code> — one summary per Admin Home tile</li>
+        <li><code>src/lib/adminHelp/knowledge/routeMap.ts</code> — path, tasks, and suggested questions</li>
+        <li><code>src/lib/adminHelp/knowledge/howTos.ts</code> — step-by-step answers, including school fees and staff contacts</li>
+      </ul>
+    </div>
+    <div class="command-block verify"
+         data-command-type="verify"
+         data-command-base="node scripts/check-admin-help-coverage.mjs"
+         data-template-command="node scripts/check-admin-help-coverage.mjs">
+      <div class="command-header">
+        <span class="command-type">Verify script</span>
+        <div class="command-header-buttons">
+          <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this, 'rag-coverage')" title="Copy template command">Template</button>
+          <button class="copy-button" type="button" onclick="copyCommand(this, 'rag-coverage')" title="Copy customized command">Copy</button>
+        </div>
+      </div>
+      <div class="command-parameters">
+        <h5>Customize parameters</h5>
+        <p>No parameters. Template and Copy both copy the same command.</p>
+      </div>
+      <div class="command-content" id="rag-coverage">node scripts/check-admin-help-coverage.mjs</div>
+      <div class="command-single-line" id="rag-coverage-single">
+        <div class="command-single-line-label">Windows single-line</div>
+        <code id="rag-coverage-single-code">node scripts/check-admin-help-coverage.mjs</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-container usage" id="revisit">
+    <div class="section-header usage">The only later retrieval case</div>
+    <p>Revisit retrieval only if product wants questions over many days of retail briefs. If that happens, embed brief summaries into the existing Postgres database. Stand up no new vector service, and keep retail numbers out of the Admin Help prompt.</p>
+    <div class="info">
+      <strong>Today’s design:</strong> keyword chunks for Help, pixels for image scan, one brief for retail Ask. Same model. Three contexts.
+    </div>
+  </div>
+
+  <script>
+    const commandParams = {};
+
+    function updateCommand(commandId) {
+      const commandElement = document.getElementById(commandId);
+      if (!commandElement) return;
+      const commandBlock = commandElement.closest('.command-block');
+      if (!commandBlock) return;
+      const baseCommand = commandBlock.getAttribute('data-command-base') || commandElement.textContent.trim();
+      commandElement.textContent = baseCommand;
+      const singleLineCode = document.getElementById(commandId + '-single-code');
+      if (singleLineCode) singleLineCode.textContent = baseCommand;
+    }
+
+    function copyText(button, text, idleLabel) {
+      const done = function () {
+        button.classList.add('copied');
+        button.textContent = 'Copied';
+        setTimeout(function () {
+          button.classList.remove('copied');
+          button.textContent = idleLabel;
+        }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, button, idleLabel); });
+      } else {
+        fallbackCopy(text, button, idleLabel);
+      }
+    }
+
+    function fallbackCopy(text, button, idleLabel) {
+      const area = document.createElement('textarea');
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      document.body.removeChild(area);
+      button.classList.add('copied');
+      button.textContent = 'Copied';
+      setTimeout(function () {
+        button.classList.remove('copied');
+        button.textContent = idleLabel;
+      }, 2000);
+    }
+
+    function copyTemplateCommand(button) {
+      const commandBlock = button.closest('.command-block');
+      if (!commandBlock) return;
+      let templateCommand = commandBlock.getAttribute('data-template-command') || '';
+      templateCommand = templateCommand.replace(/&quot;/g, '"');
+      copyText(button, templateCommand, 'Template');
+    }
+
+    function copyCommand(button, commandId) {
+      const commandElement = document.getElementById(commandId);
+      if (!commandElement) return;
+      copyText(button, commandElement.textContent.trim(), 'Copy');
+      const singleLineElement = document.getElementById(commandId + '-single');
+      if (singleLineElement) singleLineElement.classList.add('show');
+    }
+
+    function initializeCommands() {
+      document.querySelectorAll('.command-block[data-command-base]').forEach(function (block) {
+        const commandContent = block.querySelector('.command-content');
+        if (!commandContent || !commandContent.id) return;
+        commandParams[commandContent.id] = {};
+        updateCommand(commandContent.id);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeCommands);
+  </script>
+</body>
+</html>

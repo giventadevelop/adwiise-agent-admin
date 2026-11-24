@@ -1,0 +1,39 @@
+---
+description: School admission and fee payments stay on Razorpay or NTT DATA in the Next app, not on Stripe ticket flows
+globs: src/lib/payments/**/*.ts, src/app/admin/tenant-management/**/*Payment*
+alwaysApply: false
+---
+
+# School fee payment gateways
+
+Admissions fees are INR invoices on `school_fee_invoice` and `school_fee_payment`. The school Next app creates the provider session and receives the webhook. Stripe ticket and membership flows stay on their own tables.
+
+The operator guide is [SCHOOL_SITE_TYPE_GUIDE.html](mdc:documentation/school_site_type/SCHOOL_SITE_TYPE_GUIDE.html), section India fee payments, including NTT DATA Payment Services India.
+
+## Razorpay (working path)
+
+- Admissions loads open invoices with `feeKind=ADMISSION` from `GET /api/school-fee-invoices`.
+- The school app `SchoolFeePayButton` posts `POST /api/school/fee-checkout`, then loads Razorpay Checkout in the browser.
+- `src/app/api/school/fee-checkout/route.ts` in the school app creates the order with server-only keys and inserts `school_fee_payment` with provider `RAZORPAY` and status `CREATED`.
+- `src/app/api/webhooks/razorpay/route.ts` in the school app checks `x-razorpay-signature`. On `payment.captured` it patches the payment to `CAPTURED` and the invoice to `PAID`.
+- Server env, Amplify prefix first: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`. The key secret and webhook secret stay off the browser. Only the key id is publishable.
+- This admin app also creates Razorpay orders from tenant credentials in [`gatewayAdapter.ts`](mdc:src/lib/payments/gatewayAdapter.ts).
+
+## NTT DATA Payment Services India (reserved)
+
+- Provider name is `NTT_DATA`. It uses the same invoice and payment rows. Do not add a second invoice model.
+- `POST /api/school/fee-checkout` with `provider: NTT_DATA` returns HTTP 501 and inserts no payment row. [`gatewayAdapter.ts`](mdc:src/lib/payments/gatewayAdapter.ts) throws the same not-enabled error from `createClientSession`.
+- Merchant id, product id, and gateway URL belong in `payment_provider_config.configuration_json`. The hash key belongs in `provider_secret_key_encrypted`. Use case is `FEE_COLLECTION`.
+- Do not invent env var names or a hash algorithm. Replace the 501 branch and the adapter throw only after a merchant account and the request/response hash spec exist. The webhook then lives on the school Next app and patches the same two rows.
+
+## Do
+
+- Keep school fee checkout and its webhook in the school frontend.
+- Send INR school fees through Razorpay until NTT checkout is implemented.
+- Store an `NTT_DATA` config row when the merchant spec exists. Do not route those payments through Stripe.
+
+## Don't
+
+- Do not post a school fee invoice through `StripeFeesTaxService` or the Stripe webhook.
+- Do not enable `NTT_DATA` checkout by guessing the hash.
+- Do not put `RAZORPAY_KEY_SECRET` or `RAZORPAY_WEBHOOK_SECRET` in a `NEXT_PUBLIC_` variable.

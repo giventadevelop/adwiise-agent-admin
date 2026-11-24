@@ -492,8 +492,8 @@
                         </tr>
                         <tr>
                             <td><code>NTT_DATA</code></td>
-                            <td>Same invoice and <code>school_fee_payment</code> rows, different redirect and hash</td>
-                            <td>Name is allowed. Checkout returns not enabled until a merchant hash spec is in hand</td>
+                            <td>NTT DATA Payment Services India. Same invoice and <code>school_fee_payment</code> rows, different redirect and hash</td>
+                            <td>Name is allowed. Checkout returns HTTP 501 until a merchant hash spec is in hand</td>
                         </tr>
                         <tr>
                             <td><code>STRIPE</code></td>
@@ -529,6 +529,37 @@
                     <li>The webhook verifies <code>x-razorpay-signature</code>, then on <code>payment.captured</code> sets the payment to <code>CAPTURED</code> and the invoice to <code>PAID</code>.</li>
                     <li>A request with provider <code>NTT_DATA</code> returns HTTP 501 and does not create a second invoice model.</li>
                 </ol>
+            </div>
+
+            <div class="section-container usage">
+                <div class="section-header usage">NTT DATA Payment Services India</div>
+                <p>NTT DATA is the second INR fee provider. It uses the same admissions list, the same <code>school_fee_invoice</code> row, and the same <code>school_fee_payment</code> row. The Next app owns checkout and the webhook, the same way Stripe owns tickets and Razorpay owns fees. There is no separate payments service and no second invoice table.</p>
+                <p>Checkout is not switched on. <code class="script-name">fee-checkout/route.ts</code> returns HTTP 501 from <code class="code-highlight">nttDataCheckoutUnavailable()</code> when <code>provider</code> is <code>NTT_DATA</code>. The admin adapter in <code class="script-name">gatewayAdapter.ts</code> throws the same message. No payment row is inserted.</p>
+                <div class="parameters-list">
+                    <p><strong>Frontend path, once a merchant hash spec is in hand</strong></p>
+                    <ol>
+                        <li>The admissions page still lists open invoices with <code>fee_kind</code> <code>ADMISSION</code>.</li>
+                        <li>The pay button posts <code>POST /api/school/fee-checkout</code> with <code>provider</code> set to <code>NTT_DATA</code> and the invoice id.</li>
+                        <li>The route creates the provider session on the server, then the browser follows the NTT redirect or hosted checkout. The publishable merchant id may reach the browser. The hash key stays on the server.</li>
+                        <li>A webhook route on this Next app verifies the response hash, then patches <code>school_fee_payment</code> to <code>CAPTURED</code> and <code>school_fee_invoice</code> to <code>PAID</code>.</li>
+                    </ol>
+                </div>
+                <div class="parameters-list">
+                    <p><strong>Setup order</strong></p>
+                    <ol>
+                        <li>Open a merchant account with NTT DATA Payment Services India.</li>
+                        <li>Store merchant id, product id, and gateway URL in <code>payment_provider_config.configuration_json</code>. Store the hash key in <code>provider_secret_key_encrypted</code>. <code>provider_name</code> is <code>NTT_DATA</code>. <code>payment_use_case</code> is <code>FEE_COLLECTION</code>.</li>
+                        <li>Register the school-domain webhook URL with NTT. Do not point school fees at the Stripe webhook.</li>
+                        <li>Replace the 501 branch in <code class="script-name">fee-checkout/route.ts</code> and the throw in <code class="script-name">gatewayAdapter.ts</code> with the hash request and response check from that merchant spec.</li>
+                    </ol>
+                </div>
+                <div class="info">
+                    <strong>Environment variables.</strong>
+                    Razorpay reads <code class="code-highlight">RAZORPAY_KEY_ID</code>, <code class="code-highlight">RAZORPAY_KEY_SECRET</code>, and <code class="code-highlight">RAZORPAY_WEBHOOK_SECRET</code>, or the <code class="code-highlight">AMPLIFY_</code> copies, from the server. NTT does not get new env names until the merchant hash spec names them. Do not invent a hash algorithm or a secret variable. Until that spec exists, Razorpay remains the working INR path.
+                </div>
+                <div class="warning">
+                    A request with provider <code class="code-highlight">NTT_DATA</code> returns 501, creates no <code>school_fee_payment</code> row, and does not add a second invoice schema.
+                </div>
             </div>
         </section>
 
