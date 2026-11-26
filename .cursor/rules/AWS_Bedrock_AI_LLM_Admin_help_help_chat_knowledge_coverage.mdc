@@ -1,12 +1,20 @@
 ---
 description: Keep Admin Help chat knowledge in sync with Admin Home tiles, including school and other new pages
-globs: src/app/admin/page.tsx, src/lib/adminHelp/**/*, documentation/admin_help_chat/AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html
+globs: src/app/admin/**/*, src/lib/adminHelp/**/*, scripts/*admin-help*, documentation/admin_help_chat/AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html
 alwaysApply: false
 ---
 
 # Admin Help knowledge coverage
 
-Admin Help answers only from the stamped knowledge pack. It does not read live pages, and it does not call `adwiise-agent-service`.
+Admin Help answers only from the knowledge pack: curated chunks plus a page guide for every admin page group. It does not read live pages, and it does not call `adwiise-agent-service`.
+
+## Page guides (one per admin page group)
+
+- When the user asks from a page, the whole guide for that page is sent to the model as `currentPageGuide`; other pages' guide sections are retrievable chunks.
+- Hand-reviewed guides: `MANUAL_PAGE_GUIDES` in [pageGuides.ts](mdc:src/lib/adminHelp/knowledge/pageGuides.ts) (Tenant Settings). A manual guide wins over a generated one.
+- Generated guides: [pageGuides.generated.json](mdc:src/lib/adminHelp/knowledge/generated/pageGuides.generated.json), written by `npm run help:guides` from the page code (UI text, labels, limits, actions) with Bedrock. Never edit it by hand; review its diff in the PR.
+- After changing any admin page UI, run `npm run help:guides` (regenerates only stale guides), then `npm run test:admin-help` (smoke checks, the 40-question eval in `scripts/admin-help-eval.json`, and the staleness check).
+- Add an eval case to `scripts/admin-help-eval.json` when a real question gets a wrong answer.
 
 ## Call path
 

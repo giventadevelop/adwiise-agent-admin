@@ -12,6 +12,7 @@ import {
 } from '../src/lib/adminHelp';
 import {
   ADMIN_HELP_OFFLINE_NOTE,
+  extractAdminHelpText,
   getAdminHelpBedrockSettings,
   stubAdminHelpAnswer,
 } from '../src/lib/adminHelp/bedrock';
@@ -163,6 +164,16 @@ async function main() {
     assert.match(stub, /no saved help matches/);
     assert.match(stub, /Upload, replace, or remove the tenant logo/);
     ok('offline answer lists page sections instead of an unrelated chunk');
+  }
+
+  {
+    // Regression: Claude can return a thinking block first; the answer is the text block.
+    const text = extractAdminHelpText('us.anthropic.claude-sonnet-5-5', {
+      content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: 'Open the Customization tab.' }],
+      stop_reason: 'end_turn',
+    });
+    assert.equal(text, 'Open the Customization tab.');
+    ok('Bedrock reply with a thinking block first still returns the text');
   }
 
   console.log(`\n${passed} smoke checks passed.`);

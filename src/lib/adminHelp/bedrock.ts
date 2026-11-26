@@ -56,12 +56,19 @@ function buildBody(
   };
 }
 
-function extractText(modelId: string, payload: Record<string, unknown>): string {
+export function extractAdminHelpText(modelId: string, payload: Record<string, unknown>): string {
   if (isAnthropicModel(modelId)) {
-    const content = payload.content as Array<{ text?: string }> | undefined;
-    const text = content?.[0]?.text;
-    if (typeof text === 'string') return text.trim();
-    throw new Error('Bedrock Anthropic response missing text');
+    // Newer Claude models can return a thinking block before the text block, so
+    // content[0] is not always the answer. Join every text block instead.
+    const content = payload.content as Array<{ type?: string; text?: string }> | undefined;
+    const text = (content ?? [])
+      .filter((block) => block.type === 'text' && typeof block.text === 'string')
+      .map((block) => block.text as string)
+      .join('\n')
+      .trim();
+    if (text) return text;
+    const types = (content ?? []).map((block) => block.type).join(', ') || 'none';
+    throw new Error(`Bedrock Anthropic response missing text (blocks: ${types}, stop_reason: ${String(payload.stop_reason)})`);
   }
   const output = payload.output as { message?: { content?: Array<{ text?: string }> } } | undefined;
   const text = output?.message?.content?.[0]?.text;
@@ -136,5 +143,5 @@ export async function invokeAdminHelpBedrock(
 
   const raw = response.body ? Buffer.from(response.body).toString('utf8') : '';
   const payload = JSON.parse(raw) as Record<string, unknown>;
-  return extractText(settings.modelId, payload);
+  return extractAdminHelpText(settings.modelId, payload);
 }

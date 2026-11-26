@@ -1,4 +1,5 @@
 import type { AdminHelpChunk, AdminHelpPageGuide } from '../types';
+import generatedFile from './generated/pageGuides.generated.json';
 
 /**
  * Page guides: a full, section-by-section manual for one admin page.
@@ -8,11 +9,17 @@ import type { AdminHelpChunk, AdminHelpPageGuide } from '../types';
  * answered from what is actually on the page. Each section is also exposed as a
  * retrievable chunk so questions asked from other pages can still find it.
  *
- * Facts here are taken from the page code. Keep them in sync when the page changes:
+ * Two sources:
+ * - MANUAL_PAGE_GUIDES (below): hand-reviewed guides. A manual guide wins over a generated
+ *   one with the same featureKey.
+ * - generated/pageGuides.generated.json: written by scripts/generate-admin-help-page-guides.ts
+ *   from the admin UI code for every other page group. Do not edit by hand; regenerate.
+ *
+ * Manual guide facts are taken from the page code. Keep them in sync when the page changes:
  * - Tenant Settings: src/app/admin/tenant-management/components/TenantSettingsForm.tsx,
  *   SocialUrlFields.tsx, TenantDefaultHeroManager.tsx
  */
-export const PAGE_GUIDES: AdminHelpPageGuide[] = [
+export const MANUAL_PAGE_GUIDES: AdminHelpPageGuide[] = [
   {
     featureKey: 'tenant-settings',
     title: 'Tenant Settings',
@@ -161,6 +168,33 @@ export const PAGE_GUIDES: AdminHelpPageGuide[] = [
     ],
   },
 ];
+
+type GeneratedGuideJson = {
+  featureKey: string;
+  title: string;
+  pathPrefixes: string[];
+  sourceFiles: string[];
+  platformOnly?: boolean;
+  sections: AdminHelpPageGuide['sections'];
+};
+
+const MANUAL_KEYS = new Set(MANUAL_PAGE_GUIDES.map((g) => g.featureKey));
+
+const GENERATED_PAGE_GUIDES: AdminHelpPageGuide[] = (
+  (generatedFile as { guides: GeneratedGuideJson[] }).guides ?? []
+)
+  .filter((g) => !MANUAL_KEYS.has(g.featureKey))
+  .map((g) => ({
+    featureKey: g.featureKey,
+    title: g.title,
+    pathPrefixes: g.pathPrefixes,
+    sourceFiles: g.sourceFiles,
+    platformOnly: g.platformOnly,
+    sections: g.sections,
+  }));
+
+/** Every page guide: manual first, then generated. */
+export const PAGE_GUIDES: AdminHelpPageGuide[] = [...MANUAL_PAGE_GUIDES, ...GENERATED_PAGE_GUIDES];
 
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

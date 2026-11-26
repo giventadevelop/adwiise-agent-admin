@@ -583,6 +583,24 @@ const ROUTE_ENTRIES: Array<{ prefix: string; info: AdminHelpRouteInfo }> = [
 ];
 
 /** Resolve the best route info for a pathname (longest matching prefix). */
+/** Longest-prefix route-map entry (prefix + info) for a pathname, or null. */
+export function resolveRouteEntry(
+  pathname: string | null | undefined,
+): { prefix: string; info: AdminHelpRouteInfo } | null {
+  const path = (pathname || '').split('?')[0] || '';
+  if (!path.startsWith('/admin')) return null;
+  let best: { prefix: string; info: AdminHelpRouteInfo } | null = null;
+  for (const entry of ROUTE_ENTRIES) {
+    const matches =
+      path === entry.prefix ||
+      path.startsWith(`${entry.prefix}/`) ||
+      (entry.prefix === '/admin' && (path === '/admin' || path === '/admin/'));
+    if (!matches) continue;
+    if (!best || entry.prefix.length > best.prefix.length) best = entry;
+  }
+  return best;
+}
+
 export function resolveRouteInfo(pathname: string | null | undefined): AdminHelpRouteInfo | null {
   const path = (pathname || '').split('?')[0] || '';
   if (!path.startsWith('/admin')) return null;

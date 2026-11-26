@@ -44,7 +44,10 @@
     "record:screenshot-scroll": "node scripts/record-screenshot-scroll-video.js",
     "gallery:migrate-covers": "node scripts/gallery-porting/migrate-local-album-covers-to-s3.mjs",
     "gallery:migrate-covers:dry": "node scripts/gallery-porting/migrate-local-album-covers-to-s3.mjs --dry-run",
-    "test:admin-help": "tsx scripts/smoke-admin-help.ts",
+    "test:admin-help": "tsx scripts/smoke-admin-help.ts && tsx scripts/admin-help-eval.ts && tsx scripts/generate-admin-help-page-guides.ts --check",
+    "test:admin-help:live": "tsx scripts/admin-help-eval.ts --live",
+    "help:guides": "tsx scripts/generate-admin-help-page-guides.ts",
+    "help:guides:check": "tsx scripts/generate-admin-help-page-guides.ts --check",
     "amplify:bedrock-env": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/set-amplify-bedrock-env.ps1"
   },
   "dependencies": {
