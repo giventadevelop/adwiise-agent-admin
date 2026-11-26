@@ -1,0 +1,35 @@
+Create a 10-slide PowerPoint for a sales conversation. Company: Giventa Inc, New Jersey, USA. Product: Adwiise Agent at https://www.adwiiseagent.ai/. Audience: a community, school, church, sports club, or retailer that needs its own public website quickly. Tone: confident and concrete. Short headlines. One idea per slide. Do not exceed 10 slides. Do not invent prices, customer counts, or uptime numbers.
+
+Brand: deep blue to teal circuit background, lime-green accents, white body text. Logo mark is a blue-green "G". Footer on every slide: Giventa Inc · www.giventa.com · sales@giventa.com · New Jersey, USA. Closing contact may also use info@giventa.com and +1 (862) 812-4371.
+
+Source of truth for the product is the platform codebase at F:\project_workspace\adwiise-agent-admin. That repo is the admin hub. One deployment hosts many customer sites. Each customer is a tenant with its own public hostname. Choosing a site type turns on only the pages and admin tools that site needs. Operators then run the site from one dashboard.
+
+Sites already live on this platform. Show each as a clickable example, with its role:
+- https://www.keralacenter.org/ — community and cultural site for the Parsippany Malayali community. Events, sponsors, galleries, and a public homepage. Designed and developed by Giventa Inc.
+- https://www.md-strikers.com/ — sports-team site. Roster, leagues, tournaments, events, and gallery, from the sports site type.
+- https://www.mcefee-temp.com/ — cultural-events federation site. Event listings, ticketing, media, and community pages from the event site type.
+- https://www.bst-school-demo.com — school website template. Same platform, school site type: staff with email and phone, departments, facilities, activities, campus pages, highlights, news, gallery, events, downloads, and fee invoices (admission, tuition, transport, other) with payer name, email, phone, amount, and status.
+
+Proof point to cite, not to copy as a price list: E:\Categories\Categories\Software_Projects\MOSC\MOSC Website Modernization Proposal_1.pdf. That September 8, 2025 proposal from Giventa Inc was a one-off modernization of mosc.in: responsive site, events, calendar, documents, galleries, donations, AWS hosting. The plan was 16–20 weeks and a market build value of $295,990, donated, with a $500 monthly operating fee. Use it on the contrast slide only. Do not present those figures as the price of Adwiise Agent.
+
+Slide 1 — Title. "Many sites. One platform. Days, not a new build." Subtitle: Adwiise Agent by Giventa Inc. URL https://www.adwiiseagent.ai/. One line under it: four sites already live — keralacenter.org, md-strikers.com, mcefee-temp.com, and the school template.
+
+Slide 2 — Why a new website used to take a season. A custom site means its own design, its own hosting, its own payments, and its own maintenance. The MOSC proposal shows what that looks like: a full church site planned at 16–20 weeks. Every next parish, school, or club would start that clock again.
+
+Slide 3 — What Adwiise Agent changes. One platform, many public sites. A new organization is onboarded as a tenant, given a site type, a Tenant ID, branding, and its own domain. The public site is live on that domain. Staff manage it in the same admin dashboard. keralacenter.org, md-strikers.com, and mcefee-temp.com are three hostnames on that one system.
+
+Slide 4 — Site types from one switch. Name these, each with one line, and point at the live site where one exists: Event organization (mcefee-temp.com: events, calendar, gallery, sponsors). Community and cultural (keralacenter.org). Church (events plus leadership). Sports team (md-strikers.com: roster, leagues, tournaments). Music. School (bst-school-demo.com). Personal profile and hybrid profile. Retail and shop packs (gas station, liquor, restaurant, clinic) as an operator dashboard. The site type decides which admin tiles appear.
+
+Slide 5 — Dashboard and turnaround. Headline: the next site is a configuration, not a rebuild. Show the path: onboarding request, approve, set site type and domain, brand it, publish. The same dashboard that runs keralacenter.org also runs the Strikers site and the MCEFEE site. A platform admin can see every tenant. Quick turnaround comes from presets and shared tools.
+
+Slide 6 — Ticketing, events, and payments. Event management: dates, ticket types, sponsors, performers, contacts, check-in. Payments on the same tenant: Stripe for tickets and memberships, Givebutter for donations, Razorpay for India school fees, plus manual methods (Zelle, cash, check) where enabled. Each tenant keeps its own gateway credentials. A cultural site can sell tickets. A school site can collect fees. The gateway stays on that tenant.
+
+Slide 7 — Media that keeps the homepage current. Galleries, event photos, sponsor banners, and a homepage hero that cycles images. Staff upload media in the dashboard. The public pages pick it up. Image text is read from banners so visitors can search a sponsor by the words on the picture, for example "AI-based solutions" on a Giventa banner. The same media tools serve keralacenter.org, the sports site, and the school gallery.
+
+Slide 8 — Sites already live. A four-card grid. Card 1: Kerala Center, https://www.keralacenter.org/, community and cultural. Card 2: MD Strikers, https://www.md-strikers.com/, sports team. Card 3: MCEFEE, https://www.mcefee-temp.com/, cultural events and ticketing. Card 4: School template, https://www.bst-school-demo.com, and a short feature list: staff, departments, facilities, activities, pages, highlights, news, events, gallery, downloads, fee invoices. Caption: four site types, one admin hub at https://www.adwiiseagent.ai/.
+
+Slide 9 — Software services from Giventa, on this multi-modal platform. This slide is required. Giventa Inc builds and operates the platform, then delivers customer sites as a service. Modes on the same system: public community websites, sports sites, event ticketing, school operations, church presence, and retail operator tools. Giventa's service is the setup, the site type, the domain, the payments, and the ongoing operation. The customer gets a finished site and a dashboard. Tagline already in market use: "Providing AI-based solutions." Name the four live sites as the proof.
+
+Slide 10 — Close. Three lines: one dashboard, many site types, a public site on the customer's own domain. Repeat the four URLs in one row. URL https://www.adwiiseagent.ai/. Giventa Inc, www.giventa.com, sales@giventa.com, New Jersey, USA.
+
+Design rules: 16:9. Large titles. At most five bullets on a content slide. Slide 8 is a grid of the four live sites, not a paragraph. Leave the MOSC dollar figures off every slide except slide 2.

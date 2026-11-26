@@ -210,8 +210,8 @@ export async function createPlatformCheckout(input: {
     billingId: String(billing.id),
     billingMode: mode,
   };
-  const success = `${origin}/admin/billing?checkout=success`;
-  const cancel = `${origin}/admin/billing?checkout=cancel`;
+  const success = `${origin}/admin/billing/${encodeURIComponent(billing.tenantId)}?checkout=success`;
+  const cancel = `${origin}/admin/billing/${encodeURIComponent(billing.tenantId)}?checkout=cancel`;
 
   if (mode === 'RECURRING') {
     // One billing row has one live subscription. Stripe is asked, because a missed webhook leaves the row without the id.
@@ -330,7 +330,7 @@ export async function openCustomerPortal(tenantId: string): Promise<{ url: strin
   const configuration = await ensurePortalConfiguration(stripe);
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${origin}/admin/billing`,
+    return_url: `${origin}/admin/billing/${encodeURIComponent(tenantId)}`,
     configuration,
   });
   return { url: session.url };

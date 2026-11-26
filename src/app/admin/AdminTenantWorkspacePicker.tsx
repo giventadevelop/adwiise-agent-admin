@@ -37,6 +37,46 @@ function tenantMatchesQuery(tenant: AdminWorkspaceTenant, rawQuery: string): boo
   );
 }
 
+type OrganizationCard = {
+  key: string;
+  organizationName: string;
+  domain?: string;
+  role: string;
+  tenantCount: number;
+  representativeTenantId: string;
+  tenantIds: string[];
+};
+
+function organizationKey(tenant: AdminWorkspaceTenant): string {
+  return `${tenant.organizationName.trim().toLowerCase()}|${(tenant.domain || '').trim().toLowerCase()}`;
+}
+
+function groupOrganizations(tenants: AdminWorkspaceTenant[]): OrganizationCard[] {
+  const groups = new Map<string, OrganizationCard>();
+  for (const tenant of tenants) {
+    const key = organizationKey(tenant);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        key,
+        organizationName: tenant.organizationName,
+        domain: tenant.domain,
+        role: tenant.role,
+        tenantCount: 1,
+        representativeTenantId: tenant.tenantId,
+        tenantIds: [tenant.tenantId],
+      });
+      continue;
+    }
+    if (!existing.tenantIds.includes(tenant.tenantId)) {
+      existing.tenantIds.push(tenant.tenantId);
+      existing.tenantCount = existing.tenantIds.length;
+    }
+    if (tenant.mappedToUser) existing.role = tenant.role;
+  }
+  return Array.from(groups.values());
+}
+
 function orgToWorkspaceTenants(
   org: TenantOrganizationDTO,
   mappedById: Map<string, AdminWorkspaceTenant>,
@@ -183,6 +223,8 @@ export default function AdminTenantWorkspacePicker({
     return Array.from(byId.values());
   }, [tenants, searchHits, query]);
 
+  const organizations = useMemo(() => groupOrganizations(filteredTenants), [filteredTenants]);
+
   useEffect(() => {
     setPage(0);
   }, [query]);
@@ -197,13 +239,13 @@ export default function AdminTenantWorkspacePicker({
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, []);
 
-  const totalCount = filteredTenants.length;
+  const totalCount = organizations.length;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
   const currentPage = Math.min(page, totalPages - 1);
   const startItem = totalCount > 0 ? currentPage * PAGE_SIZE + 1 : 0;
   const endItem =
     totalCount > 0 ? currentPage * PAGE_SIZE + Math.min(PAGE_SIZE, totalCount - currentPage * PAGE_SIZE) : 0;
-  const pageTenants = filteredTenants.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const pageOrganizations = organizations.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
   const showPagination = totalCount > PAGE_SIZE;
   const isPrevDisabled = currentPage === 0 || saving !== null;
   const isNextDisabled = currentPage >= totalPages - 1 || saving !== null;
@@ -285,13 +327,9 @@ export default function AdminTenantWorkspacePicker({
               <span className="font-semibold">
                 {sessionAllTenants
                   ? 'all tenants'
-                  : tenants.find((t) => t.tenantId === sessionTenantId)?.organizationName ||
-                    filteredTenants.find((t) => t.tenantId === sessionTenantId)?.organizationName ||
-                    sessionTenantId}
+                  : organizations.find((org) => org.tenantIds.includes(sessionTenantId || ''))?.organizationName ||
+                    'this organization'}
               </span>
-              {!sessionAllTenants && sessionTenantId ? (
-                <span className="font-mono text-green-700"> ({sessionTenantId})</span>
-              ) : null}
             </span>
           </div>
           {!sessionAllTenants && sessionTenantId ? (
@@ -363,9 +401,9 @@ export default function AdminTenantWorkspacePicker({
               }}
               onFocus={() => setSearchOpen(true)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && filteredTenants.length === 1) {
+                if (e.key === 'Enter' && organizations.length === 1) {
                   e.preventDefault();
-                  void handleSelect(filteredTenants[0].tenantId);
+                  void handleSelect(organizations[0].representativeTenantId);
                   setSearchOpen(false);
                 } else if (e.key === 'Escape') {
                   setSearchOpen(false);
@@ -403,29 +441,29 @@ export default function AdminTenantWorkspacePicker({
                 className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-72 overflow-y-auto"
                 role="listbox"
               >
-                {filteredTenants.length === 0 ? (
+                {organizations.length === 0 ? (
                   <div className="p-4 text-center text-gray-500 text-sm">No matching organizations.</div>
                 ) : (
                   <ul className="py-1">
-                    {filteredTenants.slice(0, 20).map((tenant) => (
-                      <li key={tenant.tenantId}>
+                    {organizations.slice(0, 20).map((org) => (
+                      <li key={org.key}>
                         <button
                           type="button"
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
-                            void handleSelect(tenant.tenantId);
+                            void handleSelect(org.representativeTenantId);
                             setSearchOpen(false);
                           }}
                           className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors ${
-                            sessionTenantId === tenant.tenantId ? 'bg-blue-100' : ''
+                            org.tenantIds.includes(sessionTenantId || '') ? 'bg-blue-100' : ''
                           }`}
                           role="option"
-                          aria-selected={sessionTenantId === tenant.tenantId}
+                          aria-selected={org.tenantIds.includes(sessionTenantId || '')}
                         >
-                          <div className="font-medium text-gray-900">{tenant.organizationName}</div>
+                          <div className="font-medium text-gray-900">{org.organizationName}</div>
                           <div className="text-sm text-gray-500">
-                            {tenant.tenantId}
-                            {tenant.domain ? ` · ${tenant.domain}` : ''}
+                            {org.tenantCount} tenant {org.tenantCount === 1 ? 'ID' : 'IDs'}
+                            {org.domain ? ` · ${org.domain}` : ''}
                           </div>
                         </button>
                       </li>
@@ -461,20 +499,21 @@ export default function AdminTenantWorkspacePicker({
           </button>
         )}
 
-        {pageTenants.map((tenant, index) => {
+        {pageOrganizations.map((org, index) => {
           const colors = CARD_COLORS[(currentPage * PAGE_SIZE + index) % CARD_COLORS.length];
-          const selected = !sessionAllTenants && sessionTenantId === tenant.tenantId;
+          const selected = !sessionAllTenants && org.tenantIds.includes(sessionTenantId || '');
+          const countLabel = `${org.tenantCount} tenant ${org.tenantCount === 1 ? 'ID' : 'IDs'}`;
           return (
             <button
-              key={tenant.tenantId}
+              key={org.key}
               type="button"
-              onClick={() => handleSelect(tenant.tenantId)}
+              onClick={() => handleSelect(org.representativeTenantId)}
               disabled={saving !== null}
               className={`flex flex-col items-center justify-center ${colors.card} rounded-lg shadow-md p-4 text-xs transition-all group ${
                 selected ? `ring-4 ${colors.ring}` : ''
               }`}
-              title={`Work on ${tenant.organizationName} (${tenant.tenantId})`}
-              aria-label={`Work on ${tenant.organizationName} (${tenant.tenantId})`}
+              title={`Work on ${org.organizationName}`}
+              aria-label={`Work on ${org.organizationName}, ${countLabel}`}
               aria-pressed={selected}
             >
               <div className={`flex-shrink-0 w-14 h-14 rounded-xl ${colors.icon} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
@@ -482,13 +521,13 @@ export default function AdminTenantWorkspacePicker({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <span className="font-semibold text-center leading-tight">{tenant.organizationName}</span>
-              <span className="mt-1 font-mono text-center break-all">{tenant.tenantId}</span>
-              {tenant.domain ? (
-                <span className="mt-0.5 text-center opacity-80">{tenant.domain}</span>
+              <span className="font-semibold text-center leading-tight">{org.organizationName}</span>
+              <span className="mt-1 text-center">{countLabel}</span>
+              {org.domain ? (
+                <span className="mt-0.5 text-center opacity-80">{org.domain}</span>
               ) : null}
-              <span className="mt-1 font-medium">{tenant.mappedToUser ? tenant.role : 'Organization site'}</span>
-              {saving === tenant.tenantId ? <span className="mt-1">Selecting…</span> : null}
+              <span className="mt-1 font-medium">{org.role}</span>
+              {saving === org.representativeTenantId ? <span className="mt-1">Selecting…</span> : null}
             </button>
           );
         })}

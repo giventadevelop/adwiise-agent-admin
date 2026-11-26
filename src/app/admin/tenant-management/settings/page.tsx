@@ -5,8 +5,59 @@ import AdminNavigation from '@/components/AdminNavigation';
 import SatelliteDomainsGuidance from '@/components/admin/SatelliteDomainsGuidance';
 import Link from 'next/link';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
+import { readAdminSessionTenantCookie } from '@/app/admin/adminAccessServer';
+import { isAdminSessionAllTenants } from '@/lib/adminSessionTenant';
+import { loadOrganizationForTenantId } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
+import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
+import { fetchOrganizationTenantIdsPage } from '@/app/admin/tenant-management/organizations/tenantIdListActions';
 
-export default async function TenantSettingsPage() {
+interface PageProps {
+  searchParams?: { tenant?: string } | Promise<{ tenant?: string }>;
+}
+
+export default async function TenantSettingsPage({ searchParams }: PageProps) {
+  const resolvedSearchParams =
+    searchParams && typeof (searchParams as Promise<{ tenant?: string }>).then === 'function'
+      ? await (searchParams as Promise<{ tenant?: string }>)
+      : searchParams;
+  const queryTenant = resolvedSearchParams?.tenant?.trim() || '';
+  const cookieTenant = queryTenant ? '' : (await readAdminSessionTenantCookie()) || '';
+  const workspaceTenant = queryTenant || (cookieTenant && !isAdminSessionAllTenants(cookieTenant) ? cookieTenant : '');
+
+  if (workspaceTenant) {
+    const organization = await loadOrganizationForTenantId(workspaceTenant).catch(() => null);
+    const tenantCount = organization?.id != null
+      ? (await fetchOrganizationTenantIdsPage(organization.id, 0, 1).catch(() => null))?.totalCount ?? 0
+      : 0;
+    const organizationName = organization?.organizationName?.trim() || 'This organization';
+    const tenantCountLabel = tenantCount === 1 ? '1 tenant ID' : `${tenantCount} tenant IDs`;
+    return (
+      <div className="w-full overflow-x-hidden box-border" style={adminPageTopStyle}>
+        <div className="w-full px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 mb-6 sm:mb-8">
+          <AdminNavigation showTenantBanner={false} />
+          <div className="mt-6 inline-flex flex-col gap-1 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 shadow-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Organization</span>
+            <span className="text-lg font-bold text-indigo-950">{organizationName}</span>
+            <span className="text-sm font-semibold text-indigo-800">{tenantCountLabel}</span>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Tenant Settings</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Open one row to view or edit its settings.
+            </p>
+          </div>
+          {organization?.id != null ? (
+            <OrganizationTenantIdList organizationId={organization.id} />
+          ) : (
+            <p className="text-sm text-gray-600">This organization has no tenant IDs yet.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Fetch initial data for server-side rendering
   let initialData = [];
   let initialTotalCount = 0;

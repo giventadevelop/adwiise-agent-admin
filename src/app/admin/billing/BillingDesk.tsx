@@ -456,8 +456,7 @@ export default function BillingDesk({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6" style={{ paddingTop: '120px' }}>
       <AdminNavigation
-        tenantId={tenantId}
-        contextLine="Platform billing for this tenant — event site and retail fees."
+        showTenantBanner={false}
       />
       <div className="bg-white rounded-lg shadow-md p-6">
         <h1 className="text-3xl font-bold text-gray-900">Platform billing</h1>

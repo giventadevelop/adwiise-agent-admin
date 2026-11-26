@@ -6,7 +6,6 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
-import AdminTenantIdBanner from '@/components/admin/AdminTenantIdBanner';
 import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
 
 interface PageProps {
@@ -172,11 +171,12 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Edit Organization</h1>
-        <div className="mt-4">
-          <AdminTenantIdBanner
-            tenantId={organization?.tenantId}
-            contextLine="Company CRM — contact and address. Tenant ID / hostname / branding are managed via Onboarding."
-          />
+        <div className="mt-4 inline-flex flex-col gap-1 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Organization</span>
+          <span className="text-lg font-bold text-indigo-950">{organization?.organizationName || 'Organization'}</span>
+          <span className="text-sm font-semibold text-indigo-800">
+            Database ID {organization?.id != null ? `#${organization.id}` : '—'}
+          </span>
         </div>
         <p className="mt-2 text-sm text-gray-500">
           Update company contact and address. Site Tenant ID, domain, and branding stay on Onboarding / Tenant Settings.

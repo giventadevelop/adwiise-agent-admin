@@ -1,59 +1,59 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { fetchAdminAccessForClerkUser, resolveSessionTenantForAccess } from '@/app/admin/adminAccessServer';
-import { getApiBaseUrl, getTenantIdOptional } from '@/lib/env';
-import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import { fetchPlatformBillingPlans, prepareTenantBillingDesk } from '@/app/admin/platform-billing/ApiServerActions';
-import type { RetailLocationDTO } from '@/types/retail';
-import { loadShopPack } from '@/lib/platformBilling/shopPackServer';
-import BillingDesk from './BillingDesk';
+import { fetchAdminAccessForClerkUser, readAdminSessionTenantCookie, resolveSessionTenantForAccess } from '@/app/admin/adminAccessServer';
+import { isAdminSessionAllTenants } from '@/lib/adminSessionTenant';
+import { loadOrganizationForTenantId } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
+import AdminNavigation from '@/components/AdminNavigation';
+import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
+import BillingTenantList from './BillingTenantList';
 
-async function loadLocations(tenantId: string): Promise<RetailLocationDTO[]> {
-  const params = new URLSearchParams({ 'tenantId.equals': tenantId, size: '500' });
-  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/retail-locations?${params.toString()}`, {
-    cache: 'no-store',
-    headers: { 'X-Tenant-ID': tenantId },
-  });
-  if (!response.ok) return [];
-  const data = await response.json();
-  return Array.isArray(data) ? data : data?.content ?? [];
-}
-
-export default async function TenantBillingPage({
+export default async function TenantBillingIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string }> | { reason?: string };
+  searchParams?: { tenant?: string; reason?: string } | Promise<{ tenant?: string; reason?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect('/');
   const user = await currentUser();
   const access = await fetchAdminAccessForClerkUser(userId, user?.emailAddresses?.[0]?.emailAddress);
   if (!access.isAdmin) redirect('/');
+
+  const resolved =
+    searchParams && typeof (searchParams as Promise<{ tenant?: string; reason?: string }>).then === 'function'
+      ? await (searchParams as Promise<{ tenant?: string; reason?: string }>)
+      : searchParams;
   const session = await resolveSessionTenantForAccess(access);
-  const tenantId = session.tenantId || getTenantIdOptional() || access.defaultTenantId;
-  if (!tenantId) {
-    redirect('/admin');
-  }
-  const resolvedSearch = typeof (searchParams as Promise<{ reason?: string }>).then === 'function'
-    ? await (searchParams as Promise<{ reason?: string }>)
-    : (searchParams as { reason?: string });
-  const [desk, plans, locations, shopPack] = await Promise.all([
-    prepareTenantBillingDesk(tenantId).catch(() => ({ rows: [], complimentaryPlan: false, charges: [] })),
-    fetchPlatformBillingPlans().catch(() => []),
-    loadLocations(tenantId).catch(() => []),
-    loadShopPack(tenantId).catch(() => ({ code: null, label: null })),
-  ]);
+  const cookieTenant = (await readAdminSessionTenantCookie()) || '';
+  const workspaceTenant =
+    resolved?.tenant?.trim() ||
+    session.tenantId ||
+    (cookieTenant && !isAdminSessionAllTenants(cookieTenant) ? cookieTenant : '') ||
+    access.defaultTenantId ||
+    '';
+  const organization = workspaceTenant ? await loadOrganizationForTenantId(workspaceTenant).catch(() => null) : null;
+  const locked = resolved?.reason === 'locked';
+
   return (
-    <BillingDesk
-      tenantId={tenantId}
-      canEditSwitch={access.isPlatformSuperAdmin}
-      initialRows={desk.rows}
-      plans={plans}
-      locations={locations}
-      complimentaryPlan={desk.complimentaryPlan}
-      lockedNotice={resolvedSearch.reason === 'locked' || desk.rows.some((row) => row.status === 'LOCKED')}
-      shopPackCode={shopPack.code}
-      shopPackLabel={shopPack.label}
-    />
+    <div className="w-full overflow-x-hidden box-border px-2 sm:px-3" style={adminPageTopStyle}>
+      <AdminNavigation showTenantBanner={false} />
+      <div className="max-w-7xl mx-auto py-4">
+        <h1 className="text-3xl font-bold text-gray-900">Platform billing</h1>
+        <div className="mt-4 inline-flex flex-col gap-1 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Organization</span>
+          <span className="text-lg font-bold text-indigo-950">{organization?.organizationName || 'Organization'}</span>
+          <span className="text-sm font-semibold text-indigo-800">
+            Database ID {organization?.id != null ? `#${organization.id}` : '—'}
+          </span>
+        </div>
+        {locked ? (
+          <p className="mt-4 text-sm text-red-700">Paid admin tools are locked until a platform fee is paid. Open a tenant to see its bill.</p>
+        ) : null}
+        {organization?.id != null ? (
+          <BillingTenantList organizationId={organization.id} />
+        ) : (
+          <p className="mt-6 text-sm text-gray-600">Select an organization on Admin Home to list its tenant IDs.</p>
+        )}
+      </div>
+    </div>
   );
 }

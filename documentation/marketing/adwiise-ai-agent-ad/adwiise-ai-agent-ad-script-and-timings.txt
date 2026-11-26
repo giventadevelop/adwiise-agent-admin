@@ -1,0 +1,98 @@
+ADWIISE AI AGENT by Giventa Inc — VIDEO ADVERTISEMENT
+Final voiceover script and scene-by-scene timing sheet
+
+FILES
+  out/adwiise-ai-agent-ad-16x9.mp4   1920x1080, 30 fps, 58.4 s   (web / LinkedIn)
+  out/adwiise-ai-agent-ad-9x16.mp4   1080x1920, 30 fps, 58.4 s   (vertical; re-laid-out, not cropped)
+  adwiise-ai-agent-ad-captions.srt   sidecar captions (same timings as below)
+
+Audio: AI voiceover (ElevenLabs engine, preset voice "Arthur"), one take per line.
+Music: AI-generated instrumental underscore, held low under the voice, lifts on the end card.
+Source for every claim: "Adwiise Agent AI by Giventa Inc.pptx" (slides 1, 2, 3, 4, 5, 6, 8, 10).
+No pricing, customer counts, or the MOSC dollar figures appear anywhere in the ad.
+
+
+FINAL VOICEOVER SCRIPT (as recorded)
+-------------------------------------
+ 1. A new website used to take a season.
+ 2. Its own design. Hosting. Payments. Maintenance.
+ 3. Sixteen to twenty weeks. Then the next organization starts all over again.
+ 4. Adwiise AI Agent changes that.
+ 5. Many sites. One platform.
+ 6. Onboard a tenant. Brand it. Publish on their own domain. In days, not months.
+ 7. Already live: community sites, sports teams, events, and schools.
+ 8. Sell tickets. Collect fees. Take donations. Manage media. All from one dashboard.
+ 9. Your next site is a configuration.
+10. Visit adwiiseagent.ai.
+
+Changes from the supplied script:
+  - Line 8 ends "All from one dashboard." (was "— from one dashboard.") so it reads as its own beat.
+  - Dashes in lines 3 and 6 became full stops, to get a clean pause in the read.
+  - For the voice engine only, "Adwiise" was spelled "Adwise" and the URL was spelled
+    "adwise agent, dot A.I." so it would be pronounced "ad-wise". On screen it is always
+    "Adwiise AI Agent" and "adwiiseagent.ai".
+
+
+SCENE TIMING SHEET
+------------------
+#  Time (s)        Scene                 On screen                                         Voiceover (start)
+1  00.00 - 03.55   Hook                  THE OLD WAY                                       L1  @ 00.60
+                                         "A new website used to take a season."
+2  03.55 - 15.25   Pain                  Its own design / hosting / payments /             L2  @ 04.00
+                                         maintenance (one per spoken word)
+                                         "16-20 weeks" + 20-week bar filling               L3  @ 08.55
+                                         "Then the next organization starts all            (cue @ 11.45)
+                                         over again." (bar empties and restarts)
+3  15.25 - 19.65   Turn / brand reveal   Logo, "Adwiise AI Agent", "by Giventa Inc",       L4  @ 15.75
+                                         "changes that."  Background shifts from
+                                         dark navy to the brand blue-teal.
+4  19.65 - 30.50   Solution              "Many sites. One platform."                       L5  @ 20.10
+                                         1 Onboard > 2 Approve > 3 Site type + domain      L6  @ 23.40
+                                         > 4 Brand > 5 Publish (lights up in order)
+                                         "On their own domain. In days, not months."       (cue @ 27.92)
+5  30.50 - 39.45   Proof montage         ALREADY LIVE - "Four sites. One platform."        L7  @ 31.00
+                                         Kerala Center   www.keralacenter.org    @ 32.46
+                                         MD Strikers     www.md-strikers.com     @ 33.77
+                                         MCEFEE          www.mcefee-temp.com     @ 35.13
+                                         School template www.bst-school-demo.com @ 36.05
+                                         Site types: Community, Sports, Church,
+                                         School, Events, Retail                  @ 36.75
+6  39.45 - 48.30   Benefits              BUILT IN - Sell tickets / Collect fees /          L8  @ 39.91
+                                         Take donations / Manage media
+                                         "Payments with Stripe, Givebutter, Razorpay"
+                                         "All from one dashboard."                         (cue @ 45.50)
+7  48.30 - 52.00   Closing line          "Your next site is a configuration."              L9  @ 48.82
+8  52.00 - 58.40   CTA end card          Logo, "Adwiise AI Agent", "by Giventa Inc"        L10 @ 52.49
+                   (6.4 s on screen)     "Many sites. One platform. Days, not a new build."
+                                         adwiiseagent.ai
+                                         sales@giventa.com - +1 (312) 343-0073
+                                         www.giventa.com - New Jersey, USA
+
+A small "Adwiise AI Agent / by Giventa Inc" lockup sits top-left from 0.3 s through every
+scene except the brand reveal and the end card, where the full lockup is the hero.
+
+
+VOICEOVER LINE TIMINGS
+----------------------
+Line  Start    End      Length
+ 1    00.60    03.11    2.51
+ 2    04.00    07.97    3.97
+ 3    08.55    14.74    6.19
+ 4    15.75    19.22    3.47
+ 5    20.10    22.79    2.69
+ 6    23.40    29.93    6.53
+ 7    31.00    37.11    6.11
+ 8    39.91    47.62    7.71
+ 9    48.82    51.59    2.77
+10    52.49    56.04    3.55
+Pauses between lines run 0.6 s to 2.8 s. Total spoken time 45.5 s of 58.4 s.
+
+
+TO RE-RENDER OR EDIT
+--------------------
+  npm install
+  npm run render            (16:9)
+  npm run render:vertical   (9:16)
+  npm run dev               (Remotion Studio preview)
+All timing lives in src/timeline.js; all scenes and copy live in src/Ad.jsx.
+Site screenshots are in public/shots (captured 2026-11-25, cookie banners cropped out).

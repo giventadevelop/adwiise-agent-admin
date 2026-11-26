@@ -182,6 +182,16 @@ export interface TenantSettingsDTO {
   /** @deprecated v2.0 — canonical source is tenant_organization; read fallback only */
   stateProvince?: string;
   email?: string;
+  /** Public name for this tenant ID. */
+  tenantName?: string;
+  /** Public WhatsApp link, for example https://api.whatsapp.com/send?phone=9188934773 */
+  whatsappUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
+  youtubeUrl?: string;
+  tiktokUrl?: string;
   /** Registrar name, domain, name servers, and URL or domain forwarding notes. */
   registrarNotes?: string | null;
   createdAt: string; // ISO date-time

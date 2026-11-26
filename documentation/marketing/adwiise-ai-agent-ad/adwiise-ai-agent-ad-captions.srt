@@ -1,0 +1,51 @@
+1
+00:00:00,600 --> 00:00:03,300
+A new website used to take a season.
+
+2
+00:00:04,000 --> 00:00:08,100
+Its own design. Hosting. Payments. Maintenance.
+
+3
+00:00:08,550 --> 00:00:11,300
+Sixteen to twenty weeks.
+
+4
+00:00:11,450 --> 00:00:14,900
+Then the next organization starts all over again.
+
+5
+00:00:15,750 --> 00:00:19,400
+Adwiise AI Agent changes that.
+
+6
+00:00:20,100 --> 00:00:23,000
+Many sites. One platform.
+
+7
+00:00:23,400 --> 00:00:27,700
+Onboard a tenant. Brand it. Publish on their own domain.
+
+8
+00:00:27,920 --> 00:00:30,200
+In days, not months.
+
+9
+00:00:31,000 --> 00:00:37,300
+Already live: community sites, sports teams, events, and schools.
+
+10
+00:00:39,910 --> 00:00:45,300
+Sell tickets. Collect fees. Take donations. Manage media.
+
+11
+00:00:45,500 --> 00:00:47,900
+All from one dashboard.
+
+12
+00:00:48,820 --> 00:00:51,800
+Your next site is a configuration.
+
+13
+00:00:52,490 --> 00:00:56,300
+Visit adwiiseagent.ai.

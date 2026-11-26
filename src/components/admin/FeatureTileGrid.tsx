@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useId, useState, type ReactNode } from 'react';
+import { useAdminTenantId } from '@/app/admin/AdminTenantContext';
 
 export type FeatureTile = {
   key: string;
@@ -124,6 +125,7 @@ export default function FeatureTileGrid({
   searchLabel?: string;
 }) {
   const searchId = useId();
+  const workspaceTenantId = useAdminTenantId();
   const [query, setQuery] = useState('');
   const [cursorTip, setCursorTip] = useState<{ text: string; x: number; y: number } | null>(null);
   const visible = tiles.filter((tile) => tileMatchesSearch(tile, query));
@@ -189,10 +191,14 @@ export default function FeatureTileGrid({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visible.map((tile) => {
             const guide = tile.guide || tile.hint;
+            const href =
+              tile.key === 'tenant-settings' && workspaceTenantId
+                ? `${tile.href}?tenant=${encodeURIComponent(workspaceTenantId)}`
+                : tile.href;
             return (
               <Link
                 key={tile.key}
-                href={tile.href}
+                href={href}
                 aria-label={`${tile.label}: ${tile.hint}`}
                 aria-current={tile.active ? 'page' : undefined}
                 className={`relative flex flex-col items-center justify-center rounded-lg shadow-md p-5 text-sm transition-all group ${tile.cardClassName} ${

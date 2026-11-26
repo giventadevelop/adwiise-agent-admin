@@ -25,6 +25,7 @@ import { REGISTRAR_NOTES_PROMPT } from '@/lib/onboarding/onboardingShared';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import GoogleAdsensePlacementsFields from '@/app/admin/tenant-management/components/GoogleAdsensePlacementsFields';
+import { SocialUrlInputs } from '@/app/admin/tenant-management/components/SocialUrlFields';
 import {
   adsensePlacementFieldsFromJson,
   serializeAdsensePlacementFields,
@@ -213,6 +214,14 @@ export default function TenantSettingsForm({
       displayEventHeroImages: initialData?.displayEventHeroImages ?? true,
       phoneNumber: initialData?.phoneNumber || '',
       email: initialData?.email || '',
+      tenantName: initialData?.tenantName || '',
+      whatsappUrl: initialData?.whatsappUrl || '',
+      facebookUrl: initialData?.facebookUrl || '',
+      instagramUrl: initialData?.instagramUrl || '',
+      twitterUrl: initialData?.twitterUrl || '',
+      linkedinUrl: initialData?.linkedinUrl || '',
+      youtubeUrl: initialData?.youtubeUrl || '',
+      tiktokUrl: initialData?.tiktokUrl || '',
       registrarNotes: initialData?.registrarNotes || ''
     }
   });
@@ -1014,6 +1023,29 @@ export default function TenantSettingsForm({
                   <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>
                 )}
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="tenantName">
+                  Tenant name
+                </label>
+                <input
+                  id="tenantName"
+                  type="text"
+                  {...register('tenantName', {
+                    maxLength: {
+                      value: 255,
+                      message: 'Tenant name must be 255 characters or less'
+                    }
+                  })}
+                  className="mt-1 block w-full border border-gray-400 rounded-xl focus:border-blue-500 focus:ring-blue-500 px-4 py-3 text-base"
+                  placeholder="Public name for this tenant"
+                />
+                {errors.tenantName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.tenantName.message}</p>
+                )}
+              </div>
+
+              <SocialUrlInputs register={register} errors={errors} />
             </div>
 
             {/* User Registration Settings */}

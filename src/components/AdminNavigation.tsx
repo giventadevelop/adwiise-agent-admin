@@ -10,6 +10,8 @@ interface AdminNavigationProps {
   contextLine?: string;
   /** Optional explicit tenant when workspace context is empty but the page has a record tenant. */
   tenantId?: string | null;
+  /** When false, the page supplies its own summary and the tenant ID card is omitted. */
+  showTenantBanner?: boolean;
 }
 
 /**
@@ -20,6 +22,7 @@ export default function AdminNavigation({
   showHome = true,
   contextLine,
   tenantId,
+  showTenantBanner = true,
 }: AdminNavigationProps) {
   if (!showHome) return null;
 
@@ -29,7 +32,7 @@ export default function AdminNavigation({
       style={{ maxWidth: '100%', width: '100%' }}
     >
       <AdminBackButton href="/admin" label="Admin Home" />
-      <AdminTenantIdBanner tenantId={tenantId} contextLine={contextLine} />
+      {showTenantBanner ? <AdminTenantIdBanner tenantId={tenantId} contextLine={contextLine} /> : null}
     </div>
   );
 }

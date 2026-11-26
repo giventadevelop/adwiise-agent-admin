@@ -535,6 +535,7 @@ export default function OnboardingRequestReviewClient({
         cloneAdmins: prov.cloneAdmins,
         notifySubmitter: prov.notifySubmitter,
         adminComments: prov.adminComments.trim() || undefined,
+        sourceOrganizationId: sourceOrganizationId ?? undefined,
       },
       (fields.siteType || null) as TenantSiteType | null
     );

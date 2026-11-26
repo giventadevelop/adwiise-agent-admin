@@ -108,7 +108,15 @@ export default function TenantSettingsEditClient({
           displayEventHeroImages: settings?.displayEventHeroImages ?? true,
           // Contact fields (operational — identity lives on tenant organization)
           phoneNumber: settings?.phoneNumber || '',
-          email: settings?.email || ''
+          email: settings?.email || '',
+          tenantName: settings?.tenantName || '',
+          whatsappUrl: settings?.whatsappUrl || '',
+          facebookUrl: settings?.facebookUrl || '',
+          instagramUrl: settings?.instagramUrl || '',
+          twitterUrl: settings?.twitterUrl || '',
+          linkedinUrl: settings?.linkedinUrl || '',
+          youtubeUrl: settings?.youtubeUrl || '',
+          tiktokUrl: settings?.tiktokUrl || '',
         }}
       />
 

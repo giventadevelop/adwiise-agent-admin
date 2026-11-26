@@ -829,6 +829,10 @@ export interface TenantSettingsDTO {
   linkedinUrl?: string;
   youtubeUrl?: string;
   tiktokUrl?: string;
+  /** Public name for this tenant ID. */
+  tenantName?: string;
+  /** Public WhatsApp link, for example https://api.whatsapp.com/send?phone=9188934773 */
+  whatsappUrl?: string;
   createdAt: string; // date-time
   updatedAt: string; // date-time
   tenantOrganization?: TenantOrganizationDTO;
@@ -1417,6 +1421,8 @@ export interface TenantOnboardingApproveDTO {
   reviewedByClerkUserId?: string;
   reviewedByEmail?: string;
   notifySubmitter?: boolean;
+  /** Organization selected on the request. The new tenant settings row is assigned to this id. */
+  sourceOrganizationId?: number;
   /** Client organization that will own the new website. Empty leaves the new row as its own client. */
   parentOrganizationId?: number;
 }

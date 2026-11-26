@@ -22,6 +22,31 @@ import { revalidateSatelliteConfigCache } from '@/lib/satelliteConfigRuntime';
 
 const API_BASE_URL = getApiBaseUrl();
 
+const SOCIAL_FIELD_PAIRS = [
+  ['facebookUrl', 'facebook_url'],
+  ['instagramUrl', 'instagram_url'],
+  ['twitterUrl', 'twitter_url'],
+  ['linkedinUrl', 'linkedin_url'],
+  ['youtubeUrl', 'youtube_url'],
+  ['tiktokUrl', 'tiktok_url'],
+  ['whatsappUrl', 'whatsapp_url'],
+  ['tenantName', 'tenant_name'],
+] as const;
+
+/** Copy snake_case social columns onto the camelCase DTO the forms read. */
+function withSocialFields(row: TenantSettingsDTO): TenantSettingsDTO {
+  const source = row as TenantSettingsDTO & Record<string, unknown>;
+  const next: TenantSettingsDTO & Record<string, unknown> = { ...source };
+  for (const [camel, snake] of SOCIAL_FIELD_PAIRS) {
+    const current = next[camel];
+    const alternate = source[snake];
+    if ((current == null || current === '') && alternate != null && alternate !== '') {
+      next[camel] = alternate;
+    }
+  }
+  return next;
+}
+
 /** Logo changes feed auth branding via getMergedSatelliteConfigs — bust that cache. */
 function maybeRevalidateSatelliteAuthBranding(data: Partial<TenantSettingsFormDTO>) {
   if ('logoImageUrl' in data || 'primaryColor' in data || 'secondaryColor' in data) {
@@ -175,7 +200,7 @@ export async function fetchTenantSettings(
     }
 
     const data = await response.json();
-    const rows = Array.isArray(data) ? data : [];
+    const rows = (Array.isArray(data) ? data : []).map((row) => withSocialFields(row as TenantSettingsDTO));
     const totalCount = parseInt(response.headers.get('x-total-count') || '0');
 
     let organizationsWithoutSettings: Array<{
@@ -249,7 +274,7 @@ export async function fetchTenantSetting(id: number): Promise<TenantSettingsDTO 
       throw new Error(`Failed to fetch tenant setting: ${response.statusText}`);
     }
 
-    const setting = (await response.json()) as TenantSettingsDTO;
+    const setting = withSocialFields((await response.json()) as TenantSettingsDTO);
     const access = await getCurrentAdminAccess();
     if (!isTenantIdAllowed(access, setting.tenantId)) {
       return null;
@@ -281,7 +306,8 @@ export async function fetchTenantSettingsByTenantId(tenantId: string): Promise<T
     }
 
     const data = await response.json();
-    return Array.isArray(data) && data.length > 0 ? data[0] : null;
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    return row ? withSocialFields(row as TenantSettingsDTO) : null;
   } catch (error) {
     console.error('Error fetching tenant settings by tenant ID:', error);
     throw new Error('Failed to fetch tenant settings by tenant ID');

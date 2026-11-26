@@ -1,0 +1,17 @@
+{
+  "name": "adwiise-ai-agent-ad",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx Ad out/adwiise-ai-agent-ad-16x9.mp4",
+    "render:vertical": "remotion render src/index.jsx AdVertical out/adwiise-ai-agent-ad-9x16.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.484",
+    "@remotion/google-fonts": "4.0.484",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.484"
+  }
+}

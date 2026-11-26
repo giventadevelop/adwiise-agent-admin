@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { fetchTenantSetting } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import AdminRecordMissing, { isMissingRecordError } from '@/components/admin/AdminRecordMissing';
-import { fetchTenantOrganizations } from '@/app/admin/tenant-management/organizations/ApiServerActions';
+import { loadOrganizationForTenantId } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 import { fetchRecentTenantOrganizationsForSelectServer } from '@/app/admin/tenant-management/organizations/organizationSelectServerActions';
 import TenantSettingsEditClient from './TenantSettingsEditClient';
 import Link from 'next/link';
@@ -65,11 +65,10 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
       );
     }
 
-    const orgs = await fetchTenantOrganizations(
-      { page: 0, pageSize: 1 },
-      { tenantId }
-    );
-    const match = orgs.data.find((org) => (org.websiteTenantIds || []).includes(tenantId));
+    const match = await loadOrganizationForTenantId(tenantId);
+    if (match) {
+      match.websiteTenantIds = [tenantId];
+    }
     if (!match) {
       return (
         <AdminRecordMissing
@@ -95,7 +94,7 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>
+      <div className="max-w-7xl mx-auto px-2 sm:px-3 py-8" style={adminPageTopStyle}>
         <div className="mb-8">
           <AdminBackButton href="/admin/tenant-management/settings" label="Back to Settings" />
         </div>
@@ -134,7 +133,7 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>
+    <div className="max-w-7xl mx-auto px-2 sm:px-3 py-8" style={adminPageTopStyle}>
       {/* Breadcrumb Navigation */}
       <nav className="flex mb-8" aria-label="Breadcrumb">
         <ol className="inline-flex flex-wrap items-center gap-y-3 gap-x-2 md:gap-x-3">
@@ -222,6 +221,7 @@ export default async function EditTenantSettingsPage({ params, searchParams }: P
         <div className="mt-4">
           <AdminTenantIdBanner
             tenantId={settings?.tenantId}
+            entityLabel="tenant settings"
             contextLine="Tenant configuration — General, Integrations, Limits, Homepage Hero, and Customization tabs below."
           />
         </div>

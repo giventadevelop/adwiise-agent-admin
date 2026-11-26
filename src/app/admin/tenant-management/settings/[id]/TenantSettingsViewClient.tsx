@@ -9,7 +9,10 @@ import { TenantSettingsDTO, TenantOrganizationDTO } from '@/app/admin/tenant-man
 import TenantDefaultHeroView from '@/app/admin/tenant-management/components/TenantDefaultHeroView';
 import TenantSubscriptionPanel from '@/app/admin/tenant-management/components/TenantSubscriptionPanel';
 import { tenantSettingsTabQuery, type TenantSettingsTab } from '@/lib/tenantSettingsTabs';
-import { REGISTRAR_NOTES_PROMPT } from '@/lib/onboarding/onboardingShared';
+import { SocialUrlList } from '@/app/admin/tenant-management/components/SocialUrlFields';
+
+const REGISTRAR_NOTES_PROMPT =
+  'Paste the registrar name, the domain, the name servers, and any URL-forwarding notes. You can update this later on the request.';
 
 interface TenantSettingsViewClientProps {
   settings: TenantSettingsDTO;
@@ -306,6 +309,17 @@ export default function TenantSettingsViewClient({ settings, settingsId, organiz
                 <dd className="mt-1 text-sm text-gray-900">{settings.phoneNumber}</dd>
               </div>
             )}
+            <SocialUrlList
+              values={{
+                facebookUrl: settings?.facebookUrl,
+                instagramUrl: settings?.instagramUrl,
+                twitterUrl: settings?.twitterUrl,
+                linkedinUrl: settings?.linkedinUrl,
+                youtubeUrl: settings?.youtubeUrl,
+                tiktokUrl: settings?.tiktokUrl,
+                whatsappUrl: settings?.whatsappUrl,
+              }}
+            />
             <div>
               <dt className="text-sm font-medium text-gray-500">Created At</dt>
               <dd className="mt-1 text-sm text-gray-900">

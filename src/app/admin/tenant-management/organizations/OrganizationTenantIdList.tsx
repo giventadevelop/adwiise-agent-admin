@@ -70,20 +70,35 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
                   <tr key={row.settingsId}>
                     <td className="px-4 py-3 font-mono text-sm text-gray-900 break-all">{row.tenantId}</td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/tenant-management/settings/${row.settingsId}`}
-                        className="inline-flex flex-shrink-0 h-14 rounded-xl bg-teal-100 hover:bg-teal-200 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
-                        title="Open settings"
-                        aria-label={`Open settings for ${row.tenantId}`}
-                      >
-                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-200 flex items-center justify-center">
-                          <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                        </div>
-                        <span className="font-semibold text-teal-700">Open settings</span>
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/admin/tenant-management/settings/${row.settingsId}`}
+                          className="inline-flex flex-shrink-0 h-14 rounded-xl bg-green-100 hover:bg-green-200 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
+                          title="View settings"
+                          aria-label={`View settings for ${row.tenantId}`}
+                        >
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </div>
+                          <span className="font-semibold text-green-700">View</span>
+                        </Link>
+                        <Link
+                          href={`/admin/tenant-management/settings/${row.settingsId}/edit`}
+                          className="inline-flex flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
+                          title="Edit settings"
+                          aria-label={`Edit settings for ${row.tenantId}`}
+                        >
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </div>
+                          <span className="font-semibold text-blue-700">Edit</span>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

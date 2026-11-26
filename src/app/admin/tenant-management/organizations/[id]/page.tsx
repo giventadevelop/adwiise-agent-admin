@@ -10,6 +10,7 @@ import CascadeDeleteOrganizationButton from '@/app/admin/tenant-management/organ
 import OrganizationActiveStatusButton from '@/app/admin/tenant-management/organizations/OrganizationActiveStatusButton';
 import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
 import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
+import { fetchOrganizationTenantIdsPage } from '@/app/admin/tenant-management/organizations/tenantIdListActions';
 import OrganizationBillingScopeCard from '@/app/admin/tenant-management/organizations/OrganizationBillingScopeCard';
 
 interface PageProps {
@@ -89,10 +90,13 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
     );
   }
 
-  const tenantIds = organization.websiteTenantIds || [];
-  const tenantSummary = tenantIds.length === 0
+  const tenantCountPage = organization.id != null
+    ? await fetchOrganizationTenantIdsPage(organization.id, 0, 1).catch(() => null)
+    : null;
+  const tenantCount = tenantCountPage?.totalCount ?? 0;
+  const tenantSummary = tenantCount === 0
     ? 'No tenant IDs yet'
-    : `${tenantIds.length} tenant ${tenantIds.length === 1 ? 'ID' : 'IDs'}`;
+    : `${tenantCount} tenant ${tenantCount === 1 ? 'ID' : 'IDs'}`;
   const identity = resolveTenantOrganizationIdentity(organization, null);
   const monthlyChargeAmount = organization.monthlyFeeUsd != null ? Number(organization.monthlyFeeUsd) : 0;
   const monthlyChargeEnabled = Number.isFinite(monthlyChargeAmount) && monthlyChargeAmount > 0;
@@ -148,8 +152,13 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                 {organization.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <a href="#tenant-ids" className="inline-flex items-center h-10 px-4 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 font-semibold">
-              {tenantSummary}. View tenant IDs
+            <a
+              href="#tenant-ids"
+              className="inline-flex items-center h-10 px-4 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 font-semibold"
+              title="Go to the tenant ID list"
+              aria-label={tenantCount === 0 ? 'No tenant IDs yet. Go to the tenant ID list' : `${tenantSummary}. Go to the tenant ID list`}
+            >
+              {tenantSummary}
             </a>
             <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">
               {identity?.description || 'No description provided'}

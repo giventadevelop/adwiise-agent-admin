@@ -1,5 +1,4 @@
 import { fetchTenantOrganization } from '@/app/admin/tenant-management/organizations/ApiServerActions';
-import { fetchTenantSettingsByTenantId } from '@/app/admin/tenant-management/settings/ApiServerActions';
 import AdminRecordMissing from '@/components/admin/AdminRecordMissing';
 import { redirect } from 'next/navigation';
 
@@ -48,22 +47,5 @@ export default async function TenantOrganizationSettingsPage({ params }: PagePro
     );
   }
 
-  const tenantId = organization.websiteTenantIds?.[0]?.trim();
-  if (!tenantId) {
-    return (
-      <AdminRecordMissing
-        title="This tenant is no longer available"
-        message={`Organization #${organizationId} has no tenant id, so its settings cannot be opened.`}
-        backHref="/admin/tenant-management/organizations"
-        backLabel="Back to Organizations"
-      />
-    );
-  }
-
-  const settings = await fetchTenantSettingsByTenantId(tenantId).catch(() => null);
-  if (settings?.id != null) {
-    redirect(`/admin/tenant-management/settings/${settings.id}`);
-  }
-
-  redirect(`/admin/tenant-management/settings/new?organizationId=${organization.id}&tenantId=${encodeURIComponent(tenantId)}`);
+  redirect(`/admin/tenant-management/organizations/${organization.id}#tenant-ids`);
 }
