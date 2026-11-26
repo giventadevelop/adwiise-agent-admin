@@ -206,7 +206,8 @@
 <body>
   <h1>Vector database and RAG analysis</h1>
   <div class="section-intro">
-    <p>Admin Help, image scanning, and retail Ask already share one Bedrock model, <code class="code-highlight">us.anthropic.claude-sonnet-5-5</code> in <code class="code-highlight">us-east-1</code>. They do not share context. Only Admin Help retrieves documents before the call, and that retrieval is a keyword score over TypeScript files in this repository.</p>
+    <p>Admin Help, image scanning, and retail Ask already share one Bedrock model, <code class="code-highlight">us.anthropic.claude-sonnet-5-5</code> in <code class="code-highlight">us-east-1</code>. They do not share context. Only Admin Help retrieves documents before the call. It sends the full help guide for the page the admin is on, plus the best keyword matches from the rest of the knowledge pack.</p>
+    <p><strong>Updated 2026-11-26.</strong> The first version sent only short tile summaries, and real questions got wrong answers. Every admin page now has a full guide generated from its code. The decision to stay without a vector database still holds.</p>
     <p>A managed vector database stays out of this design. It would add a monthly floor without making the same model more accurate on the questions these three callers already answer.</p>
   </div>
 
@@ -214,6 +215,7 @@
     <h2>Contents</h2>
     <ol>
       <li><a href="#decision">Decision</a></li>
+      <li><a href="#lessons">What went wrong and what changed</a></li>
       <li><a href="#callers">What each project sends the model</a></li>
       <li><a href="#paths">The three call paths</a></li>
       <li><a href="#where">Where retrieval already works</a></li>
@@ -226,10 +228,39 @@
   <div class="section-container output" id="decision">
     <div class="section-header output">Decision</div>
     <div class="success">
-      <strong>Keep the three call paths.</strong> Admin Help keeps stamped chunks. Image scanning stays a direct model call from Java. Retail Ask stays a direct model call with the one saved brief. The model id stays the same.
+      <strong>Keep the three call paths.</strong> Admin Help sends the current page's full guide plus keyword matches. Image scanning stays a direct model call from Java. Retail Ask stays a direct model call with the one saved brief. The model id stays the same.
     </div>
-    <p>Fine-tuning the same model on new pages is the expensive, stale option. A page change would require another training job. The help prompt already answers only from the chunks that were retrieved. Adding a hub guide is the update path.</p>
+    <p>Fine-tuning the same model on new pages is the expensive, stale option, because every page change would need another training job. The update path is to change the page and run <code class="script-name">npm run help:guides</code>. That rewrites only the guides whose page code changed.</p>
+    <p>A vector database is still not needed. The wrong answers came from missing content and a code bug, not from how chunks were searched.</p>
     <p>Related guide: <a href="AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html">Admin Help knowledge coverage</a>.</p>
+  </div>
+
+  <div class="section-container parameters" id="lessons">
+    <div class="section-header parameters">What went wrong and what changed (2026-11-26)</div>
+    <p>On Tenant Settings, “how do I update the logo here?” was answered with the default hero images note. That answer came from three separate problems:</p>
+    <table>
+      <thead>
+        <tr><th>Problem</th><th>Effect</th><th>Fix</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>The knowledge pack had one-line tile summaries. Nothing described the logo upload, social links, or most other fields on each page.</td>
+          <td>Even a working model could only say “I don't know”. The only chunk containing the word “logo” was the hero images note, so it ranked first.</td>
+          <td>A full guide for each of 57 admin page groups (518 sections), generated from the page code: labels, buttons, help text, file limits, and messages. The whole guide for the current page goes to the model. Tenant Settings has a hand-reviewed guide.</td>
+        </tr>
+        <tr>
+          <td>Newer Claude replies can start with a <code>thinking</code> block. The route read only <code>content[0].text</code>.</td>
+          <td>Good model answers were thrown away and replaced by the backup answer. This failed 6 of 40 questions in a live run.</td>
+          <td>Read every <code>text</code> block in the reply.</td>
+        </tr>
+        <tr>
+          <td>The backup answer pasted the first 480 characters of the top chunk, whatever the question.</td>
+          <td>Off-topic answers that looked real.</td>
+          <td>The backup now says AI help is unavailable. It quotes saved help only when the title or keywords match the question; otherwise it lists the page's sections. The chat shows a status line under every answer: green “AI answer” or amber “Saved help” with the reason.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The coverage script still passed while all of this was wrong, because it only checks that every tile has a summary. Accuracy is now measured with 40 real questions in <code>scripts/admin-help-eval.json</code>: 40/40 offline and 40/40 with live Bedrock answers.</p>
   </div>
 
   <div class="section-container usage" id="callers">
@@ -248,8 +279,8 @@
         <tr>
           <td>adwiise-agent-admin Admin Help</td>
           <td>Next.js server <code>InvokeModel</code> in <code>src/lib/adminHelp/bedrock.ts</code></td>
-          <td>System rules plus up to 8 stamped chunks from <code>src/lib/adminHelp/retrieve.ts</code></td>
-          <td>Keyword score over TypeScript in <code>src/lib/adminHelp/knowledge/</code>. This is already retrieve-then-answer. It is not a vector index.</td>
+          <td>System rules, the full guide for the current page (<code>currentPageGuide</code>), and up to 8 keyword-matched chunks from <code>src/lib/adminHelp/retrieve.ts</code></td>
+          <td>Page guide chosen by URL path, plus a keyword score over <code>src/lib/adminHelp/knowledge/</code> (curated notes and every page-guide section). This is retrieve-then-answer without a vector index.</td>
         </tr>
         <tr>
           <td>adwiise-agent-service</td>
@@ -271,7 +302,7 @@
     <div class="section-header">The three call paths</div>
     <div class="flow" role="img" aria-label="Help, retail, and image scan each reach the same Bedrock model on their own path">Admin Help chat
   → Next.js help-chat
-  → keyword chunks
+  → current page guide + keyword chunks
   → Bedrock Claude
 
 Retail Ask
@@ -290,8 +321,8 @@ Image scan
   <div class="section-container parameters" id="where">
     <div class="section-header parameters">Where retrieval already works</div>
     <div class="parameters-list">
-      <p><strong>Admin Help</strong> is already retrieve-then-generate. The pack is about 55 tiles plus short how-tos. Eight chunks fit in the prompt. A vector database does not make that more correct for questions whose words match the guides.</p>
-      <p>A vector index would help only when someone asks with different words than the keywords, for example “tuition bill” when the chunk says “fee invoice”. That miss is fixed by adding those words to the chunk. The school how-to already does this.</p>
+      <p><strong>Admin Help</strong> retrieves first, then generates. Most questions are about the page the admin is on. Choosing that page's guide by URL path is exact, and no similarity search can do better. The guide fits in the prompt with room to spare.</p>
+      <p>A vector index would only help a question asked from a different page in words that no section uses, for example “tuition bill” when the guide says “fee invoice”. The generated guides already list everyday synonyms as keywords. When a real question still misses, add it to the eval set and fix the guide or its keywords.</p>
     </div>
     <table>
       <thead>
@@ -303,7 +334,7 @@ Image scan
       <tbody>
         <tr>
           <td>Admin Help</td>
-          <td>The current keyword pack already answers matching questions. Synonym misses are fixed in the knowledge files.</td>
+          <td>Little. The current page's guide covers most questions, and synonym misses are fixed in the guide keywords. Revisit only if the eval set shows cross-page misses that keywords cannot fix. If that happens, use embeddings in a JSON file or pgvector, not a hosted store.</td>
         </tr>
         <tr>
           <td>Image scanning</td>
@@ -319,7 +350,7 @@ Image scan
 
   <div class="section-container" id="cost">
     <div class="section-header">Cost of adding a vector store</div>
-    <p>Help traffic is small. A few thousand input tokens and a few hundred output tokens per question, at Sonnet-class Bedrock rates, is on the order of cents per question and tens of dollars a month even at a few thousand questions. Embeddings of the current pack would be a one-time fraction of a dollar.</p>
+    <p>Help traffic is small. A few thousand input tokens and a few hundred output tokens per question, at Sonnet-class Bedrock rates, is on the order of cents per question and tens of dollars a month even at a few thousand questions. Embeddings of the current pack would be a one-time fraction of a dollar. Sending the full page guide adds a few thousand input tokens per question, which is still cents. Generating all 57 guides with <code class="script-name">npm run help:guides</code> is a one-time cost of a few dollars, and later runs only rewrite guides whose page code changed.</p>
     <p>The cost that matters is the store.</p>
     <table>
       <thead>
@@ -354,14 +385,20 @@ Image scan
 
   <div class="section-container output" id="future">
     <div class="section-header output">How new pages stay current</div>
-    <p><strong>Update 2026-11-26:</strong> short tile summaries were not enough. A question such as “how do I update the logo here?” on Tenant Settings had nothing to match. Every admin page group now has a full page guide generated from its code, and the whole guide for the current page goes to the model. Still no vector database. After changing a page, run <code class="script-name">npm run help:guides</code>, then <code class="script-name">npm run test:admin-help</code>. Details: <a href="AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html">Admin Help knowledge coverage</a>.</p>
-    <p>When an Admin Home tile is added, update the knowledge files and run <code class="script-name">check-admin-help-coverage.mjs</code>. That script compares tile keys in <code class="code-highlight">src/app/admin/page.tsx</code> with hub guides and route-map feature keys. It prints every tile label, path, and summary. Exit code 0 means every tile is covered.</p>
+    <p>After changing an admin page, run <code class="script-name">npm run help:guides</code> to refresh its guide. It needs AWS credentials that can call Bedrock and rewrites only the guides whose page code changed. Review the guide diff in the pull request. Generated guides live in <code class="code-highlight">src/lib/adminHelp/knowledge/generated/pageGuides.generated.json</code>; do not edit that file by hand. Hand-reviewed guides go in <code class="code-highlight">MANUAL_PAGE_GUIDES</code> in <code class="code-highlight">pageGuides.ts</code>.</p>
+    <ul>
+      <li><code class="script-name">npm run test:admin-help</code> runs the smoke checks, the 40-question eval, and the stale-guide check. It needs no AWS access.</li>
+      <li><code class="script-name">npm run test:admin-help:live</code> asks Bedrock the same 40 questions.</li>
+      <li><code class="script-name">npm run help:guides:check</code> exits with code 1 when a page changed and its guide was not regenerated.</li>
+    </ul>
+    <p>When an Admin Home tile is added, also add its hub summary and route-map entry, then run <code class="script-name">check-admin-help-coverage.mjs</code>. That script compares tile keys in <code class="code-highlight">src/app/admin/page.tsx</code> with hub guides and route-map feature keys, prints every tile label, path, and summary, and exits with code 0 when every tile is covered. It checks that every tile has a summary. It does not check answer accuracy; the eval set does that.</p>
     <div class="parameters-list">
       <p><strong>Parameters:</strong> this script reads the repository. It has no command-line flags.</p>
       <ul>
         <li><code>src/lib/adminHelp/knowledge/hubGuides.ts</code> — one summary per Admin Home tile</li>
         <li><code>src/lib/adminHelp/knowledge/routeMap.ts</code> — path, tasks, and suggested questions</li>
         <li><code>src/lib/adminHelp/knowledge/howTos.ts</code> — step-by-step answers, including school fees and staff contacts</li>
+        <li><code>src/lib/adminHelp/knowledge/pageGuides.ts</code> and <code>generated/pageGuides.generated.json</code> — full page guides</li>
       </ul>
     </div>
     <div class="command-block verify"
@@ -391,7 +428,7 @@ Image scan
     <div class="section-header usage">The only later retrieval case</div>
     <p>Revisit retrieval only if product wants questions over many days of retail briefs. If that happens, embed brief summaries into the existing Postgres database. Stand up no new vector service, and keep retail numbers out of the Admin Help prompt.</p>
     <div class="info">
-      <strong>Today’s design:</strong> keyword chunks plus the current page’s full guide for Help, pixels for image scan, one brief for retail Ask. Same model. Three contexts.
+      <strong>Today’s design:</strong> the current page's full guide plus keyword chunks for Help, pixels for image scan, one brief for retail Ask. Same model. Three contexts.
     </div>
   </div>
 
