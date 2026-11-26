@@ -193,9 +193,8 @@ const HUB_GUIDE_ROWS: Array<{
   {
     key: 'tenant-settings',
     title: 'Tenant Settings',
-    body: 'Homepage sections, hero images, and feature flags for a tenant. Platform super admin only.',
-    keywords: ['settings', 'hero', 'feature flags'],
-    platformOnly: true,
+    body: 'Per-site settings for a tenant: contact details and social links, registration, homepage sections, header menu, integrations, usage limits, custom styling, brand colors, the tenant logo, email header and footer, and default homepage hero images. An organization admin edits the sites in their organization; a platform super admin can open every tenant.',
+    keywords: ['settings', 'hero', 'feature flags', 'logo', 'social links', 'header menu', 'brand colors'],
     pathPrefixes: ['/admin/tenant-management/settings'],
   },
   {

@@ -1,4 +1,4 @@
-import { ADMIN_HELP_CHUNKS, resolveRouteInfo } from './knowledge';
+import { ADMIN_HELP_CHUNKS, resolvePageGuide, resolveRouteInfo } from './knowledge';
 import type { AdminHelpChunk, AdminHelpPageContext, AdminHelpRetrieveResult } from './types';
 
 const STOP = new Set([
@@ -30,15 +30,34 @@ const STOP = new Set([
   'it',
   'be',
   'about',
+  'here',
+  'please',
+  'there',
 ]);
 
-function tokenize(text: string): string[] {
+export function tokenizeAdminHelpQuestion(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9/\s-]+/g, ' ')
     .split(/\s+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 1 && !STOP.has(t));
+}
+
+/**
+ * How many question tokens hit a chunk's title or keywords (not body, not page boosts).
+ * Used to tell a genuinely relevant chunk from one that only matched the current page.
+ */
+export function chunkTopicMatches(chunk: AdminHelpChunk, tokens: string[]): number {
+  const keywords = chunk.keywords.map((k) => k.toLowerCase());
+  const title = chunk.title.toLowerCase();
+  let hits = 0;
+  for (const token of tokens) {
+    if (keywords.some((k) => k === token || k.split(/\s+/).includes(token)) || title.split(/[^a-z0-9]+/).includes(token)) {
+      hits += 1;
+    }
+  }
+  return hits;
 }
 
 function scoreChunk(
@@ -80,7 +99,7 @@ export function retrieveAdminHelpKnowledge(
 ): AdminHelpRetrieveResult {
   const pathname = (page.pathname || '').split('?')[0] || '/admin';
   const route = resolveRouteInfo(pathname);
-  const tokens = tokenize(question);
+  const tokens = tokenizeAdminHelpQuestion(question);
   const featureKey = route?.featureKey ?? null;
 
   const visible = ADMIN_HELP_CHUNKS.filter((chunk) => {
@@ -132,8 +151,12 @@ export function retrieveAdminHelpKnowledge(
     }
   }
 
+  const guide = resolvePageGuide(pathname);
+  const pageGuide = guide && (!guide.platformOnly || page.isPlatformSuperAdmin) ? guide : null;
+
   return {
     route,
+    pageGuide,
     chunks: ordered.slice(0, limit),
   };
 }

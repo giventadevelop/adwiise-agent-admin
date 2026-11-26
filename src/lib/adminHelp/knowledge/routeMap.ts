@@ -284,11 +284,20 @@ const ROUTE_ENTRIES: Array<{ prefix: string; info: AdminHelpRouteInfo }> = [
     info: {
       featureKey: 'tenant-settings',
       label: 'Tenant Settings',
-      summary: 'Homepage sections, hero images, and feature flags.',
-      commonTasks: ['Edit hero images', 'Toggle feature flags'],
+      summary:
+        'Per-site settings in five tabs: General (contact, social links, registration, homepage sections, header menu), Integrations, Limits, Customization (CSS/JS, email header and footer, brand colors, tenant logo), and Homepage Hero.',
+      commonTasks: [
+        'Upload or replace the tenant logo',
+        'Update social media links',
+        'Choose header menu items',
+        'Set default hero images',
+      ],
       relatedRoutes: ['/admin/tenant-management/settings'],
-      suggestedChips: ['How do I set default hero images?', 'Where are feature flags?'],
-      platformOnly: true,
+      suggestedChips: [
+        'How do I update the logo?',
+        'Where do I add social media links?',
+        'How do I set default hero images?',
+      ],
     },
   },
   {

@@ -9,6 +9,8 @@ import type { AdminHelpPageContext } from './types';
 export type AdminHelpAnswerResult = {
   reply: string;
   backend: 'bedrock' | 'stub';
+  /** Why the stub answered: Bedrock disabled, failed, or returned no text. */
+  fallbackReason?: 'disabled' | 'error' | 'empty';
   featureKey?: string;
   chunkIds: string[];
 };
@@ -34,6 +36,7 @@ export async function answerAdminHelpQuestion(
 
   const retrieved = retrieveAdminHelpKnowledge(q, page);
   const settings = getAdminHelpBedrockSettings();
+  let fallbackReason: AdminHelpAnswerResult['fallbackReason'] = settings.enabled ? 'empty' : 'disabled';
 
   if (settings.enabled) {
     try {
@@ -47,13 +50,18 @@ export async function answerAdminHelpQuestion(
         };
       }
     } catch (error) {
-      console.error('[adminHelp] Bedrock invoke failed; using stub', error);
+      fallbackReason = 'error';
+      const err = error as { name?: string; message?: string };
+      console.error(
+        `[adminHelp] Bedrock invoke failed (model ${settings.modelId}, region ${settings.region}); using stub: ${err?.name ?? 'Error'}: ${err?.message ?? String(error)}`,
+      );
     }
   }
 
   return {
     reply: stubAdminHelpAnswer(q, retrieved),
     backend: 'stub',
+    fallbackReason,
     featureKey: retrieved.route?.featureKey,
     chunkIds: retrieved.chunks.map((c) => c.id),
   };

@@ -1,6 +1,7 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { adminHelpSystemPrompt, buildAdminHelpUserPayload } from './prompt';
-import type { AdminHelpPageContext, AdminHelpRetrieveResult } from './types';
+import { chunkTopicMatches, tokenizeAdminHelpQuestion } from './retrieve';
+import type { AdminHelpChunk, AdminHelpPageContext, AdminHelpRetrieveResult } from './types';
 
 const DEFAULT_MODEL_ID = 'us.anthropic.claude-sonnet-5-5';
 const DEFAULT_REGION = 'us-east-1';
@@ -68,18 +69,47 @@ function extractText(modelId: string, payload: Record<string, unknown>): string 
   throw new Error('Bedrock response missing text');
 }
 
-/** Deterministic fallback when Bedrock is off or fails. */
+export const ADMIN_HELP_OFFLINE_NOTE =
+  'AI help is not available right now, so this is the closest saved help text.';
+
+const STUB_BODY_LIMIT = 1600;
+
+/**
+ * Deterministic fallback when Bedrock is off or fails.
+ *
+ * Only quotes a chunk whose title or keywords match the question. A chunk that ranked
+ * first merely because it belongs to the current page is not treated as an answer;
+ * instead the user gets the page's section list so they can see where to look.
+ */
 export function stubAdminHelpAnswer(
   question: string,
   retrieved: AdminHelpRetrieveResult,
 ): string {
-  const top = retrieved.chunks[0];
-  if (top) {
-    const steps = top.body.length > 480 ? `${top.body.slice(0, 480)}…` : top.body;
-    return `${top.title}: ${steps}`;
+  const tokens = tokenizeAdminHelpQuestion(question);
+  const candidates: AdminHelpChunk[] = [...retrieved.chunks];
+  const relevant = candidates
+    .map((chunk, index) => ({ chunk, index, hits: chunkTopicMatches(chunk, tokens) }))
+    .filter((row) => row.hits > 0)
+    .sort((a, b) => b.hits - a.hits || a.index - b.index);
+
+  const best = relevant[0]?.chunk;
+  if (best) {
+    const body = best.body.length > STUB_BODY_LIMIT ? `${best.body.slice(0, STUB_BODY_LIMIT)}…` : best.body;
+    const more = relevant
+      .filter((row) => row.chunk !== best && !row.chunk.id.startsWith('hub:'))
+      .slice(0, 2)
+      .map((row) => row.chunk.title)
+      .filter(Boolean);
+    const related = more.length ? `\n\nRelated: ${more.join('; ')}.` : '';
+    return `${ADMIN_HELP_OFFLINE_NOTE}\n\n${best.title}\n${body}${related}`;
+  }
+
+  if (retrieved.pageGuide) {
+    const headings = retrieved.pageGuide.sections.map((s) => `- ${s.heading}`).join('\n');
+    return `AI help is not available right now, and no saved help matches “${question.trim()}” directly. ${retrieved.pageGuide.title} covers:\n${headings}\n\nTry asking with one of these topics.`;
   }
   if (retrieved.route) {
-    return `${retrieved.route.label}: ${retrieved.route.summary} Related: ${retrieved.route.relatedRoutes.join(', ')}.`;
+    return `AI help is not available right now, and no saved help matches “${question.trim()}” directly. You are on ${retrieved.route.label}: ${retrieved.route.summary} Related: ${retrieved.route.relatedRoutes.join(', ')}.`;
   }
   return `I could not find admin help for “${question.trim()}”. Open Admin Home and search for the feature tile, or try a more specific question.`;
 }

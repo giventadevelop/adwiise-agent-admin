@@ -51,10 +51,9 @@ export const OPERATOR_GUIDE_CHUNKS: AdminHelpChunk[] = [
       'Homepage display count (1–20, default 6) caps how many active slides show.',
       'If none are active but the library is not empty, the homepage shows 3 random library images per load.',
       'Display modes: slideshow, random one per visit, or single (first URL). Fallback chain: event heroes → tenant defaults → bundled default-hero.webp.',
-      'Platform SUPER_ADMIN edits these under Tenant Settings.',
+      'Edited on the Homepage Hero tab of Tenant Settings.',
     ].join(' '),
     keywords: ['hero', 'homepage', 'images', 'slideshow', 'tenant settings'],
-    platformOnly: true,
     pathPrefixes: ['/admin/tenant-management/settings'],
   },
   {

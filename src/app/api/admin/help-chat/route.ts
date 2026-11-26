@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       reply: result.reply,
       backend: result.backend,
+      fallbackReason: result.fallbackReason ?? null,
       featureKey: result.featureKey ?? null,
       chunkIds: result.chunkIds,
       suggestedChips: suggestedChipsForPath(pathname, access.isPlatformSuperAdmin),

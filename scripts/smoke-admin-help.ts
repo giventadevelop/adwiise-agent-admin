@@ -10,7 +10,12 @@ import {
   retrieveAdminHelpKnowledge,
   suggestedChipsForPath,
 } from '../src/lib/adminHelp';
-import { getAdminHelpBedrockSettings, stubAdminHelpAnswer } from '../src/lib/adminHelp/bedrock';
+import {
+  ADMIN_HELP_OFFLINE_NOTE,
+  getAdminHelpBedrockSettings,
+  stubAdminHelpAnswer,
+} from '../src/lib/adminHelp/bedrock';
+import { buildAdminHelpUserPayload } from '../src/lib/adminHelp/prompt';
 
 let passed = 0;
 function ok(name: string) {
@@ -111,6 +116,53 @@ async function main() {
     assert.equal(getAdminHelpBedrockSettings().enabled, false);
     delete process.env.BEDROCK_ENABLED;
     ok('BEDROCK_ENABLED=false forces stub mode');
+  }
+
+  {
+    // Regression: "how do I update the logo here?" on Tenant Settings returned hero-image text.
+    const path = '/admin/tenant-management/settings/20/edit';
+    const q = 'how do I update the logo here?';
+    for (const isPlatformSuperAdmin of [true, false]) {
+      const page = { pathname: path, isPlatformSuperAdmin };
+      const r = retrieveAdminHelpKnowledge(q, page);
+      assert.equal(r.chunks[0]?.id, 'page:tenant-settings:logo', 'logo section should rank first');
+      assert.equal(r.pageGuide?.featureKey, 'tenant-settings', 'page guide attached');
+      const payload = JSON.parse(buildAdminHelpUserPayload(q, page, r));
+      assert.ok(
+        payload.currentPageGuide.sections.some((s: { heading: string }) => /logo/i.test(s.heading)),
+        'whole page guide sent to the model',
+      );
+      assert.ok(
+        !payload.knowledge.some((c: { id: string }) => c.id.startsWith('page:tenant-settings:')),
+        'page sections not duplicated in knowledge',
+      );
+      const stub = stubAdminHelpAnswer(q, r);
+      assert.ok(stub.startsWith(ADMIN_HELP_OFFLINE_NOTE), 'offline answer says AI is unavailable');
+      assert.match(stub, /Customization tab/);
+      assert.doesNotMatch(stub, /hero images appear when no upcoming event/);
+    }
+    ok('tenant settings logo question (super admin + org admin)');
+  }
+
+  {
+    const r = retrieveAdminHelpKnowledge('where do I change the instagram and facebook links?', {
+      pathname: '/admin/tenant-management/settings/20/edit',
+      isPlatformSuperAdmin: false,
+    });
+    assert.equal(r.chunks[0]?.id, 'page:tenant-settings:social-links');
+    ok('tenant settings social links question');
+  }
+
+  {
+    const q = 'qwerty zxcvb';
+    const r = retrieveAdminHelpKnowledge(q, {
+      pathname: '/admin/tenant-management/settings/20/edit',
+      isPlatformSuperAdmin: true,
+    });
+    const stub = stubAdminHelpAnswer(q, r);
+    assert.match(stub, /no saved help matches/);
+    assert.match(stub, /Upload, replace, or remove the tenant logo/);
+    ok('offline answer lists page sections instead of an unrelated chunk');
   }
 
   console.log(`\n${passed} smoke checks passed.`);
