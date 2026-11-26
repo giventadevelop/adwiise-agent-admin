@@ -23,7 +23,10 @@ alwaysApply: false
 Admin UI (AdminHelpChat)
   → POST /api/admin/help-chat   (Clerk + ADMIN/SUPER_ADMIN)
   → retrieveAdminHelpKnowledge(question, pathname, isPlatformSuperAdmin)
+       (top keyword chunks + whole guide for the current page as currentPageGuide)
   → Bedrock InvokeModel (or stub if BEDROCK_ENABLED=false / invoke fails)
+  → { reply, backend: "bedrock" | "stub", fallbackReason, modelId }
+  → status line under the answer: "AI answer" (Bedrock) or "Saved help" + reason
 ```
 
 Key paths (admin repo):
@@ -32,7 +35,9 @@ Key paths (admin repo):
 - API: `src/app/api/admin/help-chat/route.ts`
 - UI: `src/components/admin/AdminHelpChat.tsx` (mounted from `AdminTenantContext`)
 - Ops docs: `documentation/admin_help_chat/`
-- Smoke: `npm run test:admin-help`
+- Page guides: manual in `src/lib/adminHelp/knowledge/pageGuides.ts`, generated in `src/lib/adminHelp/knowledge/generated/pageGuides.generated.json` (never hand-edit)
+- After changing an admin page: `npm run help:guides` (only stale guides; needs Bedrock credentials)
+- Tests: `npm run test:admin-help` (smoke + 40-question eval + stale-guide check, no AWS); `npm run test:admin-help:live` (eval against Bedrock); `npm run help:guides:check` (stale check only)
 
 ### Rules for Admin Help answers
 
@@ -40,6 +45,7 @@ Key paths (admin repo):
 - Plain English how-to; read-only (no mutations).
 - Omit `platformOnly` chunks for non–SUPER_ADMIN; refuse platform-only topics for ADMIN.
 - Retail Ask on `/admin/retail` stays a **separate** UI/backend path.
+- Read every `text` block of the Bedrock reply. Newer Claude replies can start with a `thinking` block; reading only `content[0].text` throws and returns the stub (cause found 2026-11-26).
 
 ## Env vars (local + Amplify)
 
@@ -93,7 +99,7 @@ That sentence is `stubAdminHelpAnswer` in `src/lib/adminHelp/bedrock.ts`. `answe
 2. Put `bedrock-invoke-policy.json` on that role as inline policy `AdminHelpBedrockInvoke` (`attach-amplify-bedrock-iam.ps1 -RoleName AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a`). The `us.` inference profile needs `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on foundation models **and** inference profiles in `us-east-1`, `us-east-2`, and `us-west-2`. A us-east-1-only resource list denies the cross-region profile.
 3. Set the compute role without touching env vars: `aws amplify update-app --app-id <id> --compute-role-arn <role-arn> --region us-east-2`. Confirm `length(keys(environmentVariables))` did not drop (prod 83, dev 85 after `ALL_TENANTS_ADMIN` was added).
 4. RELEASE `release/v1.0.0`. A compute-role change is not live until the next release. Prod auto-build can be off, so start the job: `aws amplify start-job --app-id <id> --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2`.
-5. Sign in, ask Help, and check `POST /api/admin/help-chat`. `"backend":"bedrock"` is the live model. `"backend":"stub"` means invoke still failed; read CloudWatch `/aws/amplify/<appId>` for `[adminHelp] Bedrock invoke failed`.
+5. Sign in, ask Help, and check `POST /api/admin/help-chat`. `"backend":"bedrock"` is the live model. `"backend":"stub"` means invoke still failed (the Help chat shows the same as a green "AI answer" or amber "Saved help" status line under each answer); read CloudWatch `/aws/amplify/<appId>` for `[adminHelp] Bedrock invoke failed`.
 
 Applied 2026-11-06: prod release **152** and dev release **15** succeeded with that compute role.
 

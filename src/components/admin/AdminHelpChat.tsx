@@ -7,6 +7,30 @@ import { useAdminAccess } from '@/app/admin/AdminTenantContext';
 import RetailBusyDialog from '@/components/retail/RetailBusyDialog';
 import { suggestedChipsForPath } from '@/lib/adminHelp/knowledge/routeMap';
 
+type AnswerSource = {
+  backend: 'bedrock' | 'stub';
+  fallbackReason: 'disabled' | 'error' | 'empty' | null;
+  modelId: string | null;
+};
+
+/** Short status under each answer: AI (Bedrock) or saved help, and why. */
+function describeSource(source: AnswerSource): { label: string; detail: string; tone: 'ai' | 'saved' | 'neutral' } {
+  if (source.backend === 'bedrock') {
+    const model = source.modelId ? source.modelId.replace(/^[a-z]{2}\.anthropic\./, '') : 'Claude';
+    return { label: 'AI answer', detail: `${model} on AWS Bedrock`, tone: 'ai' };
+  }
+  switch (source.fallbackReason) {
+    case 'disabled':
+      return { label: 'Saved help', detail: 'AI is turned off (BEDROCK_ENABLED=false)', tone: 'saved' };
+    case 'error':
+      return { label: 'Saved help', detail: 'AI call failed; see the server log line [adminHelp]', tone: 'saved' };
+    case 'empty':
+      return { label: 'Saved help', detail: 'AI returned no text', tone: 'saved' };
+    default:
+      return { label: 'Standard reply', detail: 'No AI needed for this question', tone: 'neutral' };
+  }
+}
+
 /**
  * Floating Admin Help chat on /admin pages.
  * Asks how-to questions about admin features; grounded via /api/admin/help-chat.
@@ -17,6 +41,7 @@ export default function AdminHelpChat() {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
+  const [answerSource, setAnswerSource] = useState<AnswerSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [chips, setChips] = useState<string[]>(() =>
@@ -26,6 +51,7 @@ export default function AdminHelpChat() {
   useEffect(() => {
     setChips(suggestedChipsForPath(pathname, isPlatformSuperAdmin));
     setAnswer(null);
+    setAnswerSource(null);
     setError(null);
   }, [pathname, isPlatformSuperAdmin]);
 
@@ -36,6 +62,7 @@ export default function AdminHelpChat() {
       setAsking(true);
       setError(null);
       setAnswer(null);
+      setAnswerSource(null);
       setQuestion(q);
       try {
         const res = await fetch('/api/admin/help-chat', {
@@ -49,6 +76,9 @@ export default function AdminHelpChat() {
         });
         const body = (await res.json()) as {
           reply?: string;
+          backend?: 'bedrock' | 'stub';
+          fallbackReason?: 'disabled' | 'error' | 'empty' | null;
+          modelId?: string | null;
           error?: string;
           suggestedChips?: string[];
         };
@@ -57,6 +87,11 @@ export default function AdminHelpChat() {
           return;
         }
         setAnswer(body.reply || 'No answer returned.');
+        setAnswerSource({
+          backend: body.backend === 'bedrock' ? 'bedrock' : 'stub',
+          fallbackReason: body.fallbackReason ?? null,
+          modelId: body.modelId ?? null,
+        });
         if (Array.isArray(body.suggestedChips) && body.suggestedChips.length > 0) {
           setChips(body.suggestedChips);
         }
@@ -170,6 +205,25 @@ export default function AdminHelpChat() {
                   {answer}
                 </div>
               )}
+              {answer && answerSource && (() => {
+                const source = describeSource(answerSource);
+                const toneClass =
+                  source.tone === 'ai'
+                    ? 'border-green-300 bg-green-50 text-green-900'
+                    : source.tone === 'saved'
+                      ? 'border-amber-300 bg-amber-50 text-amber-900'
+                      : 'border-gray-300 bg-gray-50 text-gray-700';
+                return (
+                  <p
+                    className={`flex flex-wrap items-center gap-x-2 rounded-md border px-3 py-1.5 text-xs ${toneClass}`}
+                    role="status"
+                    data-testid="admin-help-answer-source"
+                  >
+                    <span className="font-bold">{source.label}</span>
+                    <span>{source.detail}</span>
+                  </p>
+                );
+              })()}
             </form>
           </div>
         </div>

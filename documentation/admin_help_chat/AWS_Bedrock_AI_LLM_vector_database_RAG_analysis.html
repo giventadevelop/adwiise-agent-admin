@@ -354,6 +354,7 @@ Image scan
 
   <div class="section-container output" id="future">
     <div class="section-header output">How new pages stay current</div>
+    <p><strong>Update 2026-11-26:</strong> short tile summaries were not enough. A question such as “how do I update the logo here?” on Tenant Settings had nothing to match. Every admin page group now has a full page guide generated from its code, and the whole guide for the current page goes to the model. Still no vector database. After changing a page, run <code class="script-name">npm run help:guides</code>, then <code class="script-name">npm run test:admin-help</code>. Details: <a href="AWS_Bedrock_AI_LLM_Admin_help_help_chat_knowledge_coverage.html">Admin Help knowledge coverage</a>.</p>
     <p>When an Admin Home tile is added, update the knowledge files and run <code class="script-name">check-admin-help-coverage.mjs</code>. That script compares tile keys in <code class="code-highlight">src/app/admin/page.tsx</code> with hub guides and route-map feature keys. It prints every tile label, path, and summary. Exit code 0 means every tile is covered.</p>
     <div class="parameters-list">
       <p><strong>Parameters:</strong> this script reads the repository. It has no command-line flags.</p>
@@ -390,7 +391,7 @@ Image scan
     <div class="section-header usage">The only later retrieval case</div>
     <p>Revisit retrieval only if product wants questions over many days of retail briefs. If that happens, embed brief summaries into the existing Postgres database. Stand up no new vector service, and keep retail numbers out of the Admin Help prompt.</p>
     <div class="info">
-      <strong>Today’s design:</strong> keyword chunks for Help, pixels for image scan, one brief for retail Ask. Same model. Three contexts.
+      <strong>Today’s design:</strong> keyword chunks plus the current page’s full guide for Help, pixels for image scan, one brief for retail Ask. Same model. Three contexts.
     </div>
   </div>
 

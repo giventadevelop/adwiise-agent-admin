@@ -228,12 +228,19 @@
       <pre>AdminHelpChat (floating UI on /admin)
   → POST /api/admin/help-chat   (Clerk session + ADMIN / SUPER_ADMIN)
   → retrieveAdminHelpKnowledge(question, pathname, isPlatformSuperAdmin)
-  → Bedrock InvokeModel  (or knowledge-pack stub if disabled / invoke fails)</pre>
+       top keyword chunks + the whole page guide for the current page (currentPageGuide)
+  → Bedrock InvokeModel  (or knowledge-pack stub if disabled / invoke fails)
+  → reply + backend ("bedrock" | "stub") + fallbackReason + modelId
+  → status line under the answer: "AI answer" or "Saved help" with the reason</pre>
       <ul>
         <li>Library: <code class="code-highlight">src/lib/adminHelp/</code> (knowledge, retrieve, prompt, bedrock client)</li>
         <li>API: <code class="code-highlight">src/app/api/admin/help-chat/route.ts</code></li>
         <li>UI: <code class="code-highlight">src/components/admin/AdminHelpChat.tsx</code> mounted from admin tenant layout client</li>
-        <li>Smoke: <code class="script-name">npm run test:admin-help</code></li>
+        <li>Page guides: hand-reviewed in <code class="code-highlight">src/lib/adminHelp/knowledge/pageGuides.ts</code>; generated for every other admin page group in <code class="code-highlight">src/lib/adminHelp/knowledge/generated/pageGuides.generated.json</code></li>
+        <li>After changing an admin page: <code class="script-name">npm run help:guides</code> (regenerates only guides whose page code changed; needs AWS credentials that can call Bedrock)</li>
+        <li>Tests: <code class="script-name">npm run test:admin-help</code> (smoke checks, 40-question eval in <code class="code-highlight">scripts/admin-help-eval.json</code>, stale-guide check; no AWS needed)</li>
+        <li>Live answers: <code class="script-name">npm run test:admin-help:live</code> (same 40 questions against Bedrock)</li>
+        <li>Stale check only: <code class="script-name">npm run help:guides:check</code> (exit 1 when a page changed and its guide was not regenerated)</li>
       </ul>
     </div>
   </div>
@@ -245,7 +252,8 @@
         <li>Answer only from retrieved chunks + page context; never invent menus or routes.</li>
         <li>Plain English how-to; read-only (no admin mutations).</li>
         <li>Hide <code class="code-highlight">platformOnly</code> knowledge from non–SUPER_ADMIN.</li>
-        <li>Do not fine-tune the model on admin pages — update the knowledge pack instead.</li>
+        <li>Do not fine-tune the model on admin pages — update the knowledge pack or run <code class="script-name">npm run help:guides</code> instead.</li>
+        <li>When the user asks from a page, answer from that page's guide first and name the tab and section.</li>
       </ul>
     </div>
   </div>
@@ -365,13 +373,24 @@ BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5</pre>
       </ul>
     </div>
   </div>
+  <div class="section-container parameters">
+    <div class="section-header">Second cause found 2026-11-26 (localhost and hubs)</div>
+    <div class="section-body">
+      <ul>
+        <li>Newer Claude replies can start with an empty <code class="code-highlight">thinking</code> block before the <code class="code-highlight">text</code> block.</li>
+        <li>The route read only <code class="code-highlight">content[0].text</code>, threw <code class="code-highlight">Bedrock Anthropic response missing text</code>, and returned the stub. In a 40-question live run, 6 answers fell back this way.</li>
+        <li>Fix: <code class="code-highlight">extractAdminHelpText</code> joins every <code class="code-highlight">text</code> block. Smoke check: “Bedrock reply with a thinking block first still returns the text”.</li>
+        <li>To see which path answered without DevTools, read the status line under each answer in the Help chat (green <strong>AI answer</strong> = Bedrock wrote it; amber <strong>Saved help</strong> = the backup answered, with the reason).</li>
+      </ul>
+    </div>
+  </div>
   <p>Fix both hubs. Prod app <code class="code-highlight">d3gov7yn1ctow1</code>, dev app <code class="code-highlight">d3qk5eouzr7b80</code>. The role trust policy must allow <code class="code-highlight">amplify.amazonaws.com</code> to <code class="code-highlight">sts:AssumeRole</code>.</p>
   <ol>
     <li>Read the compute role: <code class="code-highlight">aws amplify get-app --app-id &lt;id&gt; --region us-east-2 --query app.computeRoleArn</code>. Add <code class="code-highlight">--no-verify-ssl</code> when the CLI fails with <code class="code-highlight">CERTIFICATE_VERIFY_FAILED</code>.</li>
     <li>Put <code class="script-name">bedrock-invoke-policy.json</code> on that role as inline policy <code class="code-highlight">AdminHelpBedrockInvoke</code>. The <code class="code-highlight">us.</code> inference profile needs invoke permission on foundation models and inference profiles in <code class="code-highlight">us-east-1</code>, <code class="code-highlight">us-east-2</code>, and <code class="code-highlight">us-west-2</code>. A us-east-1-only resource list denies the cross-region profile.</li>
     <li>Set <code class="code-highlight">computeRoleArn</code> with <code class="code-highlight">update-app --compute-role-arn</code> only. Do not pass <code class="code-highlight">--environment-variables</code> unless the JSON is the full map; that flag replaces every key. Confirm the env key count did not drop.</li>
     <li>RELEASE <code class="code-highlight">release/v1.0.0</code>. A compute-role change is not live until the next release. Prod auto-build can be off, so start a RELEASE job.</li>
-    <li>Sign in, ask Help, and inspect <code class="code-highlight">POST /api/admin/help-chat</code>. <code class="code-highlight">"backend":"bedrock"</code> is the live model. <code class="code-highlight">"backend":"stub"</code> means invoke still failed. Read CloudWatch <code class="code-highlight">/aws/amplify/&lt;appId&gt;</code> for <code class="code-highlight">[adminHelp] Bedrock invoke failed</code>.</li>
+    <li>Sign in, ask Help, and inspect <code class="code-highlight">POST /api/admin/help-chat</code>. <code class="code-highlight">"backend":"bedrock"</code> is the live model. <code class="code-highlight">"backend":"stub"</code> means invoke still failed. The Help chat also shows this as a status line under the answer. Read CloudWatch <code class="code-highlight">/aws/amplify/&lt;appId&gt;</code> for <code class="code-highlight">[adminHelp] Bedrock invoke failed</code>.</li>
   </ol>
 
   <div class="command-block setup" data-command-type="setup">
@@ -448,6 +467,14 @@ BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-5-5</pre>
       <tr>
         <td>Treat <code class="code-highlight">BEDROCK_ENABLED=true</code> as proof the live chat calls Bedrock</td>
         <td>Check <code class="code-highlight">POST /api/admin/help-chat</code> for <code class="code-highlight">"backend":"bedrock"</code></td>
+      </tr>
+      <tr>
+        <td>Read only <code class="code-highlight">content[0].text</code> from the Bedrock reply</td>
+        <td>Join every <code class="code-highlight">text</code> block; a <code class="code-highlight">thinking</code> block can come first</td>
+      </tr>
+      <tr>
+        <td>Hand-edit <code class="code-highlight">pageGuides.generated.json</code></td>
+        <td>Change the page, run <code class="script-name">npm run help:guides</code>, review the diff; put hand-written guides in <code class="code-highlight">MANUAL_PAGE_GUIDES</code></td>
       </tr>
       <tr>
         <td>Leave <code class="code-highlight">computeRoleArn</code> null after attaching the invoke policy to the service role</td>

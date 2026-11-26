@@ -52,7 +52,7 @@ Follow the same ordered steps in [bedrock_llm_admin_help_and_chat_integration.ht
 2. Attach `bedrock-invoke-policy.json` as inline policy `AdminHelpBedrockInvoke`. The `us.` profile needs foundation-model and inference-profile invoke in `us-east-1`, `us-east-2`, and `us-west-2`.
 3. `aws amplify update-app --app-id <id> --compute-role-arn <role-arn> --region us-east-2` for `d3gov7yn1ctow1` and `d3qk5eouzr7b80`. Do not pass `--environment-variables` unless the payload is the full map. Confirm the env key count did not drop.
 4. `aws amplify start-job --app-id <id> --branch-name release/v1.0.0 --job-type RELEASE --region us-east-2`. A compute-role change is not live until this release.
-5. Sign in and confirm `POST /api/admin/help-chat` returns `"backend":"bedrock"`. `"backend":"stub"` means invoke still failed; read `/aws/amplify/<appId>` for `[adminHelp] Bedrock invoke failed`.
+5. Sign in and confirm `POST /api/admin/help-chat` returns `"backend":"bedrock"` (the Help chat shows a green "AI answer" status line under the answer; amber "Saved help" is the backup). `"backend":"stub"` means invoke still failed; read `/aws/amplify/<appId>` for `[adminHelp] Bedrock invoke failed`.
 
 Role ARN: `arn:aws:iam::224674645062:role/service-role/AmplifySSRLoggingRole-1cc46167-ac65-414a-b580-7103432bd70a`. Applied 2026-11-06 on prod release 152 and dev release 15.
 
@@ -95,7 +95,7 @@ Role ARN: `arn:aws:iam::224674645062:role/service-role/AmplifySSRLoggingRole-1cc
 
 4. Confirm the model / inference profile is enabled in Bedrock **Model access** for that region.
 5. Redeploy Amplify after env + IAM changes.
-6. Smoke-test: sign in as ADMIN → open any `/admin` page → Help → ask “How do I upload media for an event?”. Response `backend` in network JSON should be `bedrock` when enabled.
+6. Smoke-test: sign in as ADMIN → open any `/admin` page → Help → ask “How do I upload media for an event?”. Response `backend` in network JSON should be `bedrock` when enabled, and the status line under the answer should read "AI answer".
 
 Locally, use the default AWS credential chain (SSO profile, env keys, or instance role) with the same permissions.
 

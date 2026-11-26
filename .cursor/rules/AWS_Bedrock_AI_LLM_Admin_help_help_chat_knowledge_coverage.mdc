@@ -15,6 +15,7 @@ Admin Help answers only from the knowledge pack: curated chunks plus a page guid
 - Generated guides: [pageGuides.generated.json](mdc:src/lib/adminHelp/knowledge/generated/pageGuides.generated.json), written by `npm run help:guides` from the page code (UI text, labels, limits, actions) with Bedrock. Never edit it by hand; review its diff in the PR.
 - After changing any admin page UI, run `npm run help:guides` (regenerates only stale guides), then `npm run test:admin-help` (smoke checks, the 40-question eval in `scripts/admin-help-eval.json`, and the staleness check).
 - Add an eval case to `scripts/admin-help-eval.json` when a real question gets a wrong answer.
+- `npm run test:admin-help:live` runs the same questions against Bedrock. In the Help chat, a green "AI answer" status line means Bedrock wrote the reply; amber "Saved help" means the backup answered, with the reason.
 
 ## Call path
 

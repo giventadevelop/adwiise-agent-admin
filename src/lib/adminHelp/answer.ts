@@ -9,6 +9,8 @@ import type { AdminHelpPageContext } from './types';
 export type AdminHelpAnswerResult = {
   reply: string;
   backend: 'bedrock' | 'stub';
+  /** Bedrock model id, when the model wrote the reply. */
+  modelId?: string;
   /** Why the stub answered: Bedrock disabled, failed, or returned no text. */
   fallbackReason?: 'disabled' | 'error' | 'empty';
   featureKey?: string;
@@ -45,6 +47,7 @@ export async function answerAdminHelpQuestion(
         return {
           reply,
           backend: 'bedrock',
+          modelId: settings.modelId,
           featureKey: retrieved.route?.featureKey,
           chunkIds: retrieved.chunks.map((c) => c.id),
         };

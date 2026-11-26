@@ -103,6 +103,56 @@
     </div>
   </div>
 
+  <div class="section-container output">
+    <div class="section-header output">Keep page guides current</div>
+    <p>Every admin page group has a guide. When someone asks from a page, the whole guide for that page goes to the model with the question. Tenant Settings is hand-reviewed in <code class="code-highlight">src/lib/adminHelp/knowledge/pageGuides.ts</code>. Every other guide is generated from the page code into <code class="code-highlight">src/lib/adminHelp/knowledge/generated/pageGuides.generated.json</code>. Do not edit that file by hand.</p>
+    <p>After changing a page, run <code class="script-name">npm run help:guides</code> to refresh its guide. It rewrites only the guides whose page code changed and needs AWS credentials that can call Bedrock. Review the guide diff in the pull request, then run the tests.</p>
+    <div class="command-block setup" data-command-base="npm run help:guides" data-template-command="npm run help:guides">
+      <div class="command-header">
+        <span>Refresh page guides</span>
+        <div class="command-header-buttons">
+          <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+          <button class="copy-button" type="button" onclick="copyCommand(this, 'help-guides')" title="Copy command">Copy</button>
+        </div>
+      </div>
+      <div class="command-content" id="help-guides">npm run help:guides</div>
+      <div class="command-single-line">
+        <div class="command-single-line-label">Windows single-line</div>
+        <code id="help-guides-single-code">npm run help:guides</code>
+      </div>
+    </div>
+    <div class="command-block setup" data-command-base="npm run test:admin-help" data-template-command="npm run test:admin-help">
+      <div class="command-header">
+        <span>Help tests (smoke, 40-question eval, stale-guide check; no AWS)</span>
+        <div class="command-header-buttons">
+          <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+          <button class="copy-button" type="button" onclick="copyCommand(this, 'help-tests')" title="Copy command">Copy</button>
+        </div>
+      </div>
+      <div class="command-content" id="help-tests">npm run test:admin-help</div>
+      <div class="command-single-line">
+        <div class="command-single-line-label">Windows single-line</div>
+        <code id="help-tests-single-code">npm run test:admin-help</code>
+      </div>
+    </div>
+    <div class="command-block setup" data-command-base="npm run test:admin-help:live" data-template-command="npm run test:admin-help:live">
+      <div class="command-header">
+        <span>Same 40 questions against Bedrock</span>
+        <div class="command-header-buttons">
+          <button class="copy-button-template" type="button" onclick="copyTemplateCommand(this)" title="Copy template command">Template</button>
+          <button class="copy-button" type="button" onclick="copyCommand(this, 'help-tests-live')" title="Copy command">Copy</button>
+        </div>
+      </div>
+      <div class="command-content" id="help-tests-live">npm run test:admin-help:live</div>
+      <div class="command-single-line">
+        <div class="command-single-line-label">Windows single-line</div>
+        <code id="help-tests-live-single-code">npm run test:admin-help:live</code>
+      </div>
+    </div>
+    <p>When a real question gets a wrong answer, add it to <code class="code-highlight">scripts/admin-help-eval.json</code> with the on-screen labels the answer must mention.</p>
+    <p>Each answer in the Help chat shows a status line: green <strong>AI answer</strong> means Bedrock wrote it; amber <strong>Saved help</strong> means the backup answered, with the reason (AI turned off, AI call failed, or no text returned).</p>
+  </div>
+
   <script>
     function copyText(button, text, idleLabel) {
       navigator.clipboard.writeText(text).then(function () {
