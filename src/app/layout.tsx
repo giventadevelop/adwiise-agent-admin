@@ -25,6 +25,9 @@ import { buildClerkProfileInsert, decideClerkProfileIdentity } from "@/lib/clerk
 import { fetchAdminAccessForClerkUser } from "@/app/admin/adminAccessServer";
 import { BRAND_NAME, BRAND_PRIMARY_HOST, BRAND_TAGLINE } from "@/lib/brand";
 import type { Metadata } from "next";
+import SuspendedSitePage from "@/components/suspension/SuspendedSitePage";
+import { getTenantSuspension } from "@/lib/tenantSuspension/server";
+import { isExemptFromWebsiteSuspension } from "@/lib/tenantSuspension/types";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -354,7 +357,12 @@ export default async function RootLayout({
 
   console.log('[Layout] 🔍 Final admin status:', { isTenantAdmin, isPublicRoute, pathname });
 
-  const footerContact = await fetchFooterContactPropsServer();
+  // Public website suspended by a platform super admin: show a neutral page instead of the site.
+  // Sign-in, /admin (it has its own dashboard check) and API routes keep working.
+  const websiteSuspended =
+    !isExemptFromWebsiteSuspension(pathname) && (await getTenantSuspension(getTenantIdOptional())).website;
+
+  const footerContact = websiteSuspended ? null : await fetchFooterContactPropsServer();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -373,13 +381,17 @@ export default async function RootLayout({
         >
           <PaginationScrollToTop />
           <TrpcProvider>
-            <TenantSettingsProvider>
-              <Header hideMenuItems={false} isTenantAdmin={isTenantAdmin} />
-              <div className="flex-1 flex flex-col">
-                {children}
-              </div>
-              <Footer contact={footerContact ?? undefined} />
-            </TenantSettingsProvider>
+            {websiteSuspended ? (
+              <SuspendedSitePage />
+            ) : (
+              <TenantSettingsProvider>
+                <Header hideMenuItems={false} isTenantAdmin={isTenantAdmin} />
+                <div className="flex-1 flex flex-col">
+                  {children}
+                </div>
+                <Footer contact={footerContact ?? undefined} />
+              </TenantSettingsProvider>
+            )}
           </TrpcProvider>
         </ClerkProvider>
         <Script

@@ -10,6 +10,7 @@ import { withTenantId } from '@/lib/withTenantId';
 import { attachWebsiteTenantIds } from '@/app/admin/tenant-management/organizations/websiteTenantIdsServer';
 import { normalizeTenantDomain } from '@/lib/tenantDomainValidation';
 import { normalizeWebsiteUrl } from '@/lib/websiteUrlValidation';
+import { keepStoredSuspensionFields, stripSuspensionFields } from '@/lib/tenantSuspension/types';
 import type {
   TenantOrganizationDTO,
   TenantOrganizationFormDTO,
@@ -286,7 +287,7 @@ export async function fetchTenantOrganizationByTenantId(tenantId: string): Promi
 export async function createTenantOrganization(data: TenantOrganizationFormDTO): Promise<TenantOrganizationDTO> {
   await assertPlatformSuperAdmin();
   try {
-    const normalized = normalizeTenantOrganizationPayload(data);
+    const normalized = stripSuspensionFields(normalizeTenantOrganizationPayload(data) as Record<string, unknown>) as typeof data;
     const payload = withTenantId({
       ...normalized,
       billingScope: resolveBillingScope(normalized.billingScope),
@@ -333,7 +334,11 @@ export async function updateTenantOrganization(
       throw new Error('Organization not found');
     }
 
-    const normalized = normalizeTenantOrganizationPayload(data);
+    // A full save keeps the stored suspension; only the super admin suspension tool changes it.
+    const normalized = keepStoredSuspensionFields(
+      normalizeTenantOrganizationPayload(data) as Record<string, unknown>,
+      existingOrganization,
+    ) as typeof data;
     const payload = withTenantId({
       ...normalized,
       billingScope: resolveBillingScope(normalized.billingScope, existingOrganization.billingScope),
@@ -411,7 +416,7 @@ export async function patchTenantOrganization(
       throw new Error('Organization not found');
     }
     const payload = withTenantId({
-      ...normalizeTenantOrganizationPayload(data),
+      ...stripSuspensionFields(normalizeTenantOrganizationPayload(data) as Record<string, unknown>),
       id,
       updatedAt: new Date().toISOString(),
     });

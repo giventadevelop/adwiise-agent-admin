@@ -6,6 +6,9 @@ import {
   fetchOrganizationTenantIdsPage,
   type OrganizationTenantIdRow,
 } from './tenantIdListActions';
+import { fetchTenantSuspensionBadges } from '@/app/admin/tenant-management/suspensions/actions';
+import { SuspensionBadges } from '@/app/admin/tenant-management/suspensions/SuspensionDialogButton';
+import type { EffectiveTenantSuspension } from '@/lib/tenantSuspension/types';
 
 const PAGE_SIZE = 10;
 
@@ -15,6 +18,7 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [suspensions, setSuspensions] = useState<Record<string, EffectiveTenantSuspension>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +29,13 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
         if (cancelled) return;
         setRows(result.rows);
         setTotalCount(result.totalCount);
+        fetchTenantSuspensionBadges(result.rows.map((row) => row.tenantId))
+          .then((badges) => {
+            if (!cancelled) setSuspensions(badges);
+          })
+          .catch(() => {
+            if (!cancelled) setSuspensions({});
+          });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -62,6 +73,7 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Settings</th>
                 </tr>
               </thead>
@@ -69,6 +81,19 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
                 {rows.map((row) => (
                   <tr key={row.settingsId}>
                     <td className="px-4 py-3 font-mono text-sm text-gray-900 break-all">{row.tenantId}</td>
+                    <td className="px-4 py-3">
+                      {suspensions[row.tenantId] ? (
+                        <SuspensionBadges
+                          website={suspensions[row.tenantId].website}
+                          dashboard={suspensions[row.tenantId].dashboard}
+                          source={
+                            suspensions[row.tenantId].websiteSource === 'tenant' || suspensions[row.tenantId].dashboardSource === 'tenant'
+                              ? 'tenant'
+                              : suspensions[row.tenantId].websiteSource ?? suspensions[row.tenantId].dashboardSource
+                          }
+                        />
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         <Link
@@ -97,6 +122,19 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
                             </svg>
                           </div>
                           <span className="font-semibold text-blue-700">Edit</span>
+                        </Link>
+                        <Link
+                          href={`/admin/tenant-management/suspensions?tenant=${encodeURIComponent(row.tenantId)}`}
+                          className="inline-flex flex-shrink-0 h-14 rounded-xl bg-orange-100 hover:bg-orange-200 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
+                          title="Suspend or re-enable this tenant ID"
+                          aria-label={`Suspend or re-enable ${row.tenantId}`}
+                        >
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-orange-200 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <span className="font-semibold text-orange-700">Suspend</span>
                         </Link>
                       </div>
                     </td>

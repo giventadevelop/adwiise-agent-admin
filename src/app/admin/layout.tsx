@@ -8,6 +8,8 @@ import { fetchAdminAccessForClerkUser, resolveSessionTenantForAccess } from './a
 import { fetchRetailProfilesForClerkUser } from './retail/retailServer';
 import { isPlatformOnlyAdminPath } from '@/lib/adminTenantAccess';
 import { tenantHasLockedPlatformBilling } from '@/app/admin/platform-billing/ApiServerActions';
+import { getTenantSuspension } from '@/lib/tenantSuspension/server';
+import DashboardSuspendedNotice from './DashboardSuspendedNotice';
 
 /**
  * Admin Layout - Protects all /admin/* routes
@@ -111,6 +113,33 @@ export default async function AdminLayout({
         redirect('/admin/billing?reason=locked');
       }
     }
+    // Dashboard suspension set by a platform super admin. Super admins are never blocked, and
+    // Billing stays open so the tenant can pay. The notice replaces the page, not the admin bar.
+    let suspendedDashboardTenantId: string | null = null;
+    if (!access.isPlatformSuperAdmin && !billingPath) {
+      const retailPath = pathOnly === '/admin/retail' || pathOnly.startsWith('/admin/retail/');
+      const queryTenant = retailPath
+        ? new URLSearchParams(headersList.get('x-search') || '').get('tenant')?.trim() || ''
+        : '';
+      const candidates = new Set<string>();
+      if (retailOnly) {
+        candidates.add(queryTenant && retailTenantIds.includes(queryTenant) ? queryTenant : retailTenantIds[0] || '');
+      } else {
+        if (session.tenantId) candidates.add(session.tenantId);
+        if (queryTenant && (access.allowedTenantIds.includes(queryTenant) || retailTenantIds.includes(queryTenant))) {
+          candidates.add(queryTenant);
+        }
+      }
+      for (const tenantId of candidates) {
+        if (!tenantId) continue;
+        const suspension = await getTenantSuspension(tenantId);
+        if (suspension.dashboard) {
+          suspendedDashboardTenantId = tenantId;
+          break;
+        }
+      }
+    }
+
     const isAdminSubpath = pathOnly.startsWith('/admin/') && pathOnly !== '/admin/';
     const needsWorkspacePick =
       !access.canQueryAllTenants &&
@@ -129,7 +158,14 @@ export default async function AdminLayout({
         defaultTenantId={session.tenantId ?? access.defaultTenantId ?? retailTenantIds[0]}
         limitNavToRetail={retailOnly}
       >
-        {children}
+        {suspendedDashboardTenantId ? (
+          <DashboardSuspendedNotice
+            tenantId={suspendedDashboardTenantId}
+            canSwitchWorkspace={new Set([...access.allowedTenantIds, ...retailTenantIds]).size > 1}
+          />
+        ) : (
+          children
+        )}
       </AdminTenantLayoutClient>
     );
   } catch (error) {

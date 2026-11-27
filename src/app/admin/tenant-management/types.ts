@@ -6,6 +6,11 @@ import type { TenantSiteType } from '@/types/profileSite';
  */
 export interface TenantOrganizationDTO {
   id?: number;
+  /** Super admin suspension for every tenant ID this organization owns. See src/lib/tenantSuspension. */
+  websiteSuspended?: boolean | null;
+  dashboardSuspended?: boolean | null;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
   /** Website tenant ids stored on tenant_settings for this organization. */
   websiteTenantIds?: string[];
   /** @deprecated Organizations no longer store a tenant id. Present only on older responses. */
@@ -60,6 +65,11 @@ export interface TenantOrganizationDTO {
 export interface TenantSettingsDTO {
   id?: number;
   tenantId: string;
+  /** Super admin suspension for this one tenant ID. See src/lib/tenantSuspension. */
+  websiteSuspended?: boolean | null;
+  dashboardSuspended?: boolean | null;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
   /** Git repository URL for the project that belongs to this tenant. Empty when no dedicated repo exists. */
   repositoryUrl?: string | null;
   allowUserRegistration?: boolean;

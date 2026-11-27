@@ -663,6 +663,11 @@ export interface QrCodeUsageDTO {
  */
 export interface TenantOrganizationDTO {
   id?: number;
+  /** Super admin suspension for every tenant ID this organization owns. See src/lib/tenantSuspension. */
+  websiteSuspended?: boolean | null;
+  dashboardSuspended?: boolean | null;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
   tenantId: string;
   organizationName: string;
   domain?: string;
@@ -709,6 +714,11 @@ export interface TenantOrganizationDTO {
 export interface TenantSettingsDTO {
   id?: number;
   tenantId: string;
+  /** Super admin suspension for this one tenant ID. See src/lib/tenantSuspension. */
+  websiteSuspended?: boolean | null;
+  dashboardSuspended?: boolean | null;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
   allowUserRegistration?: boolean;
   requireAdminApproval?: boolean;
   enableWhatsappIntegration?: boolean;

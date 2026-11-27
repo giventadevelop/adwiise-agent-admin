@@ -5634,13 +5634,13 @@
         "src/components/admin/AdminListSearchCombobox.tsx",
         "src/components/admin/CopyInstructionsButton.tsx"
       ],
-      "sourceHash": "6c25ccc8cfb7b4a2",
+      "sourceHash": "7a65e4b1b46ded0c",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
-          "heading": "What this page is for and where things are",
-          "body": "Onboarding Requests lists applications from new customers who want a website (a tenant). Approving a request creates the tenant, its settings, email addresses, satellite domain and admin access in one step. The site type chosen on the request decides which tools that tenant sees. This area is for the platform super admin. The list is at the Onboarding Requests page, with a search box, an \"Add Request Manually\" button, a \"Review request\" action on each row, and \"Previous\" and \"Next\" page buttons. Opening a row takes you to the review screen for that request, and \"Add Request Manually\" opens the \"Add onboarding request\" form.",
+          "heading": "Overview",
+          "body": "Onboarding Requests lists new customer applications for a website (a tenant). Approving a request creates the tenant, its settings, email addresses, satellite domain and admin access in one step. The list is at the Onboarding Requests page; it has a search box, a \"Add Request Manually\" button, a \"Review request\" action on each row, and \"Previous\" / \"Next\" page buttons. Clicking a request opens its review screen, and \"Add Request Manually\" opens the \"Add onboarding request\" form. This area is for the platform super admin. The site type chosen on the request decides which tools the tenant sees.",
           "keywords": [
             "onboarding",
             "requests",
@@ -5649,14 +5649,13 @@
             "tenant",
             "approve",
             "overview",
-            "website",
-            "site type"
+            "site request"
           ]
         },
         {
           "slug": "find-requests",
           "heading": "Search and browse requests",
-          "body": "On the list, type in the search box to find a request by organization, email, domain, tenant ID, organization ID, or an ONB- code. While results load you will see \"Loading...\". If nothing matches, the list shows \"No requests match this filter.\" or \"No requests found\". Use \"Previous\" and \"Next\" at the bottom to move between pages; the page number and a \"Showing\" count are displayed there. Requests you entered yourself are marked \"(manual)\". Tenant IDs appear in tenant settings only after approval.",
+          "body": "On the list, type in the search box (placeholder \"Organization, email, domain, tenant id, organization id, or ONB- code\"). You can search by organization, email, domain, tenant ID, organization ID or an ONB- code. Use \"Clear search\" to empty the box. If nothing matches you will see \"No requests match this filter.\"; if there are none at all, \"No requests found\". Use \"Previous\" and \"Next\" at the bottom to change pages; the footer shows the page and \"Showing\" count. Requests entered by an admin are marked \"(manual)\". Tenant IDs are saved to tenant settings only after approval.",
           "keywords": [
             "search",
             "find",
@@ -5671,130 +5670,126 @@
           ]
         },
         {
-          "slug": "add-manually",
+          "slug": "add-request",
           "heading": "Add a request manually",
-          "body": "Use this when you want to enter an application yourself. 1) Click \"Add Request Manually\" on the list. 2) Pick an existing organization; if it doesn't exist yet, create it first under Organizations, because contact and address details live there. 3) Type a Name prefix in \"Name prefix (you supply) *\" (for example ford_motors); the sequence number is generated automatically and the \"Generated Tenant ID:\" is shown. 4) Fill in the requested domain, site type, domain ownership, branding and any subscription details. 5) Click \"Save request\". The request stays PENDING until you approve it on the review screen. If the organization has no contact email, you will be asked to update it under Organizations and select it again.",
+          "body": "1) On the list, click \"Add Request Manually\". 2) Select an existing organization first; if you can't, create it under Organizations first, because contact and address details live there. The organization must have a contact email, otherwise you'll be told to update it under Organizations and select it again. 3) Enter the \"Name prefix (you supply) *\"; the sequence number is generated automatically and the \"Generated Tenant ID:\" appears. 4) Fill in the requested domain, site type, domain ownership, branding and optional subscription details. 5) Click \"Save request\". The request stays PENDING until you approve it on the review screen.",
           "keywords": [
             "add",
             "create",
             "new request",
             "manual",
             "organization",
-            "prefix",
             "tenant id",
-            "save request",
-            "pending"
+            "prefix",
+            "save request"
           ]
         },
         {
           "slug": "request-fields",
-          "heading": "Request form fields",
-          "body": "Required fields are marked with an asterisk: \"Site type *\", \"Domain ownership *\", and \"Requested domain\" (for example www.example.org), plus the contact email. Contact first name, last name and phone are also needed for contacts. Other fields include address lines, city, \"State / province\", \"ZIP / postal code\", country, \"Primary color\" (for example #1E40AF), \"Secondary color\" (for example #F59E0B), \"Tenant / site description\", \"Customer notes\", and the checkbox \"Wants online payments (tickets / donations)\". The site description describes only this website tenant and is not copied from the organization record. Under \"Domain ownership\", the \"Registrar details\" field is available for domain handoff details.",
+          "heading": "Request fields and logo",
+          "body": "Required fields are marked with *: \"Site type *\", \"Domain ownership *\", \"Requested domain\" (for example www.example.org) and \"Contact email\". Other fields include contact first/last name and phone, address lines, city, state/province, ZIP/postal code, country, \"Primary color\" (for example #1E40AF) and \"Secondary color\" (for example #F59E0B), \"Tenant / site description\" and \"Customer notes\". Tick \"Wants online payments (tickets / donations)\" if relevant. Choosing a domain ownership option shows matching DNS guidance and registrar details. The description applies to this website tenant only, not to the organization record.",
           "keywords": [
             "fields",
             "required",
-            "domain",
             "site type",
-            "contact",
-            "address",
-            "color",
+            "domain ownership",
+            "colors",
             "description",
             "notes",
-            "payments",
-            "registrar"
+            "contact",
+            "address",
+            "payments"
           ]
         },
         {
-          "slug": "logo-subscription",
-          "heading": "Tenant logo and subscription details",
-          "body": "In \"Tenant logo (optional)\" you can click to upload or drag and drop an image, or paste a \"Logo URL\". Accepted files are images (PNG, JPG, GIF, WebP) up to 10MB. Upload is enabled only after a Tenant ID has been generated from the name prefix. Use \"Remove logo\" to clear it. If upload fails you may see \"Please select an image file\", \"File size must be less than 10MB\" or \"Failed to upload logo\". Optional subscription details are \"Subscription Plan\" (Basic, Professional, Enterprise), \"Subscription Status\" (Active, Inactive, Suspended, Cancelled), \"Subscription Start Date\", \"Subscription End Date\", \"Monthly Fee (USD)\" and \"Stripe Customer ID\".",
+          "slug": "tenant-logo",
+          "heading": "Upload a tenant logo",
+          "body": "Under \"Tenant logo (optional)\", the logo is used for satellite sign-in branding and tenant settings. 1) Generate a Tenant ID (name prefix) first; until then upload is disabled. 2) Click to upload or drag an image onto \"Drop image here\", or paste a link into \"Logo URL\". Accepted: PNG, JPG, GIF, WebP, max 10MB. 3) Check the \"Tenant logo preview\". Use \"Remove logo\" to clear it. Errors you may see: \"Please select an image file\", \"File size must be less than 10MB\", \"Failed to upload logo\".",
           "keywords": [
             "logo",
             "upload",
             "image",
             "picture",
+            "remove",
             "10mb",
+            "png",
+            "jpg",
+            "branding"
+          ]
+        },
+        {
+          "slug": "subscription",
+          "heading": "Optional subscription details",
+          "body": "When adding a request you can set subscription details: \"Subscription Plan\" (Basic, Professional or Enterprise), \"Subscription Status\" (Active, Inactive, Suspended or Cancelled), \"Subscription Start Date\", \"Subscription End Date\", \"Monthly Fee (USD)\" and \"Stripe Customer ID\". All are optional. If these can't be saved after approval, you'll see a message to update them on Tenant Settings.",
+          "keywords": [
             "subscription",
             "plan",
+            "basic",
+            "professional",
+            "enterprise",
             "monthly fee",
             "stripe",
-            "remove"
+            "status",
+            "billing"
           ]
         },
         {
           "slug": "review-edit",
           "heading": "Review and edit a request",
-          "body": "Click \"Review request\" on a row to open the review screen. At the top you see details such as Source, Submitted, Reviewed and Submitter IP, and reviewer comments if any. Under \"Request details\" you can change the fields, then click \"Save changes\"; \"Changes saved.\" confirms it. If some fields are wrong you will see \"Fix the highlighted request fields first.\" Use \"Back to onboarding requests\" to return to the list. If you see \"This onboarding request is no longer available\", it may have been deleted; if it \"could not be loaded\", refresh the page or go back to the list.",
+          "body": "Click \"Review request\" on a row to open the review screen. It shows \"Request details\" (including Source, Submitted, Reviewed, Submitter IP and Reviewer comments) and a \"Provisioning\" section. Change values, then click \"Save changes\"; \"Changes saved.\" confirms. If fields are invalid you'll see \"Fix the highlighted request fields first.\" Use \"Back to onboarding requests\" to return. If a request was deleted you'll see \"This onboarding request is no longer available\"; if it fails to load, refresh the page or go back to the list.",
           "keywords": [
             "review",
             "edit",
             "save changes",
-            "request details",
-            "open",
+            "details",
+            "open request",
             "update",
-            "reviewer comments",
             "not available"
           ]
         },
         {
-          "slug": "provisioning",
-          "heading": "Set provisioning options",
-          "body": "In the \"Provisioning\" section, set the \"Tenant ID prefix\" using letters, numbers and underscores only; hyphens are not allowed and it must end with a letter. Click \"Check availability\" to see whether the Tenant ID shows \"Available\" or \"Already in use\". Optional fields are \"Display name\", \"Contact email (site)\" (defaults to the contact email), \"Info email\", and a no-reply email; empty optional fields use defaults. The satellite key must use lowercase letters, numbers and hyphens, and a hostname is required. \"Copy admins from tenant\" and \"Copy platform ADMIN / SUPER_ADMIN profiles\" control which admins are copied to the new tenant. Add internal notes in \"Reviewer comments (internal)\".",
-          "keywords": [
-            "provisioning",
-            "tenant id",
-            "prefix",
-            "check availability",
-            "hostname",
-            "satellite key",
-            "display name",
-            "info email",
-            "copy admins"
-          ]
-        },
-        {
           "slug": "approve",
-          "heading": "Approve a request and create the tenant",
-          "body": "1) Review the request and provisioning options. 2) Tick \"Email the customer about the decision\" if you want them notified. 3) Click approve, then confirm in \"Approve and create tenant?\" (or \"Cancel\"). Approval stores the tenant on the selected organization, then creates tenant settings, email addresses, the satellite domain, and copies the admins, all in one transaction; if any step fails, nothing is created. On success you see \"Approval successful\" and \"Tenant created\" with the Tenant ID, satellite key, hostname, no-reply email and admins copied, plus links \"View Organization\", \"Edit Tenant Settings\" and \"Satellite Domains\". If it fails, the page shows the last failed attempt; fix the values and click \"Retry approval\". Some warnings may ask you to set presets, hero or logo in Tenant Settings.",
+          "heading": "Approve and create the tenant",
+          "body": "In \"Provisioning\", set the \"Tenant ID prefix\" (letters, numbers and underscores only, ending with a letter; hyphens are not allowed), plus satellite key and hostname (both required). Optional fields: \"Display name\", \"Contact email (site)\" (defaults to contact email), \"Info email\", \"Copy admins from tenant\" and \"Reviewer comments (internal)\". Use \"Check availability\" to see \"Available\" or \"Already in use\". Option \"Copy platform ADMIN / SUPER_ADMIN profiles\" and \"Email the customer about the decision\" are available. Click approve, then confirm \"Approve and create tenant?\". If any step fails, nothing is created. If an attempt failed, a note appears and you can fix values and use \"Retry approval\". After success, \"Approval successful\" lists Tenant ID, Satellite key, Hostname, No-reply email and Admins copied.",
           "keywords": [
             "approve",
             "create tenant",
-            "confirm",
-            "retry approval",
             "provision",
-            "success",
-            "failed",
-            "satellite domain",
-            "tenant settings"
+            "tenant id",
+            "prefix",
+            "satellite key",
+            "hostname",
+            "retry",
+            "availability"
           ]
         },
         {
           "slug": "after-approval",
-          "heading": "Remaining manual steps and copy buttons",
-          "body": "After approval, \"Remaining manual steps\" shows what is still to do, based on the \"Domain ownership\" chosen: registering the domain in Route 53 and attaching it in Amplify, a DNS-only handoff from the customer's registrar, or confirming an existing Route 53 hosted zone and Amplify mapping before changing DNS. Buttons let you copy text: \"Copy instructions\" (organization details and remaining manual steps), \"Copy org details\" (organization database details), and \"Copy Cursor prompt\" (Cursor rule prompt and satellite env checklist). \"Organization Details\" and \"Mailing address\" are shown on the screen once loaded. If the organization is gone you will see \"The organization created for this request is no longer in the database.\"",
+          "heading": "After approval: next steps and copy tools",
+          "body": "The success panel offers \"View Organization\", \"Edit Tenant Settings\" and \"Satellite Domains\" links, plus \"Remaining manual steps\" that depend on the domain ownership chosen (Route 53 / Amplify DNS guidance). Use \"Copy instructions\" to copy organization details and the remaining manual steps, \"Copy org details\" for the organization database details, and \"Copy Cursor prompt\" for the frontend clone prompt and satellite environment checklist. Some warnings may say site-type presets or default hero/logo were not applied; set them in Tenant Settings. Afterwards, promote the customer's first ADMIN from Manage Users once they register on their satellite.",
           "keywords": [
-            "manual steps",
+            "after approval",
+            "next steps",
             "copy instructions",
-            "copy org details",
-            "cursor prompt",
             "dns",
             "route 53",
             "amplify",
-            "organization details",
-            "after approval"
+            "tenant settings",
+            "satellite domains",
+            "admin"
           ]
         },
         {
           "slug": "reject",
           "heading": "Reject a request",
-          "body": "To decline an application, use \"Reject\" on the review screen. 1) Type a reason in \"Reason for rejecting\"; a reason is required. 2) Choose whether to tick \"Email the customer about the decision\". If ticked, the reason is emailed to the customer; if not, \"The customer will not be emailed.\" 3) Confirm in \"Reject this request?\" by clicking \"Reject request\", or choose \"Keep request\" to back out. \"Request rejected.\" confirms it.",
+          "body": "1) Open the request and click \"Reject\". 2) In \"Reason for rejecting\", type a reason; it is required. 3) Choose whether to \"Email the customer about the decision\": if on, the reason is emailed to the customer; if off, the customer will not be emailed. 4) Click \"Reject request\" to confirm, or \"Keep request\" to cancel. \"Request rejected.\" confirms the result.",
           "keywords": [
             "reject",
             "decline",
             "deny",
             "reason",
             "email customer",
-            "keep request"
+            "cancel request"
           ]
         }
       ]
@@ -7419,37 +7414,36 @@
         "src/components/admin/AdminHelpDialog.tsx",
         "src/components/admin/SatelliteDomainsGuidance.tsx"
       ],
-      "sourceHash": "0f959d9a73f7dcda",
+      "sourceHash": "f81a94a3957bdd00",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
           "heading": "What this page is for",
-          "body": "The \"Satellite Domains\" page lets you manage satellite domain configurations for multi-tenant authentication and branding. A satellite domain is a tenant's custom public URL that runs the same app as the primary hub domain, and each one is linked to a Tenant ID (the website). The page shows a searchable list with the columns \"Key\", \"Display Name\", \"Hostname\", \"Tenant ID\" and \"Status\", plus row actions to edit or delete. Use the \"Add Domain\" button to create a new one. A help icon opens the setup guidelines. This page is for the platform super admin.",
+          "body": "The \"Satellite Domains\" page (Admin → Satellite Domains) lets you manage the custom public web addresses that sign in through this hub, along with their branding. A satellite domain is a tenant's custom public URL that runs the same app as the primary domain, and each one is linked to a Tenant ID (the website). The page shows a searchable list with the columns \"Key\", \"Display Name\", \"Hostname\", \"Tenant ID\" and \"Status\". The \"Add Domain\" button opens the form to create one, and each row has edit and delete actions. A help icon opens the setup guidelines. The page is for platform super admins only.",
           "keywords": [
             "satellite domains",
             "custom domain",
             "hostname",
+            "tenant",
             "overview",
-            "tenant url",
-            "multi-tenant",
-            "branding",
-            "login domain"
+            "website address",
+            "hub",
+            "sign in"
           ]
         },
         {
           "slug": "setup-order",
-          "heading": "Setup order and why it matters",
-          "body": "Login and sign-up on a custom URL need a satellite domain record. If the hostname is not registered here, sign-in on that URL will not work correctly. The recommended order is: 1) create the company organization 2) under Onboarding, use \"Add Request\" to set the Tenant ID, hostname, branding and portfolio 3) approve the onboarding 4) register the satellite domain here 5) configure DNS 6) configure the Clerk satellite domain on the primary. The Tenant ID must match the one in Tenant Settings and the organization. The primary domain must stay deployed for satellite authentication.",
+          "heading": "Recommended setup order",
+          "body": "Login and sign-up on a custom URL need a satellite domain record, so register the hostname here or sign-in on that URL will not work correctly. The recommended order is: 1) Create the company organization (CRM). 2) Go to Onboarding → Add Request and enter the Tenant ID, hostname, branding and portfolio. 3) Approve the onboarding. 4) Register the Satellite Domain here with the Satellite Key, Domain URL (including the scheme), Hostname, Tenant ID and Enabled. 5) Configure DNS. 6) Configure the Clerk satellite domain on the primary. The Tenant ID must match the one in Tenant Settings and the organization. The primary domain must stay deployed for satellite sign-in to work.",
           "keywords": [
             "setup",
             "order",
-            "onboarding",
             "dns",
             "clerk",
-            "sign in",
-            "login",
-            "workflow",
+            "onboarding",
+            "tenant id",
+            "steps",
             "guidelines",
             "help icon"
           ]
@@ -7457,7 +7451,7 @@
         {
           "slug": "search-browse",
           "heading": "Search and browse the list",
-          "body": "Type in the search box (\"Search by name, key, hostname, or tenant...\") to narrow the list by name, key, hostname or Tenant ID. Use the clear button (\"Clear domain search\") to reset it. Some column headings, such as \"Key\", \"Display Name\" and \"Tenant ID\", are sortable. The footer shows \"Showing\" a count of satellite domains, and the \"Previous\" and \"Next\" buttons move between pages. If nothing matches, you see \"No satellite domains found\".",
+          "body": "Type in the search box (\"Search by name, key, hostname, or tenant...\") to narrow the list by display name, key, hostname or tenant. Use the clear button (\"Clear domain search\") to reset it. Some column headers, such as Key, Display Name and Tenant ID, are sortable. At the bottom, \"Previous\" and \"Next\" move between pages, and the page shows which page you are on and a \"Showing ... satellite domains\" count. If nothing matches you see \"No satellite domains found\".",
           "keywords": [
             "search",
             "find",
@@ -7473,67 +7467,53 @@
         {
           "slug": "add-domain",
           "heading": "Add a satellite domain",
-          "body": "1) Click \"Add Domain\" to open the \"Add Satellite Domain\" form. 2) Under \"Core Configuration\", fill in \"Satellite Key *\" (for example mosc-temp), \"Display Name *\", \"Domain URL *\" and \"Hostname *\" (for example www.mosc-temp.com). 3) Enter the \"Tenant ID\" of the website this domain belongs to. 4) Use the \"Enabled\" setting to turn it on or off. 5) Fill in any optional sections, then click \"Create Domain\". You see \"Satellite domain created successfully\". Use \"Cancel\" to close without saving.",
+          "body": "1) Click \"Add Domain\" (the \"Add Satellite Domain\" button). 2) Under \"Core Configuration\", fill the required fields \"Satellite Key *\" (for example mosc-temp), \"Display Name *\", \"Domain URL *\" and \"Hostname *\" (for example www.mosc-temp.com). 3) Enter the \"Tenant ID\" of the website this domain belongs to, and use the \"Enabled\" setting to turn it on or off. 4) Fill in any optional branding, contact and auth page settings. 5) Click \"Create Domain\". You see \"Satellite domain created successfully\" when it saves. Click \"Cancel\" to close without saving.",
           "keywords": [
             "add",
             "create",
             "new domain",
-            "register",
             "satellite key",
             "hostname",
             "domain url",
             "tenant id",
-            "enable"
+            "register"
           ]
         },
         {
           "slug": "required-fields",
-          "heading": "Required fields and errors",
-          "body": "Satellite Key, Display Name, Domain URL and Hostname are required, marked with *. If one is missing you see \"Satellite Key is required\", \"Display Name is required\", \"Domain URL is required\" or \"Hostname is required\". If the list cannot load, you see \"Failed to load satellite domains\". The domain URL should include the scheme, and the Tenant ID must match Tenant Settings and the organization.",
+          "heading": "Required fields and messages",
+          "body": "Satellite Key, Display Name, Domain URL and Hostname are required. If one is empty you will see \"Satellite Key is required\", \"Display Name is required\", \"Domain URL is required\" or \"Hostname is required\". Include the scheme in the Domain URL. If the list cannot load you see \"Failed to load satellite domains\". Success messages appear after you create, update or delete a domain.",
           "keywords": [
             "required",
-            "error",
             "validation",
+            "error",
             "missing field",
             "failed to load",
-            "scheme",
-            "https"
+            "domain url",
+            "scheme"
           ]
         },
         {
           "slug": "branding",
-          "heading": "Branding and logo",
-          "body": "The form's \"Branding\" section has \"Organization Name\", \"Full Name\", \"Tagline\" and a \"Logo\" area. Choose \"Logo Type\" as \"Text\" or \"Image\", and enter a \"Logo URL\" if using an image. You can also set \"Logo Primary Color\" and \"Logo Secondary Color\". Under \"Theme Colors\" set \"Primary Color\", \"Hover Color\" and \"Active Color\". Colors are entered as hex values such as #9333ea.",
+          "heading": "Branding, logo and colors",
+          "body": "In the form, the \"Branding\" section has \"Organization Name\", \"Full Name\" and \"Tagline\". Under \"Logo\", choose \"Logo Type\" as \"Text\" or \"Image\", enter a \"Logo URL\", and set \"Logo Primary Color\" and \"Logo Secondary Color\". \"Theme Colors\" has \"Primary Color\", \"Hover Color\" and \"Active Color\" (for example #9333ea). If a Tenant ID is filled in, a panel \"Tenant settings logo (same Tenant ID)\" shows the logo from Tenant Management settings. Use \"Copy\" to copy its URL, or \"Use for satellite\" to fill the Logo URL field. The message \"Logo URL applied — save to persist\" reminds you to save the domain afterward. If no logo exists yet, upload one under Tenant Management → Customization and come back.",
           "keywords": [
-            "branding",
             "logo",
+            "branding",
             "colors",
             "theme",
             "tagline",
-            "organization name",
             "image",
-            "text logo",
-            "hex"
-          ]
-        },
-        {
-          "slug": "tenant-logo",
-          "heading": "Use the tenant settings logo",
-          "body": "When a Tenant ID is filled in, the form shows \"Tenant settings logo (same Tenant ID)\" pulled from the tenant's settings (Admin → Tenant Management → settings → Customization). 1) Click \"Copy\" to copy the logo URL; you see \"Logo URL copied\". 2) Or click \"Use for satellite\" to fill the \"Logo URL\" field; you see \"Logo URL applied — save to persist\". 3) Click \"Create Domain\" or \"Update Domain\" to save it. If none exists, upload a logo under Tenant Management → Customization and come back.",
-          "keywords": [
-            "logo url",
-            "copy logo",
-            "tenant settings",
-            "use for satellite",
             "picture",
-            "image",
-            "customization"
+            "logo url",
+            "tenant settings",
+            "copy"
           ]
         },
         {
           "slug": "contact-social-auth",
-          "heading": "Contact, social links and auth page display",
-          "body": "\"Contact Information\" holds \"Address\", \"Phone\", \"Toll Free\" and \"Email\". The social section is optional and covers \"Facebook\", \"Twitter / X\", \"LinkedIn\" and \"YouTube\"; skip it if you don't need social icons, and you can add or edit them anytime. Under \"Auth Page Display\", the \"Show on Auth Header\" and \"Show on Auth Footer\" options control where this information appears on the sign-in pages.",
+          "heading": "Contact, social and auth page options",
+          "body": "\"Contact Information\" holds \"Address\", \"Phone\", \"Toll Free\" and \"Email\". The social links section (optional) has \"Facebook\", \"Twitter / X\", \"LinkedIn\" and \"YouTube\"; skip it if you don't need social icons, and you can add or edit them anytime. \"Auth Page Display\" has \"Show on Auth Header\" and \"Show on Auth Footer\" to control what appears on the sign-in pages of the satellite site.",
           "keywords": [
             "contact",
             "address",
@@ -7541,31 +7521,43 @@
             "email",
             "social",
             "facebook",
-            "youtube",
+            "twitter",
             "linkedin",
+            "youtube",
             "auth header",
             "auth footer"
           ]
         },
         {
-          "slug": "edit-enable",
-          "heading": "Edit a domain or switch it on/off",
-          "body": "To edit, click \"Edit Satellite Domain\" on the row, change the fields, and click \"Update Domain\"; you see \"Satellite domain updated successfully\". In the \"Status\" column, click the status to toggle it: hover text says \"Click to disable\" or \"Click to enable\".",
+          "slug": "edit-domain",
+          "heading": "Edit a satellite domain",
+          "body": "1) Find the domain in the list. 2) Click the edit action (\"Edit Satellite Domain\") on its row. 3) Change the fields you need. 4) Click \"Update Domain\". You see \"Satellite domain updated successfully\". Click \"Cancel\" to close without saving. Keep the Tenant ID matching Tenant Settings and the organization.",
           "keywords": [
             "edit",
             "update",
             "change",
+            "modify",
+            "satellite domain"
+          ]
+        },
+        {
+          "slug": "enable-disable",
+          "heading": "Turn a domain on or off",
+          "body": "The \"Status\" column shows whether each domain is enabled. Click the status in the row to switch it: the hover text says \"Click to disable\" or \"Click to enable\". You can also use the \"Enabled\" setting in the edit form and click \"Update Domain\".",
+          "keywords": [
             "enable",
             "disable",
             "status",
-            "toggle",
-            "turn off"
+            "turn off",
+            "turn on",
+            "active",
+            "toggle"
           ]
         },
         {
           "slug": "delete-domain",
           "heading": "Delete a satellite domain",
-          "body": "1) Click \"Delete Satellite Domain\" on the row. 2) In the confirmation, click \"Delete\". You see \"Satellite domain deleted successfully\". Once removed, sign-in on that hostname may stop working because it is no longer registered.",
+          "body": "1) Click the delete action (\"Delete Satellite Domain\") on the row. 2) In the confirmation, click \"Delete\". You see \"Satellite domain deleted successfully\". Once the hostname is no longer registered, sign-in on that custom URL will not work correctly, so delete only when you are sure.",
           "keywords": [
             "delete",
             "remove",
@@ -8394,182 +8386,345 @@
         "src/app/admin/tenant-management/organizations/search/page.tsx",
         "src/app/admin/tenant-management/organizations/tenantIdListActions.ts",
         "src/app/admin/tenant-management/organizations/websiteActions.ts",
+        "src/app/admin/tenant-management/suspensions/SuspensionDialogButton.tsx",
+        "src/app/admin/tenant-management/suspensions/actions.ts",
         "src/components/admin/AddressFieldsSection.tsx",
         "src/components/admin/AdminHelpDialog.tsx",
         "src/components/admin/AdminTableActionButtons.tsx",
         "src/components/admin/DescriptionTextareaField.tsx",
         "src/components/admin/SatelliteDomainsGuidance.tsx"
       ],
-      "sourceHash": "ac069b328ec42fc3",
+      "sourceHash": "8a9568ebd4bd3212",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
-          "heading": "Organizations overview",
-          "body": "An organization is the client (a company, institution or person) that signs up. Its websites are tenants, each with its own website tenant ID. The main page, \"Tenant Organizations\", lists organizations in a table with the columns \"Organization Name\", \"Tenant IDs\", \"Website / Domain\", \"Contact Email\", \"Organization charge\", \"Status\" and \"Actions\". Above the table you will find a search box, status filters, and a \"Create New\" button. Click an organization to open its detail page, which has an \"Edit Organization\" button, an \"Actions\" area for onboarding and moving tenant IDs, a billing card, and a \"Tenant IDs\" list. Organization records hold contact and address details. Website tenant IDs and hostnames are created through Onboarding.",
+          "heading": "What this page is for and where things are",
+          "body": "An organization is the client (a company, institution, or person) that signs up. Each organization can own many websites, and each website is a tenant with its own tenant ID. The main list is titled \"Tenant Organizations\" and shows each organization's name, tenant IDs, website or domain, contact email, organization charge, and status. Use \"Create New\" to add one, the search box and the two filters to find one, and the row actions to open, edit, or manage it. Related screens: a search page with more filters and export, an organization details page, an edit page, and two screens for moving tenant IDs. Website tenant IDs themselves are created through Onboarding, not on the organization form.",
           "keywords": [
             "organizations",
-            "organization list",
             "client",
             "company",
-            "tenant organizations",
+            "tenant",
+            "tenant id",
             "overview",
-            "tenant ids",
-            "website"
+            "website",
+            "list",
+            "customer"
           ]
         },
         {
-          "slug": "find-organizations",
-          "heading": "Find organizations in the list",
-          "body": "On the \"Tenant Organizations\" page, type in the box \"Search by organization name, tenant ID, or domain...\" to narrow the list. Use the status drop-downs, which offer \"All Statuses\", \"Active\", \"Inactive\" and \"Suspended\", and also \"All Organizations\", \"Active Only\" and \"Inactive Only\". Results are paged: use \"Previous\" and \"Next\" at the bottom, which show the page number and a \"Showing\" count. If nothing matches, you will see \"No organizations found\". Hover over a row to see full organization details, such as address, subscription and colors. Close that pop-up with the × button.",
+          "slug": "find-organization",
+          "heading": "Find an organization in the list",
+          "body": "On \"Tenant Organizations\", type in the box \"Search by organization name, tenant ID, or domain...\" to narrow the list. Two dropdowns filter further: one with \"All Statuses\", \"Active\", \"Inactive\", \"Suspended\", and one with \"All Organizations\", \"Active Only\", \"Inactive Only\". Use \"Previous\" and \"Next\" at the bottom to move between pages; the footer shows the page and how many are \"Showing\". If nothing matches you see \"No organizations found\". Hover over a row to see the full organization details, and click the \"×\" button on that pop-up to close it.",
           "keywords": [
             "search",
             "find",
             "filter",
             "status",
             "list",
-            "paging",
             "active",
             "inactive",
             "suspended",
-            "hover details"
+            "paging",
+            "lookup"
           ]
         },
         {
-          "slug": "advanced-search",
-          "heading": "Search by many fields and export",
-          "body": "Open the search page (the \"Search organizations\" button on the list) to filter by any combination of fields. Fields include \"Organization name\", \"Domain\", \"Contact email\", \"Contact person\", \"Phone\", \"City\", \"State\", \"ZIP\", \"Country\", \"Website URL\" and \"Website tenant ID\". Drop-downs include \"Site type\", \"Subscription status\" and an active/inactive choice. Each text field matches anywhere in the value. 1) Fill in one or more filters. 2) Click \"Search\". 3) Use \"Clear\" to reset the filters. Click \"Export results\" to download every match, or \"Export all organizations\" to download the full table. If nothing matched, the exported sheet contains only the column headers.",
+          "slug": "advanced-search-export",
+          "heading": "Advanced search and export",
+          "body": "Open the \"Search organizations\" page (the magnifying-glass button on the list, or the search route) to filter by any combination of fields. The fields are \"Organization name\", \"Domain\", \"Contact email\", \"Contact person\", \"Phone\", \"City\", \"State\", \"ZIP\", \"Country\", \"Website URL\", and \"Website tenant ID\", plus the dropdowns \"Site type\", \"Subscription status\", and an active/inactive choice. Each text field matches anywhere in that value. 1) Fill in the filters you want. 2) Click \"Search\". 3) Page through results with \"Previous\" and \"Next\". \"Clear\" resets the filters. \"Export results\" downloads every match, and \"Export all organizations\" downloads the full table. If an export has no matches, the sheet contains only the column headers.",
           "keywords": [
-            "advanced search",
+            "search",
             "filter",
             "export",
             "download",
             "spreadsheet",
+            "csv",
+            "excel",
             "clear filters",
-            "site type",
-            "subscription status",
-            "website tenant id",
-            "csv"
+            "tenant id search",
+            "report"
           ]
         },
         {
           "slug": "create-organization",
           "heading": "Create a new organization",
-          "body": "1) On the \"Tenant Organizations\" page click \"Create New\". 2) Fill in the \"Company information\" section. Required fields are marked with *: \"Organization Name\", \"Contact Email\", \"Contact Phone\" and \"Contact person name\". \"Domain\", \"Description\" and the website link are optional, so leave the domain empty if the company has none yet. 3) Complete the \"Address Information\" section: address line 1, city, state/province, ZIP/postal code and country are required, and address line 2 is optional. 4) Click \"Create Organization\". This creates only the client organization, not a website tenant ID. You can also use \"Cancel\" to leave the form.",
+          "body": "1) On \"Tenant Organizations\", click \"Create New\" (or open \"New Organization\"). 2) Fill in \"Organization Name\", \"Contact Email\", \"Contact Phone\", and \"Contact person name\", which are required, plus the address. 3) Optionally add \"Domain\", \"Description\", \"Website URL\", and a \"Monthly charge (USD)\". 4) Click \"Create Organization\", or \"Cancel\" to leave. This creates only the client organization and does not create a website tenant ID. The form warns if the name or domain is already registered. Afterward, create the site's tenant ID through Onboarding with \"Create Tenant ID via onboarding\" (\"Onboarding → Add Request\") on the list page.",
           "keywords": [
             "create",
-            "new organization",
+            "new",
             "add",
+            "organization",
             "client",
-            "company",
-            "contact",
-            "address",
+            "register",
             "form",
-            "required fields"
+            "onboarding",
+            "tenant id",
+            "sign up"
           ]
         },
         {
           "slug": "form-rules",
-          "heading": "Form rules and checks",
-          "body": "The form checks your entries. The organization name is required, must be under 255 characters, and must not match an existing organization (\"An organization with this name already exists.\"). A domain already in use shows \"This domain is already registered.\" If a check cannot run, you will see \"Could not verify the organization name. Try again.\" or \"Could not verify domain availability. Try again.\" Contact email must be a valid address, and contact phone must be under 50 characters. Contact person name must be under 255 characters. Address line limits are 255 for lines 1 and 2, 20 for ZIP code and 100 for country. If saving fails, you will see \"Failed to save organization. Please try again.\"",
+          "heading": "Required fields and limits on the form",
+          "body": "Required: \"Organization Name\" (under 255 characters), \"Contact Email\" (must be a valid email), \"Contact Phone\" (under 50 characters), \"Contact person name\" (under 255 characters), and in the address: Address line 1 (255 characters or less), City, State / Province, ZIP / Postal code (20 characters or less), and Country (100 characters or less). Address line 2 is optional (255 characters or less). \"Domain\" can stay empty if the organization has none yet, and \"Website URL\" is an optional public link. Names and domains must be unique: you may see \"An organization with this name already exists.\" or \"This domain is already registered.\" The \"Active Organization\" status box matters because inactive organizations cannot be used for new events or registrations.",
           "keywords": [
-            "validation",
             "required",
             "limits",
-            "duplicate name",
-            "domain already registered",
+            "validation",
+            "characters",
             "email",
             "phone",
-            "error",
-            "characters"
+            "address",
+            "domain",
+            "unique",
+            "duplicate",
+            "error"
           ]
         },
         {
           "slug": "edit-organization",
           "heading": "Edit an organization",
-          "body": "1) Open the organization from the list. 2) Click \"Edit Organization\". 3) Change the company contact, address, domain, description or website link in the \"Company information\" section. 4) Click \"Update Organization\". The page confirms the update and then returns you to the organization page. Site tenant ID, domain and branding are not changed here. They stay on Onboarding and Tenant Settings. The form also has an \"Active Organization\" status setting, and inactive organizations cannot be used for new events or registrations.",
+          "body": "1) Find the organization and click \"Edit Organization\" in its row (or on its details page). 2) Change the contact, address, and other company information. 3) Click \"Update Organization\". While saving you see \"Please wait while we save this organization.\", and on success you are sent to the organization page. If it fails, you see \"Failed to update the organization. Please try again.\" Site Tenant ID, domain, and branding are kept on Onboarding / Tenant Settings.",
           "keywords": [
             "edit",
             "update",
             "change",
             "contact",
             "address",
-            "active organization",
-            "save"
+            "modify",
+            "save",
+            "organization"
           ]
         },
         {
           "slug": "organization-details",
-          "heading": "Read an organization's detail page",
-          "body": "The detail page shows \"Organization Details\": \"Database ID (PK)\", \"Organization Name\", \"Contact Email\", \"Contact Phone\", \"Contact person name\", \"Website URL\", \"Address\", \"Status\", \"Created At\" and \"Updated At\". The \"Organization monthly charge\" shows the single charge for the organization, and tenant IDs under it are complimentary and not billed on their own. Below that, the \"Tenant IDs\" list shows each tenant ID with \"View\" and \"Edit\" links for its settings. Use \"Previous\" and \"Next\" to page through. If the organization has none, you will see \"No tenant IDs yet\" with a link, \"Go to the tenant ID list\". If you see \"This organization is no longer available\", the link may be old or the organization may have been deleted. Use \"Back to Organizations\".",
+          "heading": "Organization details page",
+          "body": "Click \"View Organization\" in a list row to open the details. \"Organization Details\" shows Status, Database ID (PK), Organization Name, Contact Email, Contact Phone, Contact person name, Website URL, Address, Created At, and Updated At. Buttons: \"Edit Organization\", \"Onboard a tenant ID\", \"Move a tenant ID to this organization\", and \"Move tenant IDs between two organizations\". The \"Tenant IDs\" list shows each tenant ID with its status and, per row, \"View\", \"Edit\", and \"Suspend\". If the organization was deleted, you see \"This organization is no longer available\" and a \"Back to Organizations\" button.",
           "keywords": [
             "details",
-            "view organization",
-            "tenant ids list",
-            "settings",
-            "database id",
-            "monthly charge",
-            "not available",
-            "deleted"
+            "view",
+            "organization page",
+            "tenant ids",
+            "status",
+            "created",
+            "contact",
+            "open",
+            "settings"
           ]
         },
         {
           "slug": "billing-scope",
-          "heading": "Set the billing scope",
-          "body": "The billing card on the organization page has a \"Billing scope\" setting. Choose \"Bill the organization once\" to charge one monthly amount for the whole organization. Enter a \"Monthly amount\" greater than zero, and the organization then has one subscription. Choose \"Bill each website separately\" with a monthly amount of zero or more, and each website stays complimentary until its own charge switch is turned on. Click \"Save billing scope\" to apply it, and use \"Open billing area\" to go to billing. Billing the organization once needs the organization to have a website tenant first.",
+          "heading": "Set how an organization is billed",
+          "body": "The \"Billing scope\" card on the organization page lets you choose \"Bill the organization once\" or \"Bill each website separately\". 1) Pick a scope. 2) Enter the \"Monthly amount\". 3) Click \"Save billing scope\". Billing once needs an amount greater than zero, and the organization needs at least one website tenant first. Billing each website separately accepts zero or more, and each website stays complimentary until its own charge switch is turned on. With one charge, tenant IDs under the organization are complimentary. \"Open billing area\" (also in list rows) takes you to billing.",
           "keywords": [
             "billing",
             "charge",
             "monthly fee",
             "subscription",
-            "one subscription",
+            "price",
+            "bill once",
             "per website",
             "amount",
-            "scope"
+            "payment"
           ]
         },
         {
-          "slug": "onboard-tenant",
-          "heading": "Add a website tenant ID",
-          "body": "Creating an organization does not create a website. 1) Open the organization page. 2) In \"Actions\" click \"Onboard a tenant ID\", or on the list use \"Create Tenant ID via onboarding\". 3) Go to Onboarding and use \"Add Request\" to create the site tenant ID, hostname/domain, branding and portfolio membership. A custom website URL also needs a satellite domain record so sign-in works there. Use the same tenant ID in both places.",
-          "keywords": [
-            "onboarding",
-            "add tenant id",
-            "new website",
-            "hostname",
-            "domain",
-            "satellite domain",
-            "create tenant id"
-          ]
-        },
-        {
-          "slug": "move-tenant-ids",
-          "heading": "Move tenant IDs between organizations",
-          "body": "There are three ways. To move one tenant ID into an organization: 1) open that organization and click \"Move a tenant ID to this organization\". 2) Type the tenant ID and click \"Look up tenant ID\". 3) Click \"Move to this organization\". You can also start from the move page, pick the receiving organization under \"Organization that receives the tenant ID\" and continue. To move between two organizations, open \"Move tenant IDs between two organizations\", choose an organization in each column, then drag a tenant ID onto the other organization or use \"Move to the other organization\". The two columns must be different organizations, and a tenant ID already on the target organization is not moved. Messages such as \"That tenant ID is already on this organization.\" tell you why a move did not happen.",
+          "slug": "move-tenant-id",
+          "heading": "Move a tenant ID to an organization",
+          "body": "1) From an organization page, click \"Move a tenant ID to this organization\". Or open the move page, choose the receiving organization under \"Organization that receives the tenant ID\", and continue. 2) Type the \"Tenant ID\" and click \"Look up tenant ID\". 3) Click \"Move to this organization\". You will be told if the tenant ID is empty, could not be found, or is already on this organization.",
           "keywords": [
             "move",
             "transfer",
             "tenant id",
             "reassign",
-            "drag",
-            "between organizations",
+            "change organization",
             "look up",
-            "change organization"
+            "website"
           ]
         },
         {
-          "slug": "inactive-delete",
+          "slug": "move-between",
+          "heading": "Move tenant IDs between two organizations",
+          "body": "Open \"Move tenant IDs between organizations\" from an organization page or the list. 1) In each of the two columns, use \"Choose an organization\" to pick different organizations; each column lists its tenant IDs. 2) Drag a tenant ID onto the other organization, or use \"Move to the other organization\" on its row. Dropping a tenant ID onto the organization it already belongs to does nothing. \"Open this organization\" opens the selected organization.",
+          "keywords": [
+            "move",
+            "drag",
+            "drop",
+            "between",
+            "swap",
+            "transfer",
+            "tenant id",
+            "two organizations"
+          ]
+        },
+        {
+          "slug": "suspend",
+          "heading": "Suspend websites or dashboards",
+          "body": "On the organization page, the \"Suspension\" section turns off public websites, dashboards, or both for every tenant ID in the organization, for example after missed payments. 1) Open the suspension dialog (the button shows \"Live\", \"Website off\", \"Dashboard off\", or \"Suspended: change\"). 2) Turn on \"Turn off the public website\" and/or \"Turn off dashboard access\". 3) Optionally add an \"Internal note (optional)\", which only super admins see. 4) Save. Nothing is deleted; turn a switch off to restore access. The Billing page stays open so admins can pay. To suspend one tenant ID, use \"Suspend\" in the Tenant IDs list. \"See everything that is suspended\" lists all suspensions.",
+          "keywords": [
+            "suspend",
+            "suspension",
+            "turn off",
+            "disable",
+            "block",
+            "unpaid",
+            "dashboard",
+            "website off",
+            "re-enable",
+            "note"
+          ]
+        },
+        {
+          "slug": "inactive-or-delete",
           "heading": "Make inactive or cascade delete",
-          "body": "If you see these buttons in a row's actions, you can make an organization inactive or delete it. \"Make inactive\" opens \"Make this organization inactive?\". It keeps the tenant settings, email addresses, satellite domains and onboarding requests, and you can make the organization active again later. \"Cascade Delete\" opens \"Cascade delete organization?\" and removes the organization row, plus its tenant settings, tenant email addresses and satellite domains. This cannot be undone. Onboarding requests, user profiles and events are kept. To confirm, type the organization name, then choose \"Cascade delete now\". Choose \"Keep organization\" or \"Make inactive instead\" to avoid deleting.",
+          "body": "To keep the records, click \"Make inactive\" and confirm \"Make this organization inactive?\". Its tenant settings, email addresses, satellite domains, and onboarding requests stay, and you can make it active again. To remove it, use \"Cascade Delete\". 1) Read the list of what is removed: the organization, tenant settings, tenant email addresses, and satellite domains. 2) Type the organization name to confirm. 3) Click \"Cascade delete now\", or choose \"Keep organization\" or \"Make inactive instead\". This cannot be undone. Onboarding requests, user profiles, and events are kept, and its websites become their own organizations.",
           "keywords": [
             "delete",
             "remove",
-            "cascade delete",
             "inactive",
             "deactivate",
+            "cascade",
             "reactivate",
+            "undo",
             "confirm",
-            "undo"
+            "archive"
+          ]
+        }
+      ]
+    },
+    {
+      "featureKey": "tenant-suspensions",
+      "title": "Suspend Sites",
+      "pathPrefixes": [
+        "/admin/tenant-management/suspensions"
+      ],
+      "routes": [
+        "/admin/tenant-management/suspensions"
+      ],
+      "sourceFiles": [
+        "src/app/admin/tenant-management/suspensions/SuspensionDialogButton.tsx",
+        "src/app/admin/tenant-management/suspensions/SuspensionsClient.tsx",
+        "src/app/admin/tenant-management/suspensions/actions.ts",
+        "src/app/admin/tenant-management/suspensions/page.tsx"
+      ],
+      "sourceHash": "e2700e3234d795d6",
+      "platformOnly": true,
+      "sections": [
+        {
+          "slug": "overview",
+          "heading": "What this page is for",
+          "body": "The \"Suspend sites and dashboards\" page lets you turn off a tenant ID's public website, its admin and retail dashboards, or both, for example when a client misses payments. The page has a \"Suspend one tenant ID\" box for looking up a website, and a \"Currently suspended\" list below it. That list has an \"Organizations (every tenant ID they own)\" table and a table of tenant IDs. Use \"Back to Admin Dashboard\" to go back. This page is for platform super admins only. If the list cannot load, you see \"The list of suspended sites could not be loaded. Refresh the page to try again.\"",
+          "keywords": [
+            "suspend",
+            "suspension",
+            "turn off site",
+            "disable website",
+            "pause dashboard",
+            "overview",
+            "non payment",
+            "block client"
+          ]
+        },
+        {
+          "slug": "suspend-tenant",
+          "heading": "Suspend one tenant ID (website)",
+          "body": "1) In the \"Suspend one tenant ID\" box, type the tenant ID in the field (for example tenant_demo_001). 2) Click the look-up button (\"Look up tenant ID\"). It shows \"Looking up...\" while it works. 3) In the dialog, choose what to turn off (see the next section). 4) Optionally add an internal note. 5) Save. The dialog says \"This applies to\" followed by the tenant ID, and nothing is deleted. If the ID cannot be found you see \"That tenant ID could not be looked up.\"",
+          "keywords": [
+            "suspend tenant",
+            "look up tenant id",
+            "find site",
+            "tenant id",
+            "turn off website",
+            "stop site",
+            "block website"
+          ]
+        },
+        {
+          "slug": "switches",
+          "heading": "Choose what to turn off",
+          "body": "The dialog has two switches. \"Turn off the public website\": visitors see a page saying the site is temporarily unavailable, and sign-in still works. \"Turn off dashboard access\": tenant admins and retail users see a notice in place of the admin and retail dashboards, while the Billing page stays open so they can pay. You can turn on either one or both. Platform super admins are never locked out.",
+          "keywords": [
+            "public website",
+            "dashboard access",
+            "switch",
+            "toggle",
+            "billing",
+            "temporarily unavailable",
+            "retail users",
+            "tenant admins"
+          ]
+        },
+        {
+          "slug": "internal-note",
+          "heading": "Add an internal note",
+          "body": "In the dialog, the \"Internal note (optional)\" field is for your own record, with the example \"For example: two missed monthly payments\". Only super admins see this note. Visitors and tenant admins do not. The note appears in the \"Note\" column of the suspended lists.",
+          "keywords": [
+            "note",
+            "reason",
+            "comment",
+            "internal note",
+            "memo",
+            "why suspended"
+          ]
+        },
+        {
+          "slug": "suspend-organization",
+          "heading": "Suspend a whole organization",
+          "body": "The \"Organizations (every tenant ID they own)\" table lists suspended organizations, with columns \"Organization\", \"Status\", \"Note\" and \"Change\". To suspend every tenant ID a client owns, open the organization and use Suspend in its Suspension panel. In the dialog, the \"By organization\" label shows that the change applies to all of that organization's tenant IDs. If the organization no longer exists, you see \"That organization no longer exists.\"",
+          "keywords": [
+            "organization",
+            "client",
+            "all tenant ids",
+            "whole organization",
+            "suspend organization",
+            "every site",
+            "company"
+          ]
+        },
+        {
+          "slug": "lift-suspension",
+          "heading": "Re-enable a site or dashboard",
+          "body": "1) Find the row in the \"Currently suspended\" list and click \"Change\" (it may read \"Suspended: change\"), or look up the tenant ID again. 2) Untick or turn off the switches. 3) Save. Nothing was deleted, so access comes back. If a tenant ID's whole organization is also suspended, you see \"The whole organization is suspended too. Lift that on the organization page, or this tenant ID stays off.\" Changes reach live sites within about a minute.",
+          "keywords": [
+            "re-enable",
+            "lift suspension",
+            "unsuspend",
+            "restore access",
+            "turn back on",
+            "change",
+            "reactivate"
+          ]
+        },
+        {
+          "slug": "status-list",
+          "heading": "Read the Currently suspended list",
+          "body": "The \"Currently suspended\" section shows what is off now. If there is nothing, it says \"Nothing is suspended right now.\" The tables show \"Tenant ID\" (or \"Tenant IDs\"), \"Status\", \"Note\" and \"Change\". Status badges show \"Live\" (nothing turned off), \"Website off\" or \"Dashboard off\".",
+          "keywords": [
+            "status",
+            "list",
+            "live",
+            "website off",
+            "dashboard off",
+            "suspended list",
+            "badges",
+            "what is suspended"
+          ]
+        },
+        {
+          "slug": "limits-errors",
+          "heading": "Rules and error messages",
+          "body": "The hub's own tenant ID cannot be suspended from here. You see \"This is the tenant ID of the hub you are signed in to. It cannot be suspended from here.\" The same applies to an organization that owns the hub's tenant ID. Changes only apply when you click Save in the dialog; \"Cancel\" closes it without changes. If saving fails you see \"The suspension could not be saved.\" or \"Could not save the suspension\". One message says the backend did not save it because the suspension columns must be deployed on the backend first; in that case contact your technical team.",
+          "keywords": [
+            "error",
+            "cannot suspend",
+            "hub",
+            "save failed",
+            "cancel",
+            "limits",
+            "rules",
+            "could not save",
+            "not allowed"
           ]
         }
       ]
@@ -8588,104 +8743,106 @@
         "src/app/admin/tenant-management/test-crud-operations.ts",
         "src/app/admin/tenant-management/test/page.tsx"
       ],
-      "sourceHash": "00cce33fb53640ff",
+      "sourceHash": "6407e25cbee9b591",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
           "heading": "What this page is for",
-          "body": "The \"Test CRUD Operations\" page (under Admin Dashboard > Tenant Management) lets you try out Create, Read, Update and Delete calls for tenant management. It is a platform test screen, not a customer workflow. The page has a \"Test Controls\" panel with buttons, a \"Test Results\" area with the tabs \"All Tests\", \"Organizations\" and \"Settings\", and a \"Test Logs\" panel that shows progress. The page is at /admin/tenant-management/test.",
+          "body": "The \"Test CRUD Operations\" page (Admin Dashboard > Tenant Management > Test CRUD Operations) lets you test Create, Read, Update and Delete operations for tenant management. It is a platform test screen, not a customer workflow. The page has a \"Test Controls\" panel with four buttons, a \"Test Results\" area with the tabs \"All Tests\", \"Organizations\" and \"Settings\", and a \"Test Logs\" area that shows progress. The breadcrumb at the top lets you go back to \"Admin Dashboard\" or \"Tenant Management\".",
           "keywords": [
             "test crud",
             "test page",
-            "tenant management",
-            "create read update delete",
-            "api test",
+            "crud operations",
+            "tenant management test",
             "overview",
-            "diagnostics"
+            "api test",
+            "diagnostics",
+            "testing"
           ]
         },
         {
           "slug": "run-all-tests",
           "heading": "Run all tests",
-          "body": "Use \"Run All Tests\" in the \"Test Controls\" panel to check both organization and settings operations in one go. 1) Open the page. 2) Click \"Run All Tests\". 3) Watch the \"Test Logs\" panel, which starts with \"Starting comprehensive CRUD operations test...\". When it finishes, the log shows either \"All tests passed!\" or \"Some tests failed\".",
+          "body": "Use this to check organization and settings operations in one go. 1) Open the \"Test Controls\" panel. 2) Click \"Run All Tests\". 3) While it runs, the page shows \"Running tests...\" and \"Please wait while the tests are running. Check the logs below for progress.\" The log starts with \"Starting comprehensive CRUD operations test...\" and ends with \"All tests passed!\" or \"Some tests failed\".",
           "keywords": [
             "run all tests",
             "run tests",
             "start test",
-            "full test",
+            "all tests",
             "check everything",
-            "all tests passed",
-            "comprehensive"
+            "passed",
+            "failed"
           ]
         },
         {
-          "slug": "run-organization-tests",
+          "slug": "test-organizations",
           "heading": "Test organizations only",
-          "body": "Click \"Test Organizations Only\" to run just the organization checks. The log starts with \"Starting organization CRUD tests...\" and ends with \"Organization tests passed!\" or \"Organization tests failed\". The test works with a sample record named \"Test Organization\" (description \"A test organization for CRUD testing\", country \"United States\"), and later changes its description to \"Updated test organization description\". If the create step returns no ID, the log reports \"Created organization missing ID\".",
+          "body": "Click \"Test Organizations Only\" in \"Test Controls\" to run only the organization checks. The log starts with \"Starting organization CRUD tests...\" and ends with \"Organization tests passed!\" or \"Organization tests failed\". The test uses a sample record named \"Test Organization\" with the description \"A test organization for CRUD testing\", country \"United States\". The test later changes its description to \"Updated test organization description\". If a created organization comes back without an ID, the test reports \"Created organization missing ID\".",
           "keywords": [
-            "test organizations only",
+            "test organizations",
             "organization test",
             "company test",
             "sample organization",
-            "test organization",
-            "create organization test"
+            "create organization test",
+            "update",
+            "delete"
           ]
         },
         {
-          "slug": "run-settings-tests",
+          "slug": "test-settings",
           "heading": "Test settings only",
-          "body": "Click \"Test Settings Only\" to run just the tenant settings checks. The log starts with \"Starting settings CRUD tests...\" and ends with \"Settings tests passed!\" or \"Settings tests failed\". If the create step returns no ID, the log reports \"Created settings missing ID\". Settings are website (tenant) settings, so errors may mention tenant settings, such as settings already existing for that tenant.",
+          "body": "Click \"Test Settings Only\" in \"Test Controls\" to run only the website settings checks. The log starts with \"Starting settings CRUD tests...\" and ends with \"Settings tests passed!\" or \"Settings tests failed\". If the created settings come back without an ID, the test reports \"Created settings missing ID\". Settings errors, such as settings already existing for a tenant, a missing required database column, or a tenant not belonging to your organization, may also appear in the log.",
           "keywords": [
-            "test settings only",
+            "test settings",
             "settings test",
             "tenant settings",
             "website settings",
-            "settings failed",
+            "error",
+            "failed",
             "missing id"
           ]
         },
         {
-          "slug": "read-results-logs",
-          "heading": "Read results and logs",
-          "body": "While tests run, the page shows \"Running tests...\" and \"Please wait while the tests are running. Check the logs below for progress.\" Results appear under \"Test Results\"; use the tabs \"All Tests\", \"Organizations\" and \"Settings\" to switch between them. The \"Test Logs\" panel shows step-by-step output. Before any test is run it says \"No logs yet. Run a test to see the output.\"",
+          "slug": "read-results",
+          "heading": "Read the results and logs",
+          "body": "Results appear under \"Test Results\", which has the tabs \"All Tests\", \"Organizations\" and \"Settings\". Click a tab to see results for that group. The \"Test Logs\" area shows step-by-step output. Before any test is run it says \"No logs yet. Run a test to see the output.\"",
           "keywords": [
             "results",
             "logs",
             "test logs",
-            "running tests",
-            "progress",
-            "passed",
-            "failed",
-            "output"
+            "tabs",
+            "output",
+            "pass",
+            "fail",
+            "read results"
           ]
         },
         {
           "slug": "clear-results",
           "heading": "Clear results",
-          "body": "Click \"Clear Results\" in the \"Test Controls\" panel to empty the results and logs from the screen. Use it before a new run if you want a clean view. After clearing, the log panel goes back to \"No logs yet. Run a test to see the output.\"",
+          "body": "Click \"Clear Results\" in \"Test Controls\" to remove the current results and logs from the page. After clearing, the \"Test Logs\" area goes back to showing \"No logs yet. Run a test to see the output.\" Use it before a new run if you want a clean view.",
           "keywords": [
             "clear results",
-            "clear logs",
             "reset",
+            "clear logs",
             "remove results",
-            "start over",
+            "clean",
             "empty"
           ]
         },
         {
-          "slug": "errors-and-notes",
-          "heading": "Common errors and things to know",
-          "body": "Test messages can come from the tenant settings service. Examples include \"Settings for this tenant already exist. Edit the existing settings instead of creating new ones.\", \"That tenant is not in your organization.\", and \"Choose an existing organization before saving website settings.\" Another is \"The backend database is missing required columns. Apply the tenant profile migration and restart the API server.\" Because this is a test screen that tries real create, update and delete calls, run it only when you intend to test the platform.",
+          "slug": "notes",
+          "heading": "Things to know",
+          "body": "This is a platform test screen, so use it only for testing. The tests create and change sample records through the same actions the settings pages use. Wait for \"Running tests...\" to finish before reading the final result. If a test fails, check \"Test Logs\" for the message.",
           "keywords": [
-            "error",
-            "failed",
-            "already exist",
-            "not in your organization",
-            "missing columns",
-            "migration",
-            "troubleshooting",
-            "warning"
+            "notes",
+            "warning",
+            "limits",
+            "rules",
+            "test data",
+            "sample records",
+            "wait"
           ]
         }
       ]

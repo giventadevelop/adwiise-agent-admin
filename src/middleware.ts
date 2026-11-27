@@ -135,6 +135,8 @@ export default clerkMiddleware(async (auth, req) => {
   // server components via headers() without interfering with Clerk's session management.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-pathname', pathname);
+  // Query string for layouts that need it (for example the retail ?tenant= checked for dashboard suspension).
+  requestHeaders.set('x-search', req.nextUrl.search || '');
 
   return NextResponse.next({
     request: {

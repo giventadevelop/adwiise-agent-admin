@@ -19,6 +19,7 @@ import type {
 } from '@/app/admin/tenant-management/types';
 import { normalizeDefaultHeroImageUrlsJsonForApi } from '@/lib/hero/defaultHeroImages';
 import { revalidateSatelliteConfigCache } from '@/lib/satelliteConfigRuntime';
+import { keepStoredSuspensionFields, stripSuspensionFields } from '@/lib/tenantSuspension/types';
 
 const API_BASE_URL = getApiBaseUrl();
 
@@ -418,7 +419,7 @@ export async function createTenantSetting(data: TenantSettingsFormDTO): Promise<
 
     const repositoryUrl = await repositoryUrlForSave(data.repositoryUrl, null);
     const payload = withTenantId({
-      ...stripDeprecatedSettingsIdentityFields(data as Record<string, unknown>),
+      ...stripSuspensionFields(stripDeprecatedSettingsIdentityFields(data as Record<string, unknown>)),
       ...heroDefaults,
       repositoryUrl,
       displayEventHeroImages: data.displayEventHeroImages ?? true,
@@ -490,7 +491,8 @@ export async function updateTenantSetting(
 
     const repositoryUrl = await repositoryUrlForSave(data.repositoryUrl, existingSetting.repositoryUrl);
     const payload = withTenantId({
-      ...stripDeprecatedSettingsIdentityFields(data as Record<string, unknown>),
+      // A full save keeps the stored suspension; only the super admin suspension tool changes it.
+      ...keepStoredSuspensionFields(stripDeprecatedSettingsIdentityFields(data as Record<string, unknown>), existingSetting),
       repositoryUrl,
       id,
       createdAt: existingSetting.createdAt, // Preserve original createdAt
@@ -565,7 +567,7 @@ export async function patchTenantSetting(
       existingSetting.repositoryUrl,
     );
     const payload = withTenantId({
-      ...stripDeprecatedSettingsIdentityFields(data as Record<string, unknown>),
+      ...stripSuspensionFields(stripDeprecatedSettingsIdentityFields(data as Record<string, unknown>)),
       repositoryUrl,
       id,
       updatedAt: new Date().toISOString(),

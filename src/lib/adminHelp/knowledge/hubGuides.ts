@@ -175,6 +175,14 @@ const HUB_GUIDE_ROWS: Array<{
     pathPrefixes: ['/admin/tenant-management/organizations'],
   },
   {
+    key: 'tenant-suspensions',
+    title: 'Suspend Sites',
+    body: 'Turn off a tenant ID\'s public website, its admin and retail dashboards, or both, for example when a client misses payments. Open Suspend Sites, look up the tenant ID, choose Suspend, tick Turn off the public website and/or Turn off dashboard access, add an optional internal note, and Save. To suspend every tenant ID a client owns, open the organization and use Suspend in the Suspension panel. Visitors see a neutral "temporarily unavailable" page. Tenant admins and retail users see a "Dashboard access is paused" notice, and Billing stays open so they can pay. Platform super admins are never locked out, and the hub\'s own tenant ID cannot be suspended. Untick the boxes and Save to re-enable. Changes reach live sites within about a minute. Platform super admin only.',
+    keywords: ['suspend', 'suspension', 'delinquent', 'missed payment', 'turn off website', 'disable dashboard', 'block tenant', 're-enable', 'unsuspend'],
+    platformOnly: true,
+    pathPrefixes: ['/admin/tenant-management/suspensions'],
+  },
+  {
     key: 'satellite-domains',
     title: 'Satellite Domains',
     body: 'Extra public domains that sign in through this hub. Platform super admin only.',

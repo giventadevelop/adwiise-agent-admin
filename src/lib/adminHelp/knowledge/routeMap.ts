@@ -268,6 +268,28 @@ const ROUTE_ENTRIES: Array<{ prefix: string; info: AdminHelpRouteInfo }> = [
     },
   },
   {
+    prefix: '/admin/tenant-management/suspensions',
+    info: {
+      featureKey: 'tenant-suspensions',
+      label: 'Suspend Sites',
+      summary:
+        'Turn off a tenant ID\'s public website, its admin and retail dashboards, or both, for example after missed payments. A whole organization is suspended from its organization page.',
+      commonTasks: [
+        'Suspend a tenant ID website',
+        'Turn off dashboard access for a tenant',
+        'Suspend every site in an organization',
+        'Re-enable a suspended site',
+      ],
+      relatedRoutes: ['/admin/tenant-management/suspensions', '/admin/tenant-management/organizations'],
+      suggestedChips: [
+        'How do I turn off a tenant website for missed payments?',
+        'How do I suspend a whole organization?',
+        'What do visitors see on a suspended site?',
+      ],
+      platformOnly: true,
+    },
+  },
+  {
     prefix: '/admin/tenant-management/organizations',
     info: {
       featureKey: 'tenant-organizations',

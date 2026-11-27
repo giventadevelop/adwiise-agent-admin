@@ -12,6 +12,7 @@ import { getCurrentAdminAccess } from '@/app/admin/adminAccessServer';
 import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
 import { fetchOrganizationTenantIdsPage } from '@/app/admin/tenant-management/organizations/tenantIdListActions';
 import OrganizationBillingScopeCard from '@/app/admin/tenant-management/organizations/OrganizationBillingScopeCard';
+import SuspensionDialogButton, { SuspensionBadges } from '@/app/admin/tenant-management/suspensions/SuspensionDialogButton';
 
 interface PageProps {
   params: { id: string };
@@ -363,6 +364,37 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
               )}
             </div>
           </div>
+          {organization.id != null && adminAccess.isPlatformSuperAdmin && (
+            <div className="bg-white shadow rounded-lg" id="suspension">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">Suspension</h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  Turn off the public websites, the dashboards, or both for every tenant ID in this organization, for
+                  example after missed payments.
+                </p>
+              </div>
+              <div className="px-6 py-4 space-y-3">
+                <SuspensionBadges
+                  website={organization.websiteSuspended === true}
+                  dashboard={organization.dashboardSuspended === true}
+                />
+                {organization.suspensionReason && (organization.websiteSuspended || organization.dashboardSuspended) ? (
+                  <p className="text-sm text-gray-700">Note: {organization.suspensionReason}</p>
+                ) : null}
+                <SuspensionDialogButton
+                  fullWidth
+                  target={{ kind: 'organization', organizationId: organization.id, organizationName: organization.organizationName }}
+                  current={organization}
+                />
+                <Link
+                  href="/admin/tenant-management/suspensions"
+                  className="block text-sm text-blue-600 hover:underline"
+                >
+                  See everything that is suspended
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
