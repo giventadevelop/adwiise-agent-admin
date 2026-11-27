@@ -146,21 +146,27 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
       <div className="mb-8">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-3xl font-bold text-gray-900">{organization.organizationName}</h1>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${organization.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {organization.isActive ? 'Active' : 'Inactive'}
+            <div className="inline-flex flex-col gap-1 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 shadow-sm">
+              <span className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Organization</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-indigo-950">{organization.organizationName}</h1>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${organization.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {organization.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <span className="text-sm font-semibold text-indigo-800">
+                Database ID {organization.id != null ? `#${organization.id}` : '—'}
               </span>
+              <a
+                href="#tenant-ids"
+                className="mt-1 inline-flex w-fit items-center h-9 px-3 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 text-sm font-semibold"
+                title="Go to the tenant ID list"
+                aria-label={tenantCount === 0 ? 'No tenant IDs yet. Go to the tenant ID list' : `${tenantSummary}. Go to the tenant ID list`}
+              >
+                {tenantSummary}
+              </a>
             </div>
-            <a
-              href="#tenant-ids"
-              className="inline-flex items-center h-10 px-4 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 font-semibold"
-              title="Go to the tenant ID list"
-              aria-label={tenantCount === 0 ? 'No tenant IDs yet. Go to the tenant ID list' : `${tenantSummary}. Go to the tenant ID list`}
-            >
-              {tenantSummary}
-            </a>
-            <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">
+            <p className="mt-3 text-sm text-gray-600 whitespace-pre-wrap">
               {identity?.description || 'No description provided'}
             </p>
           </div>
@@ -177,13 +183,6 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
             </div>
             <span className="font-semibold text-blue-700">Edit Organization</span>
           </Link>
-        </div>
-      </div>
-
-      <div className="mb-8 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Database ID</div>
-        <div className="font-mono font-bold text-indigo-800 text-lg">
-          {organization.id != null ? `#${organization.id}` : '—'}
         </div>
       </div>
 
