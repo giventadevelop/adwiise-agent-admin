@@ -296,7 +296,7 @@ export default function AdminPage() {
       icon: 'userFriends',
       label: 'Squad groups',
       hint: 'Create squads for a team or band',
-      summary: 'Containers for a sports club or band',
+      summary: 'The squad or team itself, such as First XI or Choir. Not a dropdown',
       searchTerms: SPORTS_SEARCH,
       color: 'squadGroups',
       key: 'team-groups'
@@ -306,7 +306,7 @@ export default function AdminPage() {
       icon: 'addressCard',
       label: 'Squad roster',
       hint: 'Add players and their profiles',
-      summary: 'People on a squad and their profiles',
+      summary: 'People on one squad. Choose their team or squad here. Not a dropdown',
       searchTerms: SPORTS_SEARCH,
       color: 'squadRoster',
       key: 'team-members'
@@ -316,7 +316,7 @@ export default function AdminPage() {
       icon: 'listChecks',
       label: 'Roster catalogs',
       hint: 'Sports, awards, and team types',
-      summary: 'Sports, awards, and team types',
+      summary: 'Dropdown lists for both the team type and the squad: sports, awards, and team types',
       searchTerms: SPORTS_SEARCH,
       color: 'sky',
       key: 'roster-catalogs'
@@ -391,7 +391,7 @@ export default function AdminPage() {
       icon: 'listChecks',
       label: 'Sports categories',
       hint: 'Add sports for squad members',
-      summary: 'Sports shown on a squad member',
+      summary: 'Dropdown of sports for a squad member. Not the team and not the roster',
       searchTerms: SPORTS_SEARCH,
       color: 'sportsCategoryBtn',
       key: 'sports-categories',
@@ -664,7 +664,7 @@ export default function AdminPage() {
       icon: 'userFriends',
       label: 'Squad membership',
       hint: 'Put a player on more than one squad',
-      summary: 'Put a player on more than one squad',
+      summary: 'Both the roster player and the squad: one player on more than one squad. Not a dropdown',
       searchTerms: SPORTS_SEARCH,
       color: 'squadMembership',
       key: 'squad-membership'
