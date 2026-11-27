@@ -20,7 +20,7 @@ import {
 
 interface CascadeDeleteOrganizationButtonProps {
   organizationId: number;
-  tenantId: string;
+  /** Typed back by the super admin to confirm. An organization can own many tenant IDs, so the name is the check. */
   organizationName: string;
   isActive?: boolean;
   /** Stretch to the parent width. List rows pass false so the button sizes to its label. */
@@ -33,7 +33,6 @@ interface CascadeDeleteOrganizationButtonProps {
 
 export default function CascadeDeleteOrganizationButton({
   organizationId,
-  tenantId,
   organizationName,
   isActive = true,
   fullWidth = true,
@@ -47,7 +46,7 @@ export default function CascadeDeleteOrganizationButton({
   const [result, setResult] = useState<CascadeDeleteTenantOrganizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const confirmationMatches = confirmText.trim() === tenantId.trim();
+  const confirmationMatches = confirmText.trim() === organizationName.trim();
 
   const reset = () => {
     setConfirmText('');
@@ -97,7 +96,7 @@ export default function CascadeDeleteOrganizationButton({
     setError(null);
     setResult(null);
     try {
-      const res = await cascadeDeleteTenantOrganizationServer(organizationId, tenantId);
+      const res = await cascadeDeleteTenantOrganizationServer(organizationId, organizationName);
       setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Cascade delete failed');
@@ -144,10 +143,8 @@ export default function CascadeDeleteOrganizationButton({
               <div className="space-y-3 text-sm text-muted-foreground">
                 <p>
                   This permanently removes{' '}
-                  <span className="font-semibold text-foreground">{organizationName}</span> and
-                  related rows for tenant{' '}
-                  <span className="font-mono font-semibold text-foreground">{tenantId}</span> (org
-                  PK <span className="font-mono">{organizationId}</span>).
+                  <span className="font-semibold text-foreground">{organizationName}</span> (org
+                  PK <span className="font-mono">{organizationId}</span>) and related rows.
                 </p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Satellite domains</li>
@@ -188,14 +185,14 @@ export default function CascadeDeleteOrganizationButton({
                 )}
                 <div>
                   <label htmlFor={`cascade-confirm-tenant-${organizationId}`} className="block text-sm font-medium text-foreground mb-1">
-                    Type the tenant ID to confirm
+                    Type the organization name to confirm
                   </label>
                   <input
                     id={`cascade-confirm-tenant-${organizationId}`}
                     type="text"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder={tenantId}
+                    placeholder={organizationName}
                     disabled={busy !== null || !!result?.ok}
                     className="mt-1 block w-full border border-gray-400 rounded-xl px-4 py-3 text-base font-mono disabled:bg-gray-100"
                     autoComplete="off"

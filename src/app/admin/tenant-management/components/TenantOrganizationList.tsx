@@ -300,7 +300,6 @@ export default function TenantOrganizationList({
                     {isPlatformSuperAdmin && org.id != null && (
                       <CascadeDeleteOrganizationButton
                         organizationId={org.id}
-                        tenantId={org.websiteTenantIds?.[0] || org.organizationName}
                         organizationName={org.organizationName}
                         isActive={org.isActive !== false}
                         fullWidth={false}

@@ -38,6 +38,7 @@ const BUTTON_GUIDES: Record<string, string> = {
   'homepage-cache': 'Refresh stored homepage content after heroes, events, or sections change and the public page still looks old.',
   'event-sponsors': 'Sponsor names and logos that can be attached to events.',
   'tenant-organizations': 'Create and edit tenant organizations: name, domain, and website. Platform super admin only.',
+  'move-tenant-to-organization': 'Pick the organization that should receive a tenant ID, then look up the tenant ID and move it there. Platform super admin only.',
   'satellite-domains': 'Extra public domains that sign in through this hub. Platform super admin only.',
   'onboarding-requests': 'New customer applications. Approve one to create a tenant. The site type chosen here decides which tools that tenant sees.',
   'tenant-settings': 'Homepage sections, hero images, and feature flags for the tenant you selected. An organization admin edits the sites in their organization. A platform super admin can open every tenant.',
@@ -438,6 +439,17 @@ export default function AdminPage() {
       platformOnly: true,
     },
     {
+      href: '/admin/tenant-management/organizations/move-tenant',
+      icon: 'arrowsRightLeft',
+      label: 'Move a tenant ID',
+      hint: 'Move a tenant ID to an organization',
+      summary: 'Move a tenant ID into the organization you pick',
+      searchTerms: ['move tenant', 'tenant id', 'organizations', 'reassign'],
+      color: 'moveTenantBtn',
+      key: 'move-tenant-to-organization',
+      platformOnly: true,
+    },
+    {
       href: '/admin/satellite-domains',
       icon: 'globe',
       label: 'Satellite Domains',
@@ -754,6 +766,7 @@ export default function AdminPage() {
       accessRolesBtn: 'bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#0c4a6e]',
       retailerTypesBtn: 'bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e]',
       siteTypesBtn: 'bg-[#fae8ff] hover:bg-[#f5d0fe] text-[#86198f]',
+      moveTenantBtn: 'bg-[#e0e7ff] hover:bg-[#c7d2fe] text-[#3730a3]',
       sizeBandsBtn: 'bg-[#ecfccb] hover:bg-[#d9f99d] text-[#3f6212]',
       recommendationCategoriesBtn: 'bg-[#ffe4e6] hover:bg-[#fecdd3] text-[#9f1239]',
       sportsCategoryBtn: 'bg-[#d1fae5] hover:bg-[#a7f3d0] text-[#065f46]',
@@ -809,6 +822,7 @@ export default function AdminPage() {
       accessRolesBtn: 'bg-[#bae6fd]',
       retailerTypesBtn: 'bg-[#fde68a]',
       siteTypesBtn: 'bg-[#f5d0fe]',
+      moveTenantBtn: 'bg-[#c7d2fe]',
       sizeBandsBtn: 'bg-[#d9f99d]',
       recommendationCategoriesBtn: 'bg-[#fecdd3]',
       sportsCategoryBtn: 'bg-[#a7f3d0]',
@@ -864,6 +878,7 @@ export default function AdminPage() {
       accessRolesBtn: 'text-[#0369a1]',
       retailerTypesBtn: 'text-[#b45309]',
       siteTypesBtn: 'text-[#a21caf]',
+      moveTenantBtn: 'text-[#4338ca]',
       sizeBandsBtn: 'text-[#3f6212]',
       recommendationCategoriesBtn: 'text-[#9f1239]',
       sportsCategoryBtn: 'text-[#047857]',
@@ -937,6 +952,8 @@ export default function AdminPage() {
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h12a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>;
       case 'listBullet':
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7m0 0l3-3m-3 3l3 3" /></svg>;
+      case 'arrowsRightLeft':
+        return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>;
       case 'globe':
         return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9 0 01-9-9m9 9c0 01.53.053 0 019 9m-9-9a9 9 0 019-9m-9 9a9 9 0 019 9m0 0a9 9 0 01-9 9m9-9a9 9 0 009 9" /></svg>;
       case 'youtube':

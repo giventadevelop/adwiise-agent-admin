@@ -100,6 +100,18 @@ function tenantFromSearchParams(
 }
 
 /**
+ * Organization list, view, edit and move pages. The organization comes from the list or the URL,
+ * and one organization can own many tenant IDs, so the workspace tenant bar does not apply there.
+ */
+function isOrganizationRecordPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === '/admin/tenant-management/organizations' ||
+    pathname.startsWith('/admin/tenant-management/organizations/')
+  );
+}
+
+/**
  * Provides selected tenant from URL (?tenant=), falling back to the session workspace
  * (`defaultTenantId` = admin_session_tenant cookie), plus an optional tenant selector bar.
  * Tenant ADMIN cannot clear to "all tenants"; spoofed ?tenant= values are clamped client-side
@@ -118,7 +130,11 @@ export function AdminTenantLayoutClient({
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isLoaded, userId } = useAuth();
-  const showTopTenantBar = showTenantSelector && !hasInlineTenantFilter(pathname);
+  // SUPER_ADMIN organization pages show the organization from the URL, not the Admin Home workspace.
+  const showTopTenantBar =
+    showTenantSelector &&
+    !hasInlineTenantFilter(pathname) &&
+    !(isPlatformSuperAdmin && isOrganizationRecordPath(pathname));
 
   // Layout server component rebuilds a new array every RSC refresh; stabilize by value.
   const allowedTenantIdsKey = [...allowedTenantIds].sort().join('\0');

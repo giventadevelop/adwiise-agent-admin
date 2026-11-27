@@ -556,7 +556,7 @@ async function deleteById(
  */
 export async function cascadeDeleteTenantOrganizationServer(
   organizationId: number,
-  expectedTenantId?: string
+  expectedOrganizationName?: string
 ): Promise<CascadeDeleteTenantOrganizationResult> {
   const steps: CascadeDeleteStepResult[] = [];
   await assertPlatformSuperAdmin();
@@ -565,7 +565,7 @@ export async function cascadeDeleteTenantOrganizationServer(
   if (!org) {
     return {
       ok: false,
-      tenantId: expectedTenantId || '',
+      tenantId: '',
       organizationId,
       steps,
       error: `Organization #${organizationId} was not found`,
@@ -574,13 +574,17 @@ export async function cascadeDeleteTenantOrganizationServer(
 
   const tenantIds = org.websiteTenantIds?.map((id) => id.trim()).filter(Boolean) || [];
   const tenantId = tenantIds[0] || '';
-  if (expectedTenantId && !tenantIds.includes(expectedTenantId.trim())) {
+  // Confirm by organization name: an organization can own many tenant IDs, so no single one identifies it.
+  if (
+    expectedOrganizationName &&
+    expectedOrganizationName.trim() !== (org.organizationName || '').trim()
+  ) {
     return {
       ok: false,
       tenantId,
       organizationId,
       steps,
-      error: `Tenant ID mismatch: expected ${expectedTenantId.trim()}`,
+      error: `Organization name mismatch: expected ${expectedOrganizationName.trim()}`,
     };
   }
 

@@ -357,7 +357,6 @@ export default async function TenantOrganizationViewPage({ params }: PageProps) 
                   />
                   <CascadeDeleteOrganizationButton
                     organizationId={organization.id}
-                    tenantId={tenantIds[0] || organization.organizationName}
                     organizationName={organization.organizationName}
                     isActive={organization.isActive !== false}
                   />
