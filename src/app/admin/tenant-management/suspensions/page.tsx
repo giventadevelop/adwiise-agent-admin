@@ -1,7 +1,7 @@
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import { assertPlatformSuperAdmin } from '@/app/admin/adminAccessServer';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
-import { listSuspensions } from './actions';
+import { listSuspensions } from './ApiServerActions';
 import SuspensionsClient from './SuspensionsClient';
 
 interface PageProps {

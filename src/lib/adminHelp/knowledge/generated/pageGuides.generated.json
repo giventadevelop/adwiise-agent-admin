@@ -8386,37 +8386,36 @@
         "src/app/admin/tenant-management/organizations/search/page.tsx",
         "src/app/admin/tenant-management/organizations/tenantIdListActions.ts",
         "src/app/admin/tenant-management/organizations/websiteActions.ts",
+        "src/app/admin/tenant-management/suspensions/ApiServerActions.ts",
         "src/app/admin/tenant-management/suspensions/SuspensionDialogButton.tsx",
-        "src/app/admin/tenant-management/suspensions/actions.ts",
         "src/components/admin/AddressFieldsSection.tsx",
         "src/components/admin/AdminHelpDialog.tsx",
         "src/components/admin/AdminTableActionButtons.tsx",
         "src/components/admin/DescriptionTextareaField.tsx",
         "src/components/admin/SatelliteDomainsGuidance.tsx"
       ],
-      "sourceHash": "8a9568ebd4bd3212",
+      "sourceHash": "a16e06d5b0996971",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
           "heading": "What this page is for and where things are",
-          "body": "An organization is the client (a company, institution, or person) that signs up. Each organization can own many websites, and each website is a tenant with its own tenant ID. The main list is titled \"Tenant Organizations\" and shows each organization's name, tenant IDs, website or domain, contact email, organization charge, and status. Use \"Create New\" to add one, the search box and the two filters to find one, and the row actions to open, edit, or manage it. Related screens: a search page with more filters and export, an organization details page, an edit page, and two screens for moving tenant IDs. Website tenant IDs themselves are created through Onboarding, not on the organization form.",
+          "body": "The \"Tenant Organizations\" page lists the client organizations (the company or person that signs up). Each organization stores contact and address details and can own many website tenant IDs. The list has a search box, a status filter, a \"Create New\" button, and a button \"Create Tenant ID via onboarding\". Each row has actions to view, edit, view tenant IDs and open the billing area. Related pages: a detail page per organization, \"Edit Organization\", \"Search organizations\" (advanced filters and export), and pages for moving tenant IDs between organizations.",
           "keywords": [
             "organizations",
+            "tenant organizations",
             "client",
             "company",
-            "tenant",
-            "tenant id",
-            "overview",
-            "website",
             "list",
-            "customer"
+            "overview",
+            "tenant id",
+            "websites"
           ]
         },
         {
-          "slug": "find-organization",
+          "slug": "find-organizations",
           "heading": "Find an organization in the list",
-          "body": "On \"Tenant Organizations\", type in the box \"Search by organization name, tenant ID, or domain...\" to narrow the list. Two dropdowns filter further: one with \"All Statuses\", \"Active\", \"Inactive\", \"Suspended\", and one with \"All Organizations\", \"Active Only\", \"Inactive Only\". Use \"Previous\" and \"Next\" at the bottom to move between pages; the footer shows the page and how many are \"Showing\". If nothing matches you see \"No organizations found\". Hover over a row to see the full organization details, and click the \"×\" button on that pop-up to close it.",
+          "body": "On \"Tenant Organizations\", type in the box \"Search by organization name, tenant ID, or domain...\" to narrow the list. Use the status dropdown (\"All Statuses\", \"Active\", \"Inactive\", \"Suspended\") and the second dropdown (\"All Organizations\", \"Active Only\", \"Inactive Only\") to filter. The table shows Organization Name, Tenant IDs, Website / Domain, Contact Email, Organization charge, Status and Actions. Hover over a row to see the full organization details, and close that box with the × button. Use \"Previous\" and \"Next\" to change pages. If nothing matches you will see \"No organizations found\".",
           "keywords": [
             "search",
             "find",
@@ -8433,162 +8432,125 @@
         {
           "slug": "advanced-search-export",
           "heading": "Advanced search and export",
-          "body": "Open the \"Search organizations\" page (the magnifying-glass button on the list, or the search route) to filter by any combination of fields. The fields are \"Organization name\", \"Domain\", \"Contact email\", \"Contact person\", \"Phone\", \"City\", \"State\", \"ZIP\", \"Country\", \"Website URL\", and \"Website tenant ID\", plus the dropdowns \"Site type\", \"Subscription status\", and an active/inactive choice. Each text field matches anywhere in that value. 1) Fill in the filters you want. 2) Click \"Search\". 3) Page through results with \"Previous\" and \"Next\". \"Clear\" resets the filters. \"Export results\" downloads every match, and \"Export all organizations\" downloads the full table. If an export has no matches, the sheet contains only the column headers.",
+          "body": "Open \"Search organizations\" (the search icon on the list page) to filter by any combination of fields. Fields include Organization name, Domain, Contact email, Contact person, Phone, City, State, ZIP, Country, Website URL, Website tenant ID, Site type and Subscription status, plus an active/inactive choice. Each text field matches anywhere in the value. 1) Fill in the filters 2) click \"Search\" 3) page through results with \"Previous\" and \"Next\". Click \"Clear\" to reset the filters. \"Export results\" downloads every match, and \"Export all organizations\" downloads the full table. If an export has no matches, the sheet contains only the column headers.",
           "keywords": [
-            "search",
-            "filter",
+            "advanced search",
             "export",
             "download",
             "spreadsheet",
+            "filters",
             "csv",
             "excel",
             "clear filters",
-            "tenant id search",
             "report"
           ]
         },
         {
           "slug": "create-organization",
           "heading": "Create a new organization",
-          "body": "1) On \"Tenant Organizations\", click \"Create New\" (or open \"New Organization\"). 2) Fill in \"Organization Name\", \"Contact Email\", \"Contact Phone\", and \"Contact person name\", which are required, plus the address. 3) Optionally add \"Domain\", \"Description\", \"Website URL\", and a \"Monthly charge (USD)\". 4) Click \"Create Organization\", or \"Cancel\" to leave. This creates only the client organization and does not create a website tenant ID. The form warns if the name or domain is already registered. Afterward, create the site's tenant ID through Onboarding with \"Create Tenant ID via onboarding\" (\"Onboarding → Add Request\") on the list page.",
+          "body": "1) Click \"Create New\" on the list. 2) On \"Create New Organization\", fill in the \"Company information\" and \"Address Information\" sections. 3) Click \"Create Organization\". Required fields are marked with *: Organization Name, Contact Email, Contact Phone and Contact person name, plus the address fields (address line 1, city, state / province, ZIP / postal code, country). Domain, Description, Website URL, Address Line 2 and \"Monthly charge (USD)\" are optional; leave Domain empty if the company has none yet. Creating an organization does not create a website tenant ID. The name and domain are checked, so you may see \"An organization with this name already exists.\" or \"This domain is already registered.\"",
           "keywords": [
             "create",
             "new",
             "add",
             "organization",
             "client",
-            "register",
-            "form",
-            "onboarding",
-            "tenant id",
-            "sign up"
-          ]
-        },
-        {
-          "slug": "form-rules",
-          "heading": "Required fields and limits on the form",
-          "body": "Required: \"Organization Name\" (under 255 characters), \"Contact Email\" (must be a valid email), \"Contact Phone\" (under 50 characters), \"Contact person name\" (under 255 characters), and in the address: Address line 1 (255 characters or less), City, State / Province, ZIP / Postal code (20 characters or less), and Country (100 characters or less). Address line 2 is optional (255 characters or less). \"Domain\" can stay empty if the organization has none yet, and \"Website URL\" is an optional public link. Names and domains must be unique: you may see \"An organization with this name already exists.\" or \"This domain is already registered.\" The \"Active Organization\" status box matters because inactive organizations cannot be used for new events or registrations.",
-          "keywords": [
-            "required",
-            "limits",
-            "validation",
-            "characters",
-            "email",
-            "phone",
-            "address",
+            "required fields",
             "domain",
-            "unique",
-            "duplicate",
-            "error"
+            "address",
+            "register"
           ]
         },
         {
           "slug": "edit-organization",
-          "heading": "Edit an organization",
-          "body": "1) Find the organization and click \"Edit Organization\" in its row (or on its details page). 2) Change the contact, address, and other company information. 3) Click \"Update Organization\". While saving you see \"Please wait while we save this organization.\", and on success you are sent to the organization page. If it fails, you see \"Failed to update the organization. Please try again.\" Site Tenant ID, domain, and branding are kept on Onboarding / Tenant Settings.",
+          "heading": "View and edit an organization",
+          "body": "Click \"View Organization\" on a row to open its detail page. It shows Status, Database ID (PK), Organization Name, contact fields, Website URL, Address, Created At, Updated At and the Organization monthly charge. To change details, click \"Edit Organization\", update the form and click \"Update Organization\"; you are redirected back to the organization page once saved. You can edit company contact and address here. Site Tenant ID, domain and branding stay on Onboarding / Tenant Settings. Use \"Cancel\" to leave without saving. Field limits: name and contact person up to 255 characters, phone up to 50, ZIP up to 20, country up to 100.",
           "keywords": [
             "edit",
             "update",
             "change",
+            "details",
             "contact",
             "address",
-            "modify",
+            "view",
             "save",
-            "organization"
+            "cancel"
           ]
         },
         {
-          "slug": "organization-details",
-          "heading": "Organization details page",
-          "body": "Click \"View Organization\" in a list row to open the details. \"Organization Details\" shows Status, Database ID (PK), Organization Name, Contact Email, Contact Phone, Contact person name, Website URL, Address, Created At, and Updated At. Buttons: \"Edit Organization\", \"Onboard a tenant ID\", \"Move a tenant ID to this organization\", and \"Move tenant IDs between two organizations\". The \"Tenant IDs\" list shows each tenant ID with its status and, per row, \"View\", \"Edit\", and \"Suspend\". If the organization was deleted, you see \"This organization is no longer available\" and a \"Back to Organizations\" button.",
+          "slug": "tenant-ids",
+          "heading": "See and add website tenant IDs",
+          "body": "On an organization's detail page, the \"Tenant IDs\" list shows each website (tenant settings row) with its Tenant ID, Status and Settings. Use \"View\" or \"Edit\" on a row to open that tenant's settings, and \"Previous\" and \"Next\" to page. If you see \"No tenant IDs yet\", use \"Go to the tenant ID list\". To create a new website tenant ID, click \"Onboard a tenant ID\" (or \"Create Tenant ID via onboarding\" on the list page) and use the onboarding \"Add Request\" page. Website tenant IDs and domains are not entered when you create an organization.",
           "keywords": [
-            "details",
-            "view",
-            "organization page",
-            "tenant ids",
-            "status",
-            "created",
-            "contact",
-            "open",
-            "settings"
+            "tenant id",
+            "website",
+            "add website",
+            "onboarding",
+            "settings",
+            "new tenant",
+            "hostname",
+            "domain"
+          ]
+        },
+        {
+          "slug": "move-tenant",
+          "heading": "Move tenant IDs between organizations",
+          "body": "There are three ways to move a tenant ID. To move one into a specific organization, click \"Move a tenant ID to this organization\" on its page: 1) type the tenant ID 2) click \"Look up tenant ID\" 3) click \"Move to this organization\". From the list area you can also pick the receiving organization under \"Organization that receives the tenant ID\" and continue. To move between two organizations, use \"Move tenant IDs between two organizations\": choose two different organizations, then drag a tenant ID onto the other organization or use \"Move to the other organization\". Dropping a tenant ID onto the organization it already belongs to does nothing. You will see a message if the tenant ID is already on the organization.",
+          "keywords": [
+            "move",
+            "transfer",
+            "tenant id",
+            "between organizations",
+            "drag",
+            "reassign",
+            "look up",
+            "change owner"
           ]
         },
         {
           "slug": "billing-scope",
-          "heading": "Set how an organization is billed",
-          "body": "The \"Billing scope\" card on the organization page lets you choose \"Bill the organization once\" or \"Bill each website separately\". 1) Pick a scope. 2) Enter the \"Monthly amount\". 3) Click \"Save billing scope\". Billing once needs an amount greater than zero, and the organization needs at least one website tenant first. Billing each website separately accepts zero or more, and each website stays complimentary until its own charge switch is turned on. With one charge, tenant IDs under the organization are complimentary. \"Open billing area\" (also in list rows) takes you to billing.",
+          "heading": "Billing scope and monthly charge",
+          "body": "The \"Billing scope\" card on the organization page lets you choose \"Bill the organization once\" or \"Bill each website separately\". For one charge, enter a \"Monthly amount\" above zero; the organization then has one subscription and its tenant IDs are complimentary. For separate billing, enter zero or more; each website stays complimentary until its own charge switch is turned on. Click \"Save billing scope\" to apply, and \"Open billing area\" to go to billing. The organization needs at least one website tenant before it can be billed as one subscription.",
           "keywords": [
             "billing",
             "charge",
             "monthly fee",
             "subscription",
             "price",
-            "bill once",
-            "per website",
-            "amount",
-            "payment"
+            "payment",
+            "complimentary",
+            "amount"
           ]
         },
         {
-          "slug": "move-tenant-id",
-          "heading": "Move a tenant ID to an organization",
-          "body": "1) From an organization page, click \"Move a tenant ID to this organization\". Or open the move page, choose the receiving organization under \"Organization that receives the tenant ID\", and continue. 2) Type the \"Tenant ID\" and click \"Look up tenant ID\". 3) Click \"Move to this organization\". You will be told if the tenant ID is empty, could not be found, or is already on this organization.",
-          "keywords": [
-            "move",
-            "transfer",
-            "tenant id",
-            "reassign",
-            "change organization",
-            "look up",
-            "website"
-          ]
-        },
-        {
-          "slug": "move-between",
-          "heading": "Move tenant IDs between two organizations",
-          "body": "Open \"Move tenant IDs between organizations\" from an organization page or the list. 1) In each of the two columns, use \"Choose an organization\" to pick different organizations; each column lists its tenant IDs. 2) Drag a tenant ID onto the other organization, or use \"Move to the other organization\" on its row. Dropping a tenant ID onto the organization it already belongs to does nothing. \"Open this organization\" opens the selected organization.",
-          "keywords": [
-            "move",
-            "drag",
-            "drop",
-            "between",
-            "swap",
-            "transfer",
-            "tenant id",
-            "two organizations"
-          ]
-        },
-        {
-          "slug": "suspend",
-          "heading": "Suspend websites or dashboards",
-          "body": "On the organization page, the \"Suspension\" section turns off public websites, dashboards, or both for every tenant ID in the organization, for example after missed payments. 1) Open the suspension dialog (the button shows \"Live\", \"Website off\", \"Dashboard off\", or \"Suspended: change\"). 2) Turn on \"Turn off the public website\" and/or \"Turn off dashboard access\". 3) Optionally add an \"Internal note (optional)\", which only super admins see. 4) Save. Nothing is deleted; turn a switch off to restore access. The Billing page stays open so admins can pay. To suspend one tenant ID, use \"Suspend\" in the Tenant IDs list. \"See everything that is suspended\" lists all suspensions.",
+          "slug": "suspension",
+          "heading": "Suspend an organization's websites or dashboards",
+          "body": "In the \"Suspension\" area of an organization's page, you can turn off the public websites, the dashboards, or both for every tenant ID in that organization, for example after missed payments. In the dialog, use \"Turn off the public website\" and \"Turn off dashboard access\", add an optional internal note (visible only to super admins), then save. Nothing is deleted; turn a switch off again to restore access. Visitors see a temporarily unavailable page, and the Billing page stays open for tenant admins. The organization that owns the hub tenant you are signed in to cannot be suspended. Use \"See everything that is suspended\" for an overview, or use Suspend on a single tenant ID row.",
           "keywords": [
             "suspend",
             "suspension",
             "turn off",
             "disable",
             "block",
-            "unpaid",
             "dashboard",
             "website off",
-            "re-enable",
-            "note"
+            "missed payments",
+            "restore"
           ]
         },
         {
-          "slug": "inactive-or-delete",
+          "slug": "inactive-delete",
           "heading": "Make inactive or cascade delete",
-          "body": "To keep the records, click \"Make inactive\" and confirm \"Make this organization inactive?\". Its tenant settings, email addresses, satellite domains, and onboarding requests stay, and you can make it active again. To remove it, use \"Cascade Delete\". 1) Read the list of what is removed: the organization, tenant settings, tenant email addresses, and satellite domains. 2) Type the organization name to confirm. 3) Click \"Cascade delete now\", or choose \"Keep organization\" or \"Make inactive instead\". This cannot be undone. Onboarding requests, user profiles, and events are kept, and its websites become their own organizations.",
+          "body": "If you see the \"Make inactive\" button, it marks the organization inactive after you confirm. Its tenant settings, email addresses, satellite domains and onboarding requests are kept, and you can make it active again. Inactive organizations cannot be used for new events or registrations. The \"Cascade Delete\" button permanently removes the organization row, its tenant settings, tenant email addresses and satellite domains, and this cannot be undone. Onboarding requests, user profiles and events are kept. To confirm, type the organization name, then click \"Cascade delete now\". Choose \"Keep organization\" or \"Make inactive instead\" if you want to avoid deleting.",
           "keywords": [
             "delete",
             "remove",
             "inactive",
             "deactivate",
-            "cascade",
-            "reactivate",
-            "undo",
+            "cascade delete",
+            "activate",
             "confirm",
-            "archive"
+            "undo"
           ]
         }
       ]
@@ -8603,47 +8565,47 @@
         "/admin/tenant-management/suspensions"
       ],
       "sourceFiles": [
+        "src/app/admin/tenant-management/suspensions/ApiServerActions.ts",
         "src/app/admin/tenant-management/suspensions/SuspensionDialogButton.tsx",
         "src/app/admin/tenant-management/suspensions/SuspensionsClient.tsx",
-        "src/app/admin/tenant-management/suspensions/actions.ts",
         "src/app/admin/tenant-management/suspensions/page.tsx"
       ],
-      "sourceHash": "e2700e3234d795d6",
+      "sourceHash": "0b99f62e6f479e06",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
           "heading": "What this page is for",
-          "body": "The \"Suspend sites and dashboards\" page lets you turn off a tenant ID's public website, its admin and retail dashboards, or both, for example when a client misses payments. The page has a \"Suspend one tenant ID\" box for looking up a website, and a \"Currently suspended\" list below it. That list has an \"Organizations (every tenant ID they own)\" table and a table of tenant IDs. Use \"Back to Admin Dashboard\" to go back. This page is for platform super admins only. If the list cannot load, you see \"The list of suspended sites could not be loaded. Refresh the page to try again.\"",
+          "body": "The \"Suspend sites and dashboards\" page lets you turn off a tenant ID's public website, its admin and retail dashboards, or both, for example when a client misses payments. Nothing is deleted. The page has a \"Suspend one tenant ID\" box where you look up a tenant ID, and a \"Currently suspended\" list. That list has a section for \"Organizations (every tenant ID they own)\" and a section for \"Tenant IDs\". Use \"Back to Admin Dashboard\" to return. This is for platform super admins only.",
           "keywords": [
             "suspend",
             "suspension",
             "turn off site",
+            "pause",
             "disable website",
-            "pause dashboard",
             "overview",
-            "non payment",
-            "block client"
+            "payment",
+            "block access"
           ]
         },
         {
           "slug": "suspend-tenant",
-          "heading": "Suspend one tenant ID (website)",
-          "body": "1) In the \"Suspend one tenant ID\" box, type the tenant ID in the field (for example tenant_demo_001). 2) Click the look-up button (\"Look up tenant ID\"). It shows \"Looking up...\" while it works. 3) In the dialog, choose what to turn off (see the next section). 4) Optionally add an internal note. 5) Save. The dialog says \"This applies to\" followed by the tenant ID, and nothing is deleted. If the ID cannot be found you see \"That tenant ID could not be looked up.\"",
+          "heading": "Suspend one tenant ID",
+          "body": "A tenant ID is one website. 1) In the \"Suspend one tenant ID\" box, type the tenant ID in the field (for example tenant_demo_001). 2) Click the look up button (\"Look up tenant ID\"). It shows \"Looking up...\" while it works. 3) In the window that opens, choose what to turn off and add an optional note. 4) Save. If the ID cannot be found you will see \"That tenant ID could not be looked up.\"",
           "keywords": [
             "suspend tenant",
             "look up tenant id",
             "find site",
+            "website",
             "tenant id",
-            "turn off website",
-            "stop site",
-            "block website"
+            "turn off one site",
+            "search"
           ]
         },
         {
-          "slug": "switches",
+          "slug": "choose-what-to-turn-off",
           "heading": "Choose what to turn off",
-          "body": "The dialog has two switches. \"Turn off the public website\": visitors see a page saying the site is temporarily unavailable, and sign-in still works. \"Turn off dashboard access\": tenant admins and retail users see a notice in place of the admin and retail dashboards, while the Billing page stays open so they can pay. You can turn on either one or both. Platform super admins are never locked out.",
+          "body": "The window shows what it applies to, then two switches. \"Turn off the public website\": visitors see a page saying the site is temporarily unavailable, and sign-in still works. \"Turn off dashboard access\": tenant admins and retail users see a notice in place of the admin and retail dashboards, while the Billing page stays open so they can pay. You can turn on one or both. Platform super admins are never locked out.",
           "keywords": [
             "public website",
             "dashboard access",
@@ -8651,80 +8613,80 @@
             "toggle",
             "billing",
             "temporarily unavailable",
-            "retail users",
-            "tenant admins"
+            "lock out",
+            "retail"
           ]
         },
         {
           "slug": "internal-note",
           "heading": "Add an internal note",
-          "body": "In the dialog, the \"Internal note (optional)\" field is for your own record, with the example \"For example: two missed monthly payments\". Only super admins see this note. Visitors and tenant admins do not. The note appears in the \"Note\" column of the suspended lists.",
+          "body": "In the \"Internal note (optional)\" field you can write the reason, for example \"two missed monthly payments\". Only super admins see this note. Visitors and tenant admins do not. The note appears in the \"Note\" column of the suspended lists.",
           "keywords": [
             "note",
             "reason",
             "comment",
-            "internal note",
+            "internal",
             "memo",
             "why suspended"
           ]
         },
         {
-          "slug": "suspend-organization",
-          "heading": "Suspend a whole organization",
-          "body": "The \"Organizations (every tenant ID they own)\" table lists suspended organizations, with columns \"Organization\", \"Status\", \"Note\" and \"Change\". To suspend every tenant ID a client owns, open the organization and use Suspend in its Suspension panel. In the dialog, the \"By organization\" label shows that the change applies to all of that organization's tenant IDs. If the organization no longer exists, you see \"That organization no longer exists.\"",
+          "slug": "current-list",
+          "heading": "Read the Currently suspended list",
+          "body": "\"Currently suspended\" shows what is switched off now. If it is empty you will see \"Nothing is suspended right now.\" The organizations section has the columns \"Organization\", \"Status\", \"Note\" and \"Change\". The tenant IDs section shows \"Tenant ID\", status, note and a change button. Status labels are \"Live\", \"Website off\" and \"Dashboard off\". An organization-level suspension is labeled \"By organization\". If the list does not load, you see a message to refresh the page and try again.",
           "keywords": [
-            "organization",
-            "client",
-            "all tenant ids",
-            "whole organization",
-            "suspend organization",
-            "every site",
-            "company"
+            "list",
+            "status",
+            "live",
+            "website off",
+            "dashboard off",
+            "by organization",
+            "suspended list",
+            "refresh"
           ]
         },
         {
-          "slug": "lift-suspension",
-          "heading": "Re-enable a site or dashboard",
-          "body": "1) Find the row in the \"Currently suspended\" list and click \"Change\" (it may read \"Suspended: change\"), or look up the tenant ID again. 2) Untick or turn off the switches. 3) Save. Nothing was deleted, so access comes back. If a tenant ID's whole organization is also suspended, you see \"The whole organization is suspended too. Lift that on the organization page, or this tenant ID stays off.\" Changes reach live sites within about a minute.",
+          "slug": "change-or-lift",
+          "heading": "Change or re-enable a suspension",
+          "body": "1) Find the row in \"Currently suspended\" and click its change button (it may read \"Suspended: change\" or \"Change\"). 2) Untick or switch off the options you want to bring back, or adjust the note. 3) Save. Turning both switches off restores access. If \"The suspension could not be saved.\" appears, try again. Changes reach live sites within about a minute.",
           "keywords": [
             "re-enable",
             "lift suspension",
             "unsuspend",
             "restore access",
-            "turn back on",
+            "edit",
             "change",
-            "reactivate"
+            "undo",
+            "bring back"
           ]
         },
         {
-          "slug": "status-list",
-          "heading": "Read the Currently suspended list",
-          "body": "The \"Currently suspended\" section shows what is off now. If there is nothing, it says \"Nothing is suspended right now.\" The tables show \"Tenant ID\" (or \"Tenant IDs\"), \"Status\", \"Note\" and \"Change\". Status badges show \"Live\" (nothing turned off), \"Website off\" or \"Dashboard off\".",
+          "slug": "organization-suspension",
+          "heading": "Suspend a whole organization",
+          "body": "Organizations in the list apply to every tenant ID they own. From an organization page you can use \"Suspend\" on one row of the Tenant IDs list to turn off only that tenant ID, or use \"Suspend\" in the Suspension panel to turn off all of its tenant IDs at once. If an organization is suspended too, a tenant ID's dialog warns \"The whole organization is suspended too.\" and says to lift that on the organization page, or the tenant ID stays off.",
           "keywords": [
-            "status",
-            "list",
-            "live",
-            "website off",
-            "dashboard off",
-            "suspended list",
-            "badges",
-            "what is suspended"
+            "organization",
+            "whole organization",
+            "all tenant ids",
+            "client",
+            "suspend all",
+            "organization page",
+            "every site"
           ]
         },
         {
-          "slug": "limits-errors",
-          "heading": "Rules and error messages",
-          "body": "The hub's own tenant ID cannot be suspended from here. You see \"This is the tenant ID of the hub you are signed in to. It cannot be suspended from here.\" The same applies to an organization that owns the hub's tenant ID. Changes only apply when you click Save in the dialog; \"Cancel\" closes it without changes. If saving fails you see \"The suspension could not be saved.\" or \"Could not save the suspension\". One message says the backend did not save it because the suspension columns must be deployed on the backend first; in that case contact your technical team.",
+          "slug": "limits-and-errors",
+          "heading": "Limits and error messages",
+          "body": "The hub you are signed in to cannot be suspended from here, and neither can an organization that owns the hub's tenant ID. The cancel button closes the window without saving, and nothing changes until you save. You may see messages such as \"Could not load that tenant ID\", \"Could not save the suspension\" or \"That organization no longer exists.\" One message says the backend did not save because suspension columns have to be deployed on the backend first. If you see it, the backend needs updating before suspensions can be saved.",
           "keywords": [
             "error",
             "cannot suspend",
             "hub",
-            "save failed",
-            "cancel",
-            "limits",
-            "rules",
+            "limit",
             "could not save",
-            "not allowed"
+            "cancel",
+            "rules",
+            "not saved"
           ]
         }
       ]

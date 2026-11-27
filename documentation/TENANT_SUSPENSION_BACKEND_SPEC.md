@@ -3,8 +3,12 @@
 The admin app now lets a platform super admin turn off a tenant's public website and/or its
 admin and retail dashboards (for example after missed payments), per tenant ID or for a whole
 organization. The admin side is built (`src/lib/tenantSuspension`, `/admin/tenant-management/suspensions`).
-The Java backend needs four new fields on two entities before the switches can save.
-Until then, saving shows "The backend did not save the suspension" and every site stays live.
+The backend and database changes are written (2026-11-27), committed locally, not yet deployed:
+- adwiise-agent-database-repo: `SQLS/Current_Sqls/20261127_tenant_suspension.sql` and the canonical schema file
+- adwiise-agent-service: Liquibase `20261127120000_tenant_suspension.xml`, entity, DTO, criteria filters, and
+  `TenantOrganizationServiceImpl.update` keeps stored suspension fields when a PUT omits them
+- adwiise-agent-batch-jobs: no change (it only reads these tables)
+Until the service is deployed, saving shows "The backend did not save the suspension" and every site stays live.
 
 ## 1. Columns
 

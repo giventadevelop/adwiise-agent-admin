@@ -7,24 +7,12 @@
  *   - tenant_organization (the client company): suspends every tenant ID it owns
  * A tenant ID is suspended when either its own row or its organization says so.
  */
-export interface TenantSuspensionFlags {
-  websiteSuspended?: boolean | null;
-  dashboardSuspended?: boolean | null;
-  suspensionReason?: string | null;
-  suspendedAt?: string | null;
-}
+import type {
+  EffectiveTenantSuspension,
+  TenantSuspensionFlags,
+} from '@/types/tenantSuspension';
 
-export type SuspensionSource = 'tenant' | 'organization' | null;
-
-export interface EffectiveTenantSuspension {
-  tenantId: string;
-  website: boolean;
-  dashboard: boolean;
-  websiteSource: SuspensionSource;
-  dashboardSource: SuspensionSource;
-  /** Internal note for super admins. Never shown on the public site. */
-  reason: string | null;
-}
+export type { EffectiveTenantSuspension, TenantSuspensionFlags } from '@/types/tenantSuspension';
 
 /** Field names that only the suspension tools may write. Other forms must not touch them. */
 export const SUSPENSION_FIELDS = [

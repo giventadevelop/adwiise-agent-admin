@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import SuspensionDialogButton, { SuspensionBadges } from './SuspensionDialogButton';
-import {
-  lookupTenantSuspension,
-  type SuspendedOrganizationRow,
-  type SuspendedTenantRow,
-  type TenantSuspensionLookup,
-} from './actions';
+import { lookupTenantSuspension } from './ApiServerActions';
+import type {
+  SuspendedOrganizationRow,
+  SuspendedTenantRow,
+  TenantSuspensionLookup,
+} from '@/types/tenantSuspension';
 
 interface SuspensionsClientProps {
   initialTenantId: string;

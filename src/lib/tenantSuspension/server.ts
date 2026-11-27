@@ -1,11 +1,8 @@
 import { getApiBaseUrl } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
-import {
-  combineSuspension,
-  notSuspended,
-  type EffectiveTenantSuspension,
-  type TenantSuspensionFlags,
-} from './types';
+import type { TenantOrganizationDTO, TenantSettingsDTO } from '@/types';
+import type { EffectiveTenantSuspension, TenantSuspensionFlags } from '@/types/tenantSuspension';
+import { combineSuspension, notSuspended } from './types';
 
 /**
  * Reads whether a tenant ID's website or dashboard is suspended.
@@ -18,30 +15,22 @@ const ERROR_TTL_MS = 10_000;
 type CacheEntry = { value: EffectiveTenantSuspension; expiresAt: number };
 const cache = new Map<string, CacheEntry>();
 
-type SettingsRow = TenantSuspensionFlags & {
-  id?: number;
-  tenantId?: string;
-  tenantOrganization?: (TenantSuspensionFlags & { id?: number; parentOrganizationId?: number | null }) | null;
-};
-
-type OrganizationRow = TenantSuspensionFlags & { id?: number; parentOrganizationId?: number | null };
-
 function hasSuspensionKeys(row: object | null | undefined): boolean {
   return Boolean(row && ('websiteSuspended' in row || 'dashboardSuspended' in row));
 }
 
-async function fetchOrganizationFlags(id: number): Promise<OrganizationRow | null> {
+async function fetchOrganizationFlags(id: number): Promise<TenantOrganizationDTO | null> {
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-organizations/${id}`, {
     cache: 'no-store',
   });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`organization ${id}: ${response.status}`);
-  return (await response.json()) as OrganizationRow;
+  return (await response.json()) as TenantOrganizationDTO;
 }
 
 /** Merge an organization's flags with its parent client organization's flags (one level). */
 async function organizationFlagsWithParent(
-  org: OrganizationRow | null,
+  org: TenantOrganizationDTO | null,
 ): Promise<TenantSuspensionFlags | null> {
   if (!org) return null;
   const parentId = org.parentOrganizationId;
@@ -64,7 +53,7 @@ async function loadTenantSuspension(tenantId: string): Promise<EffectiveTenantSu
   });
   if (!response.ok) throw new Error(`tenant settings ${tenantId}: ${response.status}`);
   const data = (await response.json()) as unknown;
-  const rows = Array.isArray(data) ? (data as SettingsRow[]) : [];
+  const rows = Array.isArray(data) ? (data as TenantSettingsDTO[]) : [];
   const row = rows.find((r) => r.tenantId?.trim() === tenantId) ?? null;
   if (!row) return notSuspended(tenantId);
 

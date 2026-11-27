@@ -6,9 +6,9 @@ import {
   fetchOrganizationTenantIdsPage,
   type OrganizationTenantIdRow,
 } from './tenantIdListActions';
-import { fetchTenantSuspensionBadges } from '@/app/admin/tenant-management/suspensions/actions';
-import { SuspensionBadges } from '@/app/admin/tenant-management/suspensions/SuspensionDialogButton';
-import type { EffectiveTenantSuspension } from '@/lib/tenantSuspension/types';
+import { fetchOrganizationTenantSuspensions } from '@/app/admin/tenant-management/suspensions/ApiServerActions';
+import SuspensionDialogButton, { SuspensionBadges } from '@/app/admin/tenant-management/suspensions/SuspensionDialogButton';
+import type { OrganizationTenantSuspensionRow } from '@/types/tenantSuspension';
 
 const PAGE_SIZE = 10;
 
@@ -18,7 +18,8 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [suspensions, setSuspensions] = useState<Record<string, EffectiveTenantSuspension>>({});
+  const [suspensions, setSuspensions] = useState<Record<string, OrganizationTenantSuspensionRow>>({});
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,9 +30,9 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
         if (cancelled) return;
         setRows(result.rows);
         setTotalCount(result.totalCount);
-        fetchTenantSuspensionBadges(result.rows.map((row) => row.tenantId))
-          .then((badges) => {
-            if (!cancelled) setSuspensions(badges);
+        fetchOrganizationTenantSuspensions(organizationId, result.rows.map((row) => row.tenantId))
+          .then((list) => {
+            if (!cancelled) setSuspensions(Object.fromEntries(list.map((item) => [item.tenantId, item])));
           })
           .catch(() => {
             if (!cancelled) setSuspensions({});
@@ -47,7 +48,7 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
     return () => {
       cancelled = true;
     };
-  }, [organizationId, page]);
+  }, [organizationId, page, reloadKey]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const startItem = totalCount > 0 ? page * PAGE_SIZE + 1 : 0;
@@ -58,7 +59,8 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-lg font-medium text-gray-900">Tenant IDs</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Each tenant ID is a tenant settings row for this organization.
+          Each tenant ID is a tenant settings row for this organization. Use Suspend on a row to turn off just that
+          site or its dashboard.
         </p>
       </div>
       <div className="px-6 py-4">
@@ -84,12 +86,13 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
                     <td className="px-4 py-3">
                       {suspensions[row.tenantId] ? (
                         <SuspensionBadges
-                          website={suspensions[row.tenantId].website}
-                          dashboard={suspensions[row.tenantId].dashboard}
+                          website={suspensions[row.tenantId].effective.website}
+                          dashboard={suspensions[row.tenantId].effective.dashboard}
                           source={
-                            suspensions[row.tenantId].websiteSource === 'tenant' || suspensions[row.tenantId].dashboardSource === 'tenant'
+                            suspensions[row.tenantId].effective.websiteSource === 'tenant' ||
+                            suspensions[row.tenantId].effective.dashboardSource === 'tenant'
                               ? 'tenant'
-                              : suspensions[row.tenantId].websiteSource ?? suspensions[row.tenantId].dashboardSource
+                              : suspensions[row.tenantId].effective.websiteSource ?? suspensions[row.tenantId].effective.dashboardSource
                           }
                         />
                       ) : null}
@@ -123,19 +126,13 @@ export default function OrganizationTenantIdList({ organizationId }: { organizat
                           </div>
                           <span className="font-semibold text-blue-700">Edit</span>
                         </Link>
-                        <Link
-                          href={`/admin/tenant-management/suspensions?tenant=${encodeURIComponent(row.tenantId)}`}
-                          className="inline-flex flex-shrink-0 h-14 rounded-xl bg-orange-100 hover:bg-orange-200 items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-4"
-                          title="Suspend or re-enable this tenant ID"
-                          aria-label={`Suspend or re-enable ${row.tenantId}`}
-                        >
-                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-orange-200 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <span className="font-semibold text-orange-700">Suspend</span>
-                        </Link>
+                        <SuspensionDialogButton
+                          compact
+                          key={`${row.settingsId}-${String(suspensions[row.tenantId]?.tenant.websiteSuspended)}-${String(suspensions[row.tenantId]?.tenant.dashboardSuspended)}`}
+                          target={{ kind: 'tenant', settingsId: row.settingsId, tenantId: row.tenantId }}
+                          current={suspensions[row.tenantId]?.tenant}
+                          onSaved={() => setReloadKey((value) => value + 1)}
+                        />
                       </div>
                     </td>
                   </tr>

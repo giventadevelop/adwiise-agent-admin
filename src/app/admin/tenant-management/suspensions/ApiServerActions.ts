@@ -5,53 +5,20 @@ import { assertPlatformSuperAdmin } from '@/app/admin/adminAccessServer';
 import { getApiBaseUrl, getTenantIdOptional } from '@/lib/env';
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { withTenantId } from '@/lib/withTenantId';
-import { clearTenantSuspensionCache, getTenantSuspension } from '@/lib/tenantSuspension/server';
-import {
-  combineSuspension,
-  type EffectiveTenantSuspension,
-  type TenantSuspensionFlags,
-} from '@/lib/tenantSuspension/types';
+import { clearTenantSuspensionCache } from '@/lib/tenantSuspension/server';
+import { combineSuspension } from '@/lib/tenantSuspension/types';
+import type { TenantOrganizationDTO, TenantSettingsDTO } from '@/types';
+import type {
+  OrganizationTenantSuspensionRow,
+  SuspendedOrganizationRow,
+  SuspendedTenantRow,
+  SuspensionInput,
+  TenantSuspensionFlags,
+  TenantSuspensionLookup,
+} from '@/types/tenantSuspension';
 
 const BACKEND_NOT_READY =
   'The backend did not save the suspension. The tenant_settings and tenant_organization suspension columns have to be deployed on the backend first.';
-
-export interface SuspensionInput {
-  websiteSuspended: boolean;
-  dashboardSuspended: boolean;
-  reason?: string;
-}
-
-export interface TenantSuspensionLookup {
-  settingsId: number;
-  tenantId: string;
-  organizationId: number | null;
-  organizationName: string | null;
-  tenant: TenantSuspensionFlags;
-  organization: TenantSuspensionFlags | null;
-  effective: EffectiveTenantSuspension;
-}
-
-export interface SuspendedTenantRow {
-  settingsId: number;
-  tenantId: string;
-  organizationId: number | null;
-  organizationName: string | null;
-  flags: TenantSuspensionFlags;
-}
-
-export interface SuspendedOrganizationRow {
-  organizationId: number;
-  organizationName: string;
-  flags: TenantSuspensionFlags;
-}
-
-type SettingsRow = TenantSuspensionFlags & {
-  id?: number;
-  tenantId?: string;
-  tenantOrganization?: { id?: number; organizationName?: string } | null;
-};
-
-type OrganizationRow = TenantSuspensionFlags & { id?: number; organizationName?: string };
 
 function pickFlags(row: TenantSuspensionFlags | null | undefined): TenantSuspensionFlags {
   return {
@@ -79,29 +46,29 @@ async function readJson<T>(response: Response, failure: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function fetchSettingsById(settingsId: number): Promise<SettingsRow> {
+async function fetchSettingsById(settingsId: number): Promise<TenantSettingsDTO> {
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-settings/${settingsId}`, {
     cache: 'no-store',
   });
-  return readJson<SettingsRow>(response, 'Could not load that tenant ID');
+  return readJson<TenantSettingsDTO>(response, 'Could not load that tenant ID');
 }
 
-async function fetchSettingsByTenantId(tenantId: string): Promise<SettingsRow | null> {
+async function fetchSettingsByTenantId(tenantId: string): Promise<TenantSettingsDTO | null> {
   const params = new URLSearchParams({ 'tenantId.equals': tenantId, size: '1' });
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-settings?${params.toString()}`, {
     cache: 'no-store',
     headers: { 'X-Tenant-ID': tenantId },
   });
-  const rows = await readJson<SettingsRow[]>(response, 'Could not look up that tenant ID');
+  const rows = await readJson<TenantSettingsDTO[]>(response, 'Could not look up that tenant ID');
   return (Array.isArray(rows) ? rows : []).find((row) => row.tenantId?.trim() === tenantId) ?? null;
 }
 
-async function fetchOrganization(id: number): Promise<OrganizationRow | null> {
+async function fetchOrganization(id: number): Promise<TenantOrganizationDTO | null> {
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-organizations/${id}`, {
     cache: 'no-store',
   });
   if (response.status === 404) return null;
-  return readJson<OrganizationRow>(response, 'Could not load that organization');
+  return readJson<TenantOrganizationDTO>(response, 'Could not load that organization');
 }
 
 /** Tenant IDs that belong to an organization (up to 500), used to clear cached answers. */
@@ -114,7 +81,7 @@ async function organizationTenantIds(organizationId: number): Promise<string[]> 
     cache: 'no-store',
   });
   if (!response.ok) return [];
-  const rows = (await response.json()) as SettingsRow[];
+  const rows = (await response.json()) as TenantSettingsDTO[];
   return (Array.isArray(rows) ? rows : [])
     .map((row) => row.tenantId?.trim() || '')
     .filter(Boolean);
@@ -181,7 +148,7 @@ export async function saveTenantSuspension(settingsId: number, input: Suspension
       updatedAt: new Date().toISOString(),
     }),
   });
-  const saved = await readJson<SettingsRow>(response, 'Could not save the suspension');
+  const saved = await readJson<TenantSettingsDTO>(response, 'Could not save the suspension');
   if (!savedAsRequested(saved, flags)) throw new Error(BACKEND_NOT_READY);
   clearTenantSuspensionCache([tenantId]);
   revalidatePath('/admin/tenant-management/suspensions');
@@ -213,7 +180,7 @@ export async function saveOrganizationSuspension(
       }),
     ),
   });
-  const saved = await readJson<OrganizationRow>(response, 'Could not save the suspension');
+  const saved = await readJson<TenantOrganizationDTO>(response, 'Could not save the suspension');
   if (!savedAsRequested(saved, flags)) throw new Error(BACKEND_NOT_READY);
   clearTenantSuspensionCache(tenantIds);
   revalidatePath('/admin/tenant-management/suspensions');
@@ -225,12 +192,35 @@ export async function saveOrganizationSuspension(
   };
 }
 
-/** Suspension flags for a page of an organization's tenant IDs (for badges on the organization page). */
-export async function fetchTenantSuspensionBadges(tenantIds: string[]): Promise<Record<string, EffectiveTenantSuspension>> {
+/** Own and combined suspension for a page of an organization's tenant IDs (organization page list). */
+export async function fetchOrganizationTenantSuspensions(
+  organizationId: number,
+  tenantIds: string[],
+): Promise<OrganizationTenantSuspensionRow[]> {
   await assertPlatformSuperAdmin();
   const unique = [...new Set(tenantIds.map((id) => id.trim()).filter(Boolean))].slice(0, 50);
-  const entries = await Promise.all(unique.map(async (id) => [id, await getTenantSuspension(id)] as const));
-  return Object.fromEntries(entries);
+  if (unique.length === 0) return [];
+  const params = new URLSearchParams({
+    'tenantOrganizationId.equals': String(organizationId),
+    'tenantId.in': unique.join(','),
+    size: String(unique.length),
+  });
+  const [rowsResponse, organization] = await Promise.all([
+    fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-settings?${params.toString()}`, { cache: 'no-store' }),
+    fetchOrganization(organizationId).catch(() => null),
+  ]);
+  const rows = await readJson<TenantSettingsDTO[]>(rowsResponse, 'Could not load suspension status');
+  return (Array.isArray(rows) ? rows : [])
+    .filter((row) => row.id != null && unique.includes(row.tenantId?.trim() || ''))
+    .map((row) => {
+      const tenantId = row.tenantId.trim();
+      return {
+        settingsId: row.id as number,
+        tenantId,
+        tenant: pickFlags(row),
+        effective: combineSuspension(tenantId, row, organization),
+      };
+    });
 }
 
 async function listSuspendedRows<T extends TenantSuspensionFlags>(apiPath: string): Promise<T[]> {
@@ -259,8 +249,8 @@ export async function listSuspensions(): Promise<{
 }> {
   await assertPlatformSuperAdmin();
   const [settingsRows, orgRows] = await Promise.all([
-    listSuspendedRows<SettingsRow>('/api/tenant-settings'),
-    listSuspendedRows<OrganizationRow>('/api/tenant-organizations'),
+    listSuspendedRows<TenantSettingsDTO>('/api/tenant-settings'),
+    listSuspendedRows<TenantOrganizationDTO>('/api/tenant-organizations'),
   ]);
   return {
     tenants: settingsRows

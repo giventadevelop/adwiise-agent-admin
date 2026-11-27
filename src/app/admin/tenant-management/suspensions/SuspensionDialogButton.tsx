@@ -12,8 +12,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { TenantSuspensionFlags } from '@/lib/tenantSuspension/types';
-import { saveOrganizationSuspension, saveTenantSuspension } from './actions';
+import type { TenantSuspensionFlags } from '@/types/tenantSuspension';
+import { saveOrganizationSuspension, saveTenantSuspension } from './ApiServerActions';
 
 export type SuspensionTarget =
   | { kind: 'tenant'; settingsId: number; tenantId: string }
@@ -51,8 +51,8 @@ export default function SuspensionDialogButton({
   const name = target.kind === 'tenant' ? target.tenantId : target.organizationName;
   const scope =
     target.kind === 'tenant'
-      ? 'this tenant ID only'
-      : 'every tenant ID in this organization, including ones added later';
+      ? 'this tenant ID only. Other tenant IDs in the same organization keep working'
+      : 'every tenant ID in this organization at once, including ones added later. To suspend only some of them, use Suspend on those rows in the tenant ID list instead';
 
   const handleOpenChange = (next: boolean) => {
     if (busy) return;
