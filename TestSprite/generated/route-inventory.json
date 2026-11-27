@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-22T16:57:49.608Z",
+  "generatedAt": "2026-11-27T03:21:24.074Z",
   "root": "src/app",
   "totalPages": 213,
   "totalUniqueRoutes": 213,
   "byKind": {
-    "public": 79,
-    "admin": 134
+    "public": 77,
+    "admin": 136
   },
   "routes": [
     {
@@ -51,6 +51,15 @@
       "dynamic": false,
       "dynamicParams": [],
       "sourceFile": "src/app/admin/billing/page.tsx"
+    },
+    {
+      "path": "/admin/billing/[tenantId]",
+      "kind": "admin",
+      "dynamic": true,
+      "dynamicParams": [
+        "tenantId"
+      ],
+      "sourceFile": "src/app/admin/billing/[tenantId]/page.tsx"
     },
     {
       "path": "/admin/bulk-email",
@@ -957,6 +966,13 @@
       "sourceFile": "src/app/admin/tenant-management/organizations/move-between/page.tsx"
     },
     {
+      "path": "/admin/tenant-management/organizations/move-tenant",
+      "kind": "admin",
+      "dynamic": false,
+      "dynamicParams": [],
+      "sourceFile": "src/app/admin/tenant-management/organizations/move-tenant/page.tsx"
+    },
+    {
       "path": "/admin/tenant-management/organizations/new",
       "kind": "admin",
       "dynamic": false,
@@ -1546,13 +1562,6 @@
       "sourceFile": "src/app/settings/page.tsx"
     },
     {
-      "path": "/sign-in-backend",
-      "kind": "public",
-      "dynamic": false,
-      "dynamicParams": [],
-      "sourceFile": "src/app/(auth)/sign-in-backend/page.tsx"
-    },
-    {
       "path": "/sign-in/[[...sign-in]]",
       "kind": "public",
       "dynamic": true,
@@ -1560,13 +1569,6 @@
         "sign-in"
       ],
       "sourceFile": "src/app/(auth)/sign-in/[[...sign-in]]/page.tsx"
-    },
-    {
-      "path": "/sign-up-backend",
-      "kind": "public",
-      "dynamic": false,
-      "dynamicParams": [],
-      "sourceFile": "src/app/(auth)/sign-up-backend/page.tsx"
     },
     {
       "path": "/sign-up/[[...sign-up]]",

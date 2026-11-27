@@ -249,7 +249,12 @@ export const getDonationCheckoutData = cache(async (eventId: string): Promise<Do
 
     // Re-throw with user-friendly message if not already wrapped
     if (error instanceof Error) {
-      if (error.message.includes('Unable to connect') || error.message.includes('check your internet')) {
+      if (
+        error.message.includes('Unable to connect') ||
+        error.message.includes('check your internet') ||
+        // Keep this so the page shows "use the standard checkout" instead of a connection error.
+        error.message.includes('does not support donation-based checkout')
+      ) {
         throw error;
       }
       throw new Error('Unable to load donation checkout data. Please check your connection and try again.');

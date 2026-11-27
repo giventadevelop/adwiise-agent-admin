@@ -1,5 +1,6 @@
 import { getDonationCheckoutData } from './DonationCheckoutServerData';
 import DonationCheckoutClient from './DonationCheckoutClient';
+import TryAgainButton from './TryAgainButton';
 import { unstable_noStore } from 'next/cache';
 
 interface PageProps {
@@ -95,12 +96,7 @@ export default async function DonationCheckoutPage({ params }: PageProps) {
             {userMessage}
           </p>
           <div className="space-y-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors font-medium"
-            >
-              Try Again
-            </button>
+            {!isNotSupportedError && <TryAgainButton />}
             <a
               href={`/events/${eventId}`}
               className="block w-full bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
