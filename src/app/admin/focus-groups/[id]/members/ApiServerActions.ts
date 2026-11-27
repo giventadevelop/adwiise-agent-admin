@@ -21,6 +21,17 @@ export async function fetchFocusGroupByIdServer(id: string): Promise<Record<stri
   }
 }
 
+/**
+ * Tenant for focus-group member reads and writes: the focus group's own tenant.
+ * A super admin working across all tenants has no workspace tenant, so without
+ * this resolveAdminMutationTenantId() throws "Select a tenant in the admin bar".
+ */
+async function resolveFocusGroupTenantId(focusGroupId: string | number): Promise<string> {
+  const group = await fetchFocusGroupByIdServer(String(focusGroupId));
+  const groupTenantId = typeof group?.tenantId === 'string' ? group.tenantId : undefined;
+  return resolveAdminMutationTenantId(groupTenantId);
+}
+
 export interface FocusGroupMembersResult {
   members: Record<string, unknown>[];
   totalCount: number;
@@ -36,8 +47,8 @@ export async function fetchFocusGroupMembersServer(
   pageSize: number
 ): Promise<FocusGroupMembersResult> {
   const API_BASE_URL = getApiBaseUrl();
-  const tenantId = await resolveAdminMutationTenantId();
   if (!API_BASE_URL) return { members: [], totalCount: 0 };
+  const tenantId = await resolveFocusGroupTenantId(focusGroupId);
   const params = new URLSearchParams({
     'focusGroupId.equals': focusGroupId,
     'tenantId.equals': tenantId,
@@ -115,7 +126,7 @@ export async function addFocusGroupMemberServer(input: {
   const payload = {
     focusGroupId,
     userProfileId,
-    tenantId: await resolveAdminMutationTenantId(),
+    tenantId: await resolveFocusGroupTenantId(focusGroupId),
     role,
     status,
     createdAt: now,

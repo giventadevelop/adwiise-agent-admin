@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AdminRecordMissing from '@/components/admin/AdminRecordMissing';
 import AdminNavigation from '@/components/AdminNavigation';
 import RemoveMemberButton from './RemoveMemberButton';
 import AddMemberForm from './AddMemberForm';
@@ -40,6 +41,16 @@ export default async function ManageGroupMembersPage(
   const focusGroupId = Number(params.id);
 
   const group = await fetchFocusGroupByIdServer(params.id);
+  if (!group) {
+    return (
+      <AdminRecordMissing
+        title="This focus group is no longer available"
+        message={`Focus group #${params.id} was deleted, or this link is out of date. Go back to the focus group list.`}
+        backHref="/admin/focus-groups"
+        backLabel="Back to Focus Groups"
+      />
+    );
+  }
   const { members, totalCount } = await fetchFocusGroupMembersServer(params.id, page, pageSize);
 
   const uniqueProfileIds = Array.from(

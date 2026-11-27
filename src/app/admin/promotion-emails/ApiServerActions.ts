@@ -72,9 +72,16 @@ export async function fetchPromotionEmailTemplatesServer(params?: {
 /**
  * Fetch a single promotion email template by ID
  */
-export async function fetchPromotionEmailTemplateServer(id: number): Promise<PromotionEmailTemplateDTO | null> {
+export async function fetchPromotionEmailTemplateServer(
+  id: number,
+  tenantId?: string,
+): Promise<PromotionEmailTemplateDTO | null> {
   const baseUrl = getAppUrl();
-  const url = `${baseUrl}/api/proxy/promotion-email-templates/${id}`;
+  // Read by id through the list endpoint: GET /{id} needs X-Tenant-ID on the all-tenants hub
+  // (error.tenantIdRequired), while the list accepts a tenant filter or none for super admins.
+  const params = new URLSearchParams({ 'id.equals': String(id), size: '1' });
+  await appendAdminTenantFilter(params, tenantId);
+  const url = `${baseUrl}/api/proxy/promotion-email-templates?${params.toString()}`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -91,7 +98,9 @@ export async function fetchPromotionEmailTemplateServer(id: number): Promise<Pro
     throw new Error(`Failed to fetch promotion email template. Status: ${response.status}`);
   }
 
-  return await response.json();
+  const data = await response.json();
+  const rows = Array.isArray(data) ? (data as PromotionEmailTemplateDTO[]) : [];
+  return rows[0] ?? null;
 }
 
 /**

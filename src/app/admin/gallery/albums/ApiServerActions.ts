@@ -1,5 +1,5 @@
 'use server';
-import { appendAdminTenantFilter, headersForAdminTenantScope, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
+import { appendAdminTenantFilter, getCurrentAdminAccess, headersForAdminTenantScope, resolveAdminMutationTenantId } from '@/app/admin/adminAccessServer';
 
 import { fetchWithJwtRetry } from '@/lib/proxyHandler';
 import { appendTenantIfPresent, effectiveTenantId, getApiBaseUrl } from '@/lib/env';
@@ -239,7 +239,13 @@ export async function fetchAlbumServer(
   tenantId?: string,
 ): Promise<GalleryAlbumDTO | null> {
   try {
-    const tid = await resolveAdminMutationTenantId(tenantId);
+    // Super admin across all tenants with no tenant given: read by id without a tenant
+    // (resolveAdminMutationTenantId would throw "Select a tenant in the admin bar").
+    const access = await getCurrentAdminAccess();
+    const tid =
+      access.canQueryAllTenants && !tenantId?.trim()
+        ? undefined
+        : await resolveAdminMutationTenantId(tenantId);
     const url = `${API_BASE_URL}/api/gallery-albums/${albumId}`;
     const res = await fetchWithJwtRetry(url, {
       cache: 'no-store',

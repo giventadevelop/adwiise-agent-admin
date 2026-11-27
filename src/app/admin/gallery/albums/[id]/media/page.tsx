@@ -4,20 +4,27 @@ import { auth } from '@clerk/nextjs/server';
 import AdminNavigation from '@/components/AdminNavigation';
 import AlbumMediaClientPage from './AlbumMediaClientPage';
 import { notFound } from 'next/navigation';
+import { effectiveTenantId } from '@/lib/env';
 
 export default async function AlbumMediaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tenant?: string }> | { tenant?: string };
 }) {
   const resolvedParams = typeof params.then === 'function' ? await params : params;
+  const resolvedSearch =
+    searchParams && typeof (searchParams as Promise<{ tenant?: string }>).then === 'function'
+      ? await (searchParams as Promise<{ tenant?: string }>)
+      : ((searchParams as { tenant?: string } | undefined) ?? {});
   const albumId = parseInt(resolvedParams.id, 10);
 
   if (isNaN(albumId)) {
     notFound();
   }
 
-  const album = await fetchAlbumServer(albumId);
+  const album = await fetchAlbumServer(albumId, effectiveTenantId(resolvedSearch.tenant));
   if (!album) {
     notFound();
   }
