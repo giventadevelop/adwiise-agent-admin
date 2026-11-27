@@ -1004,6 +1004,8 @@ export async function discoverDemoIds(baseUrl) {
     pollId: null,
     focusGroupSlug: null,
     sponsorId: null,
+    organizationId: null,
+    tenantSettingsId: null,
   };
 
   async function tryJson(urlPath) {
@@ -1048,7 +1050,58 @@ export async function discoverDemoIds(baseUrl) {
     else if (arr[0]?.id) ids.focusGroupSlug = String(arr[0].id);
   }
 
+  // Real organization + tenant settings ids so /tenant-management/organizations/[id] and
+  // /tenant-management/settings/[id] render a real record (not "no longer available").
+  const settings = await tryJson('/api/proxy/tenant-settings?size=5&sort=id,desc');
+  const settingsRows = Array.isArray(settings) ? settings : settings?.content || [];
+  const settingsWithOrg = settingsRows.find((row) => row?.tenantOrganization?.id != null);
+  if (settingsWithOrg) {
+    ids.tenantSettingsId = settingsWithOrg.id ?? null;
+    ids.organizationId = settingsWithOrg.tenantOrganization.id;
+  } else if (settingsRows[0]?.id != null) {
+    ids.tenantSettingsId = settingsRows[0].id;
+  }
+  if (ids.organizationId == null) {
+    const orgs = await tryJson('/api/proxy/tenant-organizations?size=5&sort=id,desc');
+    ids.organizationId = firstId(orgs);
+  }
+
   console.log('[harness] Discovered demo IDs:', ids);
+  return ids;
+}
+
+/**
+ * Fill organizationId / tenantSettingsId using the signed-in browser context.
+ * The unauthenticated discoverDemoIds() fetch often cannot read these admin-only rows.
+ */
+export async function discoverAdminRecordIds(context, baseUrl, ids) {
+  async function getJson(urlPath) {
+    try {
+      const res = await context.request.get(`${baseUrl}${urlPath}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok()) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+  if (ids.tenantSettingsId == null || ids.organizationId == null) {
+    const settings = await getJson('/api/proxy/tenant-settings?size=5&sort=id,desc');
+    const rows = Array.isArray(settings) ? settings : settings?.content || [];
+    const withOrg = rows.find((row) => row?.tenantOrganization?.id != null);
+    if (ids.tenantSettingsId == null) ids.tenantSettingsId = (withOrg || rows[0])?.id ?? null;
+    if (ids.organizationId == null && withOrg) ids.organizationId = withOrg.tenantOrganization.id;
+  }
+  if (ids.organizationId == null) {
+    const orgs = await getJson('/api/proxy/tenant-organizations?size=5&sort=id,desc');
+    const rows = Array.isArray(orgs) ? orgs : orgs?.content || [];
+    ids.organizationId = rows[0]?.id ?? null;
+  }
+  console.log('[harness] Admin record IDs:', {
+    organizationId: ids.organizationId,
+    tenantSettingsId: ids.tenantSettingsId,
+  });
   return ids;
 }
 
@@ -1059,7 +1112,8 @@ export async function discoverDemoIds(baseUrl) {
 export function resolveDynamicPath(routePath, ids = {}) {
   let out = routePath;
   const map = {
-    id: ids.eventId || ids.planId || ids.pollId || ids.sponsorId || ids.id,
+    // A caller-provided id (organization, tenant settings, …) wins over the event-id fallback.
+    id: ids.id ?? (ids.eventId || ids.planId || ids.pollId || ids.sponsorId),
     eventId: ids.eventId,
     planId: ids.planId,
     pollId: ids.pollId,
@@ -1159,10 +1213,111 @@ export async function safeGoto(page, url, opts = {}) {
 /**
  * Standard smoke check on an already-open Playwright page after goto.
  */
+/** Error text that means the page crashed (uncaught exception), not a handled message. */
+const RUNTIME_CRASH_PATTERN =
+  /\b(ReferenceError|TypeError|SyntaxError|RangeError)\b|is not defined|Cannot read propert(y|ies) of|is not a function/i;
+
+/**
+ * Record uncaught page errors and crash-like console errors on this page.
+ * smokeCheckPage() reads and clears them, so each check covers the navigation before it.
+ * Safe to call more than once.
+ */
+export function attachRuntimeErrorCollector(page) {
+  if (!page || page.__e2eRuntimeErrors) return page;
+  page.__e2eRuntimeErrors = [];
+  page.on('pageerror', (err) => {
+    page.__e2eRuntimeErrors.push(`pageerror: ${err?.message || err}`);
+  });
+  page.on('console', (msg) => {
+    if (msg.type() !== 'error') return;
+    const text = msg.text() || '';
+    // Aborted fetches during navigation are not page crashes.
+    if (/Failed to fetch|NetworkError|Load failed|AbortError|aborted/i.test(text)) return;
+    if (RUNTIME_CRASH_PATTERN.test(text)) {
+      page.__e2eRuntimeErrors.push(`console.error: ${text.slice(0, 300)}`);
+    }
+  });
+  return page;
+}
+
+/** Take (and clear) runtime errors collected since the last check. */
+export function takeRuntimeErrors(page) {
+  const list = page?.__e2eRuntimeErrors || [];
+  if (page?.__e2eRuntimeErrors) page.__e2eRuntimeErrors = [];
+  return list;
+}
+
+/**
+ * Detect a crashed page: Next.js dev error overlay (Runtime ReferenceError, etc.),
+ * the production "Application error" screen, or a global error boundary.
+ * Returns a short message, or null when the page did not crash.
+ */
+export async function detectPageCrash(page) {
+  return page
+    .evaluate(() => {
+      const crashText = /Runtime \w*Error|Unhandled Runtime Error|Build Error|Error Type|Server Error/;
+      for (const portal of Array.from(document.querySelectorAll('nextjs-portal'))) {
+        const root = portal.shadowRoot;
+        if (!root) continue;
+        const dialog = root.querySelector('[data-nextjs-dialog], [data-nextjs-dialog-overlay], [role="dialog"]');
+        const text = ((dialog || root).textContent || '').replace(/\s+/g, ' ');
+        if (dialog && crashText.test(text)) {
+          return `Next.js error overlay: ${text.slice(0, 240)}`;
+        }
+      }
+      const body = (document.body?.innerText || '').replace(/\s+/g, ' ');
+      const fatal = body.match(
+        /Application error: a (client|server)-side exception has occurred[^.]*|Internal Server Error|This page couldn.t load|Unhandled Runtime Error[^.]*/i
+      );
+      if (fatal) return `Error page: ${fatal[0].slice(0, 200)}`;
+      return null;
+    })
+    .catch(() => null);
+}
+
 export async function smokeCheckPage(page, { allowSignInRedirect = false, urlHint = '' } = {}) {
   const finalUrl = page.url();
   if (finalUrl.includes('/sign-in') && !urlHint.includes('/sign-in') && !allowSignInRedirect) {
     return { ok: false, message: `Redirected to sign-in: ${finalUrl}` };
+  }
+
+  const crash = await detectPageCrash(page);
+  const runtimeErrors = takeRuntimeErrors(page);
+  if (crash) {
+    return { ok: false, message: crash };
+  }
+  // React recovers from these by re-rendering on the client, so the page still works.
+  // Report them in the message without failing the page; real crashes still fail.
+  const recoverable = /Hydration failed|Switched to client rendering|There was an error while hydrating|Minified React error #4(18|19|22|23|25)/i;
+  const fatalErrors = runtimeErrors.filter((e) => !recoverable.test(e));
+  const recoveredErrors = runtimeErrors.filter((e) => recoverable.test(e));
+  if (fatalErrors.length) {
+    return { ok: false, message: `Runtime error: ${fatalErrors[0]}` };
+  }
+
+  // Admin layout sends non-super-admins (or a missing workspace) back to /admin.
+  // The page itself was never rendered, so report it as skipped, not passed.
+  const hintPath = String(urlHint || '').split('?')[0].replace(/\/$/, '');
+  let finalPath = '';
+  try {
+    finalPath = new URL(finalUrl).pathname.replace(/\/$/, '');
+  } catch {
+    finalPath = '';
+  }
+  if (hintPath.startsWith('/admin/') && finalPath === '/admin') {
+    return {
+      ok: true,
+      skip: true,
+      message: 'Redirected to Admin Home; page not rendered (needs super admin or a workspace)',
+    };
+  }
+
+  // Dynamic route opened with an id that is not a real record.
+  const missingRecord = await page
+    .evaluate(() => /is no longer available/i.test(document.querySelector('h1, h2')?.textContent || ''))
+    .catch(() => false);
+  if (missingRecord) {
+    return { ok: true, skip: true, message: 'Record not found for the demo id; page body not exercised' };
   }
 
   const hasContent = await page.evaluate(() => {
@@ -1207,6 +1362,13 @@ export async function smokeCheckPage(page, { allowSignInRedirect = false, urlHin
     }
   }
 
+  if (recoveredErrors.length) {
+    return {
+      ok: true,
+      warning: true,
+      message: `OK (recovered on client: ${recoveredErrors[0].replace(/\s+/g, ' ').slice(0, 160)})`,
+    };
+  }
   return { ok: true, message: 'OK' };
 }
 
@@ -1229,6 +1391,7 @@ export const ADMIN_HOME_BUTTONS = [
   { label: 'Executive Committee', href: '/admin/executive-committee' },
   { label: 'Event Sponsors', href: '/admin/event-sponsors' },
   { label: 'Organizations', href: '/admin/tenant-management/organizations' },
+  { label: 'Move a tenant ID', href: '/admin/tenant-management/organizations/move-tenant' },
   { label: 'Satellite Domains', href: '/admin/satellite-domains' },
   { label: 'Tenant Settings', href: '/admin/tenant-management/settings' },
   { label: 'Personal Profile', href: '/admin/profile-site' },

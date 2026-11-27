@@ -25,8 +25,10 @@ import {
   requireAuthJson,
   loadAuthJson,
   discoverDemoIds,
+  discoverAdminRecordIds,
   resolveDynamicPath,
   smokeCheckPage,
+  attachRuntimeErrorCollector,
   CoverageTracker,
   ADMIN_HOME_BUTTONS,
   withTenantQuery,
@@ -170,15 +172,17 @@ async function runAdminHomeButtons(page, baseUrl, tracker, timeout, tenantId) {
       const check = await smokeCheckPage(page, { urlHint: href });
       tracker.record({
         path: btn.href,
-        status: check.ok ? 'pass' : 'fail',
+        status: check.skip ? 'skip' : check.ok ? 'pass' : 'fail',
         kind: 'admin-home-button',
         message: check.ok
-          ? `Button: ${btn.label}${hasLink ? ' (clicked)' : ' (direct)'}`
+          ? check.skip
+            ? `Button: ${btn.label}: ${check.message}`
+            : `Button: ${btn.label}${hasLink ? ' (clicked)' : ' (direct)'}`
           : check.message,
         durationMs: Date.now() - start,
         meta: { label: btn.label, tenantId, via: hasLink ? 'click' : 'goto' },
       });
-      console.log(`  ${check.ok ? '✓' : '✗'} ${btn.label} → ${href}`);
+      console.log(`  ${check.skip ? '○' : check.ok ? '✓' : '✗'} ${btn.label} → ${href}${check.skip || !check.ok ? ` (${check.message})` : ''}`);
 
       // Pace tiles so Next.js / Clerk aren't flooded
       await page.waitForTimeout(250);
@@ -195,6 +199,109 @@ async function runAdminHomeButtons(page, baseUrl, tracker, timeout, tenantId) {
       await page.waitForTimeout(400);
     }
   }
+}
+
+/**
+ * Click-through flows a super admin uses on organization pages. These are client-side
+ * navigations (no HTTP status), so a crash only shows as the Next.js error overlay or a
+ * pageerror, which smokeCheckPage now reports.
+ *   1. Organizations list → View Organization on a row
+ *   2. Organization view → Edit Organization
+ *   3. Tenant Settings view → View Organization
+ *   4. Admin Home → Move a tenant ID → pick page
+ */
+async function runSuperAdminOrganizationFlows(page, baseUrl, tracker, timeout, tenantId, ids) {
+  console.log('\n[smoke] Super admin organization flows…');
+  const steps = [];
+
+  async function record(path, label, run) {
+    const start = Date.now();
+    try {
+      const outcome = await run();
+      const check = outcome?.check ?? (await smokeCheckPage(page, { urlHint: outcome?.urlHint || path }));
+      const status = outcome?.skipMessage ? 'skip' : check.skip ? 'skip' : check.ok ? 'pass' : 'fail';
+      const message = outcome?.skipMessage || check.message;
+      tracker.record({
+        path,
+        status,
+        kind: 'super-admin-flow',
+        message: `${label}: ${message}`,
+        durationMs: Date.now() - start,
+        meta: { resolved: page.url(), tenantId },
+      });
+      console.log(`  ${status === 'pass' ? '✓' : status === 'skip' ? '○' : '✗'} ${label} → ${page.url()}${status === 'pass' ? '' : ` — ${message}`}`);
+      steps.push(status);
+      return status;
+    } catch (err) {
+      tracker.record({
+        path,
+        status: 'fail',
+        kind: 'super-admin-flow',
+        message: `${label}: ${err.message}`,
+        durationMs: Date.now() - start,
+        meta: { resolved: page.url(), tenantId },
+      });
+      console.log(`  ✗ ${label}: ${err.message}`);
+      steps.push('fail');
+      return 'fail';
+    }
+  }
+
+  async function clickAndWait(locator, urlPattern) {
+    await locator.first().click({ timeout: 10000 });
+    await page.waitForURL(urlPattern, { timeout: Math.min(timeout, 30000) });
+    await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  }
+
+  const listPath = '/admin/tenant-management/organizations';
+  const listStatus = await record(listPath, 'Organizations list', async () => {
+    await safeGoto(page, `${baseUrl}${listPath}`, { timeout, settleMs: 500 });
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+    return { urlHint: listPath };
+  });
+  if (listStatus !== 'pass') {
+    console.log('  ○ Skipping organization click-through (list did not render for this user)');
+    return;
+  }
+
+  await record('/admin/tenant-management/organizations/[id]', 'List → View Organization', async () => {
+    const view = page.locator('a[title="View Organization"][href*="/admin/tenant-management/organizations/"]');
+    if ((await view.count()) === 0) return { skipMessage: 'No organization rows to open' };
+    await clickAndWait(view, /\/admin\/tenant-management\/organizations\/\d+(\?|#|$)/);
+    return { urlHint: new URL(page.url()).pathname };
+  });
+
+  await record('/admin/tenant-management/organizations/[id]/edit', 'Organization → Edit Organization', async () => {
+    const edit = page.locator('a[title="Edit Organization"][href$="/edit"]');
+    if ((await edit.count()) === 0) return { skipMessage: 'Edit Organization link not on the page' };
+    await clickAndWait(edit, /\/admin\/tenant-management\/organizations\/\d+\/edit/);
+    return { urlHint: new URL(page.url()).pathname };
+  });
+
+  await record('/admin/tenant-management/settings/[id] → organization', 'Tenant Settings → View Organization', async () => {
+    if (ids?.tenantSettingsId == null) return { skipMessage: 'No tenant settings id discovered' };
+    const settingsPath = `/admin/tenant-management/settings/${ids.tenantSettingsId}`;
+    await safeGoto(page, `${baseUrl}${settingsPath}`, { timeout, settleMs: 500 });
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+    const settingsCheck = await smokeCheckPage(page, { urlHint: settingsPath });
+    if (!settingsCheck.ok || settingsCheck.skip) return { check: settingsCheck };
+    const view = page.locator('a[title="View Organization"][href*="/admin/tenant-management/organizations/"]');
+    if ((await view.count()) === 0) return { skipMessage: 'Settings row has no organization link' };
+    await clickAndWait(view, /\/admin\/tenant-management\/organizations\/\d+(\?|#|$)/);
+    return { urlHint: new URL(page.url()).pathname };
+  });
+
+  await record('/admin/tenant-management/organizations/move-tenant', 'Admin Home → Move a tenant ID', async () => {
+    await safeGoto(page, `${baseUrl}${withTenantQuery('/admin', tenantId)}`, { timeout, settleMs: 500 });
+    const tile = page.locator('a[href="/admin/tenant-management/organizations/move-tenant"]');
+    if ((await tile.count()) === 0) return { skipMessage: 'Move a tenant ID tile not on Admin Home' };
+    await clickAndWait(tile, /\/admin\/tenant-management\/organizations\/move-tenant/);
+    return { urlHint: '/admin/tenant-management/organizations/move-tenant' };
+  });
+
+  const failed = steps.filter((s) => s === 'fail').length;
+  console.log(`  Super admin organization flows: ${steps.length - failed}/${steps.length} without failures`);
 }
 
 async function main() {
@@ -257,10 +364,16 @@ async function main() {
       });
     }
 
+    if (authNeeded) {
+      await discoverAdminRecordIds(context, baseUrl, ids);
+    }
+
     const page = await context.newPage();
+    attachRuntimeErrorCollector(page);
 
     if ((!kinds || kinds.includes('admin')) && !exclude.includes('admin')) {
       await runAdminHomeButtons(page, baseUrl, tracker, config.timeout, tenantId);
+      await runSuperAdminOrganizationFlows(page, baseUrl, tracker, config.timeout, tenantId, ids);
     }
 
     let tested = 0;
@@ -293,7 +406,11 @@ async function main() {
       if (route.dynamic) {
         // Prefer event id for /events/[id] and /admin/events/[id]
         const localIds = { ...idBag };
-        if (route.path.includes('/membership/subscribe')) {
+        if (route.path.includes('/tenant-management/organizations/')) {
+          localIds.id = ids.organizationId ?? '';
+        } else if (route.path.includes('/tenant-management/settings/')) {
+          localIds.id = ids.tenantSettingsId ?? '';
+        } else if (route.path.includes('/membership/subscribe')) {
           localIds.id = ids.planId;
           localIds.planId = ids.planId;
         } else if (route.path.includes('/polls/')) {
@@ -401,14 +518,16 @@ async function main() {
         });
         tracker.record({
           path: route.path,
-          status: check.ok ? 'pass' : 'fail',
+          status: check.skip ? 'skip' : check.ok ? 'pass' : 'fail',
           kind: route.kind,
           message: check.message,
           durationMs,
           meta: { resolved: target, http: status, tenantId },
         });
         console.log(
-          `  ${check.ok ? '✓' : '✗'} (${tested}/${totalPlanned}) ${target} (${durationMs}ms)`
+          `  ${check.skip ? '○' : check.ok ? '✓' : '✗'} (${tested}/${totalPlanned}) ${target} (${durationMs}ms)${
+            check.skip || !check.ok ? ` — ${check.message}` : ''
+          }`
         );
       } catch (err) {
         const durationMs = Date.now() - start;
