@@ -7,6 +7,7 @@ import { TenantOrganizationDTO } from '@/app/admin/tenant-management/types';
 import { adminPageTopStyle } from '@/lib/admin/adminPageLayout';
 import AdminBackButton from '@/components/admin/AdminBackButton';
 import OrganizationTenantIdList from '@/app/admin/tenant-management/organizations/OrganizationTenantIdList';
+import { fetchOrganizationTenantIdsPage } from '@/app/admin/tenant-management/organizations/tenantIdListActions';
 
 interface PageProps {
   params: { id: string };
@@ -87,6 +88,15 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
   if (!organization) {
     return missingOrganization;
   }
+
+  // Same count as the organization view page: one row per tenant ID owned by this organization.
+  const tenantCountPage = organization.id != null
+    ? await fetchOrganizationTenantIdsPage(organization.id, 0, 1).catch(() => null)
+    : null;
+  const tenantCount = tenantCountPage?.totalCount ?? 0;
+  const tenantSummary = tenantCount === 0
+    ? 'No tenant IDs yet'
+    : `${tenantCount} tenant ${tenantCount === 1 ? 'ID' : 'IDs'}`;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={adminPageTopStyle}>
@@ -177,6 +187,14 @@ export default async function EditTenantOrganizationPage({ params }: PageProps) 
           <span className="text-sm font-semibold text-indigo-800">
             Database ID {organization?.id != null ? `#${organization.id}` : '—'}
           </span>
+          <a
+            href="#tenant-ids"
+            className="mt-1 inline-flex w-fit items-center h-9 px-3 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 text-sm font-semibold"
+            title="Go to the tenant ID list"
+            aria-label={tenantCount === 0 ? 'No tenant IDs yet. Go to the tenant ID list' : `${tenantSummary}. Go to the tenant ID list`}
+          >
+            {tenantSummary}
+          </a>
         </div>
         <p className="mt-2 text-sm text-gray-500">
           Update company contact and address. Site Tenant ID, domain, and branding stay on Onboarding / Tenant Settings.
