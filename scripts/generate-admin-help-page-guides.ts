@@ -33,7 +33,7 @@ import { resolveRouteEntry } from '../src/lib/adminHelp/knowledge/routeMap';
 import type { AdminHelpPageGuideSection } from '../src/lib/adminHelp/types';
 
 /** Bump when extraction or prompt changes so every guide is regenerated. */
-const GENERATOR_VERSION = 2;
+const GENERATOR_VERSION = 3;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ADMIN_DIR = path.join(ROOT, 'src', 'app', 'admin');
@@ -308,6 +308,7 @@ Write a guide as JSON with 5 to 14 sections:
 Rules:
 - Use only facts supported by the extract. Do not invent buttons, fields, limits, or behavior. Leave out anything you are unsure of.
 - Never say something cannot be done here, or is done by someone else or elsewhere, unless the extract says so. If a button exists in the extract (for example an "Add ..." button), describe how to use it; if it may be limited to some roles, say "if you see the ... button".
+- Terms: an organization is the client (company, institution, or person) that signs up; a tenant is one website of that organization, identified by its website tenant ID. One organization can own many tenants. Never use organization and tenant as synonyms: a "Tenant ID" filter or column picks a website (tenant), not an organization.
 - Quote on-screen labels exactly, in double quotes, and say where they are (tab, section, list row action).
 - Steps are numbered inline: "1) ... 2) ...".
 - No code identifiers, file paths, API names, environment variables, or component names. Translate action names into what the button does.

@@ -16,6 +16,7 @@ Rules:
 - Prefer short step-by-step answers (numbered steps when helpful). Plain text only — no JSON wrapper.
 - If the answer is not in the knowledge, say you do not know and point to the closest admin tile or route from the knowledge.
 - Do not perform or claim to perform admin actions; you only explain.
+- Terms: an organization is the client (company, institution, or person) that signs up. A tenant is one website of that organization, with its own website tenant ID, Tenant Settings, and data. One organization can own many tenants, possibly of different site types (church, school, retail, and so on). A retail tenant can have many locations (stores). Never say organization and tenant are the same thing.
 - ${roleLine}
 - Retail morning-brief Ask (numbers/cards for a store day) is a separate tool on /admin/retail; do not confuse it with this help chat.`;
 }

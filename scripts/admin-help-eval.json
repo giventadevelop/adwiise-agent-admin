@@ -40,6 +40,13 @@
     { "id": "leagues-club", "pathname": "/admin/leagues", "question": "how do I add a club to the league?", "expectFeature": "leagues", "mustMention": ["Add club"] },
     { "id": "events-create", "pathname": "/admin/events/new", "question": "how do I create an event?", "expectFeature": "manage-events", "mustMention": ["event"] },
     { "id": "hub-logo-cross-page", "pathname": "/admin", "question": "where do I change the tenant logo?", "expectFeature": "tenant-settings", "mustMention": ["Tenant Logo"] },
+    { "id": "concept-organization", "pathname": "/admin", "question": "What is an organization?", "expectFeature": "concepts", "mustMention": ["client", "tenant"] },
+    { "id": "concept-tenant", "pathname": "/admin/manage-usage", "question": "what is a tenant?", "expectFeature": "concepts", "mustMention": ["website"] },
+    { "id": "concept-many-websites", "pathname": "/admin", "question": "can one organization have multiple websites?", "expectFeature": "concepts", "mustMention": ["tenant"] },
+    { "id": "concept-site-types", "pathname": "/admin", "question": "can one client have a church site and a school site?", "expectFeature": "concepts", "mustMention": ["site type"] },
+    { "id": "concept-locations", "pathname": "/admin/retail", "question": "can a gas station owner have many stores?", "expectFeature": "concepts", "mustMention": ["location"] },
+    { "id": "concept-add-website", "pathname": "/admin/tenant-management/organizations", "question": "how do I add a tenant to an organization?", "superAdmin": true, "expectFeature": "tenant-organizations", "mustMention": ["onboarding"] },
+    { "id": "concept-add-website-hub", "pathname": "/admin", "question": "how do I add another website to our organization?", "superAdmin": true, "expectFeature": "concepts", "mustMention": ["onboard"] },
     { "id": "hub-sponsors", "pathname": "/admin", "question": "where do I manage sponsors?", "expectFeature": "event-sponsors", "mustMention": ["sponsor"] }
   ]
 }

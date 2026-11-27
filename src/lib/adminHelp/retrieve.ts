@@ -60,21 +60,64 @@ export function chunkTopicMatches(chunk: AdminHelpChunk, tokens: string[]): numb
   return hits;
 }
 
+const haystackCache = new WeakMap<AdminHelpChunk, string>();
+function haystackOf(chunk: AdminHelpChunk): string {
+  let hay = haystackCache.get(chunk);
+  if (!hay) {
+    hay = `${chunk.title} ${chunk.body} ${chunk.keywords.join(' ')}`.toLowerCase();
+    haystackCache.set(chunk, hay);
+  }
+  return hay;
+}
+
+const weightCache = new Map<string, number>();
+/** Inverse document frequency over the knowledge pack, scaled to about 0.3–1.5. */
+function tokenWeight(token: string): number {
+  const cached = weightCache.get(token);
+  if (cached !== undefined) return cached;
+  const total = ADMIN_HELP_CHUNKS.length;
+  let df = 0;
+  for (const chunk of ADMIN_HELP_CHUNKS) if (haystackOf(chunk).includes(token)) df += 1;
+  const weight = Math.min(1.5, Math.max(0.3, Math.log(total / (1 + df)) / 3));
+  weightCache.set(token, weight);
+  return weight;
+}
+
+const CONCEPT_QUESTION_RE =
+  /\b(what\s+(is|are|does)|difference|mean|meaning|explain|relationship|can\s+(one|an?|the|my)|how\s+many|multiple|many)\b/i;
+
 function scoreChunk(
   chunk: AdminHelpChunk,
   tokens: string[],
   pathname: string,
   featureKey: string | null,
+  conceptual = false,
 ): number {
   let score = 0;
-  const hay = `${chunk.title} ${chunk.body} ${chunk.keywords.join(' ')}`.toLowerCase();
+  const hay = haystackOf(chunk);
 
   for (const token of tokens) {
+    // Rare words ("sponsors", "logo") count more than common ones ("manage", "add").
+    const weight = tokenWeight(token);
     if (chunk.keywords.some((k) => k.toLowerCase().includes(token) || token.includes(k.toLowerCase()))) {
-      score += 4;
+      score += 4 * weight;
     } else if (hay.includes(token)) {
-      score += 2;
+      score += 2 * weight;
     }
+  }
+
+  // Concept chunks (organization, tenant, site type, locations) apply on every page.
+  // Boost them like a page chunk, but only for "what is / can one ..." questions or when
+  // two or more question words hit their title/keywords, so a passing word like
+  // "tenant" in "tenant logo" does not pull them above the real how-to.
+  // Page boosts below only apply to chunks that matched the question at all; chunks
+  // for the current page that matched nothing are still added later as fillers.
+  if (score === 0) return 0;
+
+  if (chunk.featureKey === 'concepts') {
+    const hits = chunkTopicMatches(chunk, tokens);
+    if (conceptual && hits > 0) score += 20;
+    else if (hits >= 2) score += 12;
   }
 
   if (featureKey && chunk.featureKey === featureKey) {
@@ -100,6 +143,7 @@ export function retrieveAdminHelpKnowledge(
   const pathname = (page.pathname || '').split('?')[0] || '/admin';
   const route = resolveRouteInfo(pathname);
   const tokens = tokenizeAdminHelpQuestion(question);
+  const conceptual = CONCEPT_QUESTION_RE.test(question);
   const featureKey = route?.featureKey ?? null;
 
   const visible = ADMIN_HELP_CHUNKS.filter((chunk) => {
@@ -111,7 +155,7 @@ export function retrieveAdminHelpKnowledge(
   });
 
   const ranked = visible
-    .map((chunk) => ({ chunk, score: scoreChunk(chunk, tokens, pathname, featureKey) }))
+    .map((chunk) => ({ chunk, score: scoreChunk(chunk, tokens, pathname, featureKey, conceptual) }))
     .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score);
 

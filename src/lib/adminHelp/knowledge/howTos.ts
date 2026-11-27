@@ -5,14 +5,14 @@ export const HOW_TO_CHUNKS: AdminHelpChunk[] = [
   {
     id: 'howto:workspace',
     featureKey: 'admin-home',
-    title: 'Pick an organization workspace',
+    title: 'Pick which website (tenant) to work on',
     body: [
-      'On Admin Home you choose which organization (tenant) you are working on.',
-      'If you administer more than one organization, pick it from the workspace picker before opening other tools.',
-      'Platform SUPER_ADMIN can also use All tenants. Tenant ADMIN only sees organizations they are mapped to.',
-      'Many screens also have a Tenant ID filter or a top bar to switch organization.',
+      'On Admin Home you choose which website (tenant) you are working on. A tenant is one website of your organization; the organization is the client that owns the websites.',
+      'If your organization has more than one website, pick it from the workspace picker before opening other tools.',
+      'Platform SUPER_ADMIN can also use All tenants. An organization admin sees the websites of their own organization.',
+      'Many screens also have a Tenant ID filter or a top bar to switch website.',
     ].join(' '),
-    keywords: ['workspace', 'tenant', 'organization', 'picker', 'switch'],
+    keywords: ['workspace', 'tenant', 'picker', 'switch', 'switch website', 'switch tenant'],
     pathPrefixes: ['/admin'],
   },
   {
