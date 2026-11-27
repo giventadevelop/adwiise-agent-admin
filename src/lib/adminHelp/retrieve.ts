@@ -83,6 +83,9 @@ function tokenWeight(token: string): number {
   return weight;
 }
 
+/** Slots kept for other pages' chunks, so cross-page questions are answerable. */
+const OFF_PAGE_SLOTS = 3;
+
 const CONCEPT_QUESTION_RE =
   /\b(what\s+(is|are|does)|difference|mean|meaning|explain|relationship|can\s+(one|an?|the|my)|how\s+many|multiple|many)\b/i;
 
@@ -172,11 +175,30 @@ export function retrieveAdminHelpKnowledge(
     }
   }
 
-  // Prefer scored order, then feature-matched fillers.
+  // Prefer scored order, then feature-matched fillers. Current-page chunks get a page
+  // boost, so on a busy page they can fill every slot even when the question is about
+  // another page ("change the website logo" asked from Sponsors). Keep a few slots for
+  // the best chunks from other pages so cross-page questions still find their answer.
+  const isOnPage = (chunk: AdminHelpChunk) =>
+    (featureKey !== null && chunk.featureKey === featureKey) ||
+    Boolean(chunk.pathPrefixes?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)));
+  const offPageReserved = new Set(
+    ranked
+      .filter((row) => !isOnPage(row.chunk))
+      .slice(0, OFF_PAGE_SLOTS)
+      .map((row) => row.chunk.id),
+  );
   const ordered: AdminHelpChunk[] = [];
+  const onPageBudget = limit - offPageReserved.size;
+  let onPageUsed = 0;
   for (const row of ranked) {
     if (ordered.length >= limit) break;
-    ordered.push(row.chunk);
+    if (offPageReserved.has(row.chunk.id)) {
+      ordered.push(row.chunk);
+    } else if (onPageUsed < onPageBudget) {
+      ordered.push(row.chunk);
+      onPageUsed += 1;
+    }
   }
   if (ordered.length < limit && featureKey) {
     for (const chunk of visible) {

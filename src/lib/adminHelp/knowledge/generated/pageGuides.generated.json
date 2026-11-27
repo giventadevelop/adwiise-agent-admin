@@ -361,49 +361,48 @@
         "src/app/admin/platform-billing/organization/[organizationId]/page.tsx",
         "src/app/admin/platform-billing/page.tsx",
         "src/app/admin/platform-billing/reportActions.ts",
-        "src/app/admin/tenant-management/organizations/OrganizationBillingScopeCard.tsx",
-        "src/components/admin/AdminRecordMissing.tsx"
+        "src/app/admin/tenant-management/organizations/OrganizationBillingScopeCard.tsx"
       ],
-      "sourceHash": "e4fcb611190d8154",
+      "sourceHash": "b81d951dd0e8d0c8",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
           "heading": "What the Billing Area is for",
-          "body": "The Billing Area shows who pays the platform, what each subscription covers, and the ledger of charges. It is for the platform super admin only, and it is not ticket revenue. The main page is titled \"Platform billing\" and says \"Open an organization to see its websites and billing scope.\" It has a search box, a \"Search\" button, an \"Export portfolio\" button and a \"Search charges and history\" button. From there you can open an organization's billing page, a website's billing page, or the separate \"Charge search\" page. Each page has a back button, such as \"Back to Admin\" or \"Back to Platform billing\".",
+          "body": "The Billing Area shows who pays the platform, what the subscription covers, and the charge ledger. It is for the platform super admin only, and it is not ticket revenue. The main page is \"Platform billing\" (with a \"Back to Admin\" button); open an organization from it to see its websites and billing scope. \"Charge search\" is a separate page for finding charges and billing changes across every organization, with a \"Back to Platform billing\" button. Each organization has an \"Organization billing\" page, and each website (tenant) has its own billing card with a charge switch. If a billing link is out of date or the record was removed, you see \"This organization is no longer available\" or \"This tenant is no longer available\" with a button to go back.",
           "keywords": [
             "billing",
             "platform billing",
-            "who pays",
+            "overview",
             "subscription",
             "charges",
-            "ledger",
             "super admin",
-            "overview",
-            "stripe"
+            "who pays",
+            "ledger",
+            "invoice"
           ]
         },
         {
-          "slug": "search-billing",
-          "heading": "Search organizations and billing records",
-          "body": "On \"Platform billing\", type in the \"Search billing\" box. It accepts an organization, website, email, customer, subscription, or invoice. Press \"Search\" to see the matches. Each result shows Organization, Scope, Amount, Status, Stripe customer, Last payment, Next period and Covered (covered websites). If nothing matches you will see \"No billing records match this search.\" When the list has more than one page, use \"Previous\" and \"Next\" at the bottom. The footer shows the page number and a \"Showing\" count.",
+          "slug": "find-organization",
+          "heading": "Search for an organization on Platform billing",
+          "body": "On \"Platform billing\", type in the \"Search billing\" box, which accepts an organization, website, email, customer, subscription, or invoice, then click \"Search\". Each result shows the Organization, Scope, Amount, Status, Stripe customer, Last payment, Next period, and Covered websites. Click a result to open that organization's billing page. If nothing matches you see \"No billing records match this search.\" When there are many results, use \"Previous\" and \"Next\" at the bottom; the page shows which page you are on and what is being shown.",
           "keywords": [
             "search",
             "find organization",
-            "find website",
-            "email",
+            "lookup",
             "customer",
+            "email",
             "invoice",
             "subscription",
             "pagination",
             "next page",
-            "list"
+            "website"
           ]
         },
         {
           "slug": "export-portfolio",
           "heading": "Export the portfolio",
-          "body": "Click \"Export portfolio\" on the \"Platform billing\" page to export the billing portfolio. Use it when you want the organization billing list outside the dashboard. If the export cannot run, you will see the message \"Billing report is unavailable\".",
+          "body": "On \"Platform billing\", click \"Export portfolio\" to download the billing portfolio report. If the report cannot be produced you see \"Billing report is unavailable\". The search you typed in the \"Search billing\" box is next to this button on the same page.",
           "keywords": [
             "export",
             "download",
@@ -411,93 +410,139 @@
             "report",
             "csv",
             "billing report",
-            "save list"
+            "spreadsheet"
+          ]
+        },
+        {
+          "slug": "charge-search",
+          "heading": "Find charges with Charge search",
+          "body": "Open \"Search charges and history\" on Platform billing, or go to the \"Charge search\" page. 1) In \"Find\", type an organization name or number, an email, or a Stripe id (starting in_, sub_, pi_, or cus_). 2) Optionally narrow by \"Website id\" (exact), \"Fee\" (\"All fees\", \"Event site\", \"Retail locations\", or \"Organization fee\"), \"Plan\", \"Status\", the \"From\" date, and \"Amount from ($)\" and \"Amount to ($)\". 3) Pick an \"Order\": \"Newest first\", \"Oldest first\", \"Largest amount first\", or \"Smallest amount first\". 4) Click \"Search\". Click \"Clear filters\" to reset. The \"Charges\" tab lists charges; the \"Change history\" tab lists billing changes, and it cannot be searched by a Stripe id, so search by organization or website there. If nothing matches you see \"No charges match this search.\" or \"No billing changes match this search.\"",
+          "keywords": [
+            "charge search",
+            "find charge",
+            "filter",
+            "stripe id",
+            "invoice",
+            "payment",
+            "amount",
+            "date",
+            "sort",
+            "change history",
+            "clear filters"
+          ]
+        },
+        {
+          "slug": "charge-details",
+          "heading": "Open a charge's details",
+          "body": "In the \"Charges\" list, click a charge (its button is labeled \"Open the charge details\") to open \"Charge details\". The panel shows items such as Invoice, Subscription, Payment, Event, Organization id, Period start, and Failure reason when there is one. A charge marked \"Paid later\" was an invoice paid after it was first issued. You can use \"Open in Stripe\", \"Open the organization billing page\", or \"Open the website billing page\". The panel also lists \"Ledger rows of this invoice\" and \"Latest billing changes for this fee\". Click \"Close\" to return to the list.",
+          "keywords": [
+            "charge details",
+            "invoice",
+            "stripe",
+            "ledger",
+            "paid later",
+            "failure reason",
+            "open charge",
+            "payment failed",
+            "period"
+          ]
+        },
+        {
+          "slug": "export-charges",
+          "heading": "Export matching charges",
+          "body": "On \"Charge search\", set your filters, then click \"Export matching charges\" (hover text: \"Export every charge that matches\"). It exports every charge that matches your current search, not just the ones on screen. If it does not work you see \"The export failed.\"",
+          "keywords": [
+            "export charges",
+            "download",
+            "csv",
+            "ledger export",
+            "matching charges",
+            "report"
           ]
         },
         {
           "slug": "organization-billing",
-          "heading": "Open an organization's billing page",
-          "body": "Open an organization from the \"Platform billing\" results to reach \"Organization billing\". The page shows Billing scope, Monthly amount, Status, Stripe customer and Contact email. Below that is a \"Websites\" list. Each website shows its \"Tenant id\" and a \"Billing\" column, with an \"Open charge switch\" action that takes you to that website's billing page. If the list is empty you will see \"No websites are linked to this organization.\" If the link is out of date or the organization was removed, the page says \"This organization is no longer available\". Use \"Back to Platform Billing\" to return.",
+          "heading": "Review an organization's billing",
+          "body": "The \"Organization billing\" page shows the organization's \"Billing scope\", \"Monthly amount\", \"Status\", \"Stripe customer\", and \"Contact email\". Under \"Websites\" it lists each website with its \"Tenant id\" and a \"Billing\" link. Use \"Open charge switch\" on a website to go to that website's billing card. If no websites are linked you see \"No websites are linked to this organization.\" Use \"Back to Platform Billing\" to return.",
           "keywords": [
             "organization billing",
             "websites",
             "tenant id",
-            "contact email",
-            "stripe customer",
             "monthly amount",
+            "stripe customer",
+            "contact email",
             "open charge switch",
-            "company"
+            "status"
           ]
         },
         {
           "slug": "billing-scope",
           "heading": "Choose how an organization is billed",
-          "body": "The \"Billing scope\" card is on the organization page in organization management. It has two choices: \"Bill the organization once\" and \"Bill each website separately\". You can also see a \"Monthly amount\" and an \"Open billing area\" button. 1) Pick a choice. 2) Click \"Save billing scope\". If saving fails, you will see \"Could not save billing scope\". With one bill, the message is \"This organization now has one subscription.\" When each website is billed separately, \"Each website stays complimentary until its own charge switch is turned on.\"",
+          "body": "On an organization in Tenant Management, the \"Billing scope\" card sets how it pays. 1) Choose \"Bill the organization once\" (one subscription for the organization) or \"Bill each website separately\" (each website stays complimentary until its own charge switch is turned on). 2) Check the \"Monthly amount\". 3) Click \"Save billing scope\". The change is only kept after you save; if it fails you see \"Could not save billing scope\". \"Open billing area\" on the card takes you to the billing pages.",
           "keywords": [
             "billing scope",
             "bill once",
             "bill each website",
-            "separately",
-            "subscription",
-            "monthly amount",
+            "portfolio",
             "save billing scope",
-            "organization fee"
+            "organization subscription",
+            "per website",
+            "monthly amount"
           ]
         },
         {
-          "slug": "website-billing-desk",
-          "heading": "Set a website's platform fee",
-          "body": "A website's billing page has a \"Platform billing\" section. It says that paid admin tools are locked until the platform fee is paid, while the site itself stays online. The settings are \"Status\", \"Catalog plan\" (or \"No catalog plan\"), \"Custom fee USD (blank uses the catalog)\", \"Review-by date (reminder only)\", \"Grace days\" and the \"Charge switch\". 1) Change the plan, custom fee or grace days. 2) Save. A review-by date is only a reminder and does not start a charge. After unpaid grace days, paid admin tools lock but the site stays online. Only a platform super-admin can change these settings.",
+          "slug": "tenant-billing-card",
+          "heading": "Set up a website's platform billing",
+          "body": "A website's billing card is titled \"Platform billing\". It has \"Status\", \"Catalog plan\" (or \"No catalog plan\"), \"Custom fee USD (blank uses the catalog)\", \"Review-by date (reminder only)\", \"Grace days\", and the \"Charge switch\". Only a platform super admin can change platform billing. The review-by date is only a reminder and does not start a charge. If the website's plan is free or demo, the switch stays off and Stripe is not called. If an organization portfolio charge covers the website, clear that portfolio fee before charging the website on its own. Use \"Turn the charge switch on\" or \"Turn the charge switch off\" to change it.",
           "keywords": [
-            "website billing",
-            "platform fee",
+            "platform billing",
+            "charge switch",
             "catalog plan",
             "custom fee",
             "grace days",
-            "review-by date",
-            "locked",
-            "paid tools",
-            "tenant"
+            "review date",
+            "turn on charging",
+            "free plan",
+            "demo",
+            "tenant billing"
           ]
         },
         {
-          "slug": "charge-switch",
-          "heading": "Turn charging on or off",
-          "body": "Use \"Turn the charge switch on\" or \"Turn the charge switch off\" on the website's billing page. Turning it on does not charge the card by itself: the message says \"Billing saved. Turning the switch on does not charge the card by itself.\" Once charging is allowed, use a pay link. When the switch is off, \"Stripe is not called.\" If the website's plan is free or demo, the switch stays off. If the website is covered by an organization portfolio charge, clear that portfolio fee before charging the website on its own. A website covered by its organization is not paid or canceled on its own; the organization subscription is.",
+          "slug": "charging-and-grace",
+          "heading": "What turning charging on does",
+          "body": "Turning the charge switch on does not charge the card by itself; the card shows \"Billing saved. Turning the switch on does not charge the card by itself.\" Once charging is allowed, use a pay link. Paid admin tools are locked until the platform fee is paid, while the site itself stays online. Unpaid grace days lock paid admin tools and leave the site online. When the switch is off, the card says \"Switch is off. Stripe is not called.\" A website covered by its organization shows that the organization subscription is the one that is paid and canceled.",
           "keywords": [
             "charge switch",
-            "turn on",
-            "turn off",
-            "enable charging",
+            "grace",
+            "locked",
+            "paid tools",
+            "unpaid",
+            "site online",
             "stripe",
-            "free plan",
-            "demo",
-            "complimentary",
             "covered by organization"
           ]
         },
         {
           "slug": "pay-and-cancel",
-          "heading": "Pay, manage payment methods, or cancel",
-          "body": "The billing desk has these buttons: \"Pay monthly\", \"Pay once\", \"Payment methods\", \"Update location count\", \"Cancel at period end\" and \"Cancel now\". \"Pay\" opens Stripe Checkout with a card or a US bank account. Bank debit shows only when ACH Direct Debit is active on the Stripe account. \"Cancel at period end\" shows \"The subscription will cancel at the end of the period.\" \"Cancel now\" ends it straight away, the card becomes Complimentary, and \"Pay monthly\" starts a new subscription. If a request fails, you will see \"Request failed\".",
+          "heading": "Pay, manage payment methods, and cancel",
+          "body": "The billing card has these buttons: \"Pay monthly\", \"Pay once\", \"Payment methods\", \"Update location count\", \"Cancel at period end\", and \"Cancel now\". Pay opens Stripe Checkout with a card or a US bank account; bank debit appears when ACH Direct Debit is active on the Stripe account. \"Cancel at period end\" shows \"The subscription will cancel at the end of the period.\" \"Cancel now\" ends it immediately, the card becomes Complimentary, and \"Pay monthly\" starts a new subscription. If a request fails you see \"Request failed\".",
           "keywords": [
             "pay monthly",
             "pay once",
             "payment methods",
-            "cancel",
+            "cancel subscription",
             "cancel now",
-            "end of period",
-            "checkout",
-            "card",
-            "bank",
+            "cancel at period end",
+            "stripe checkout",
             "ach",
-            "subscription"
+            "bank",
+            "card"
           ]
         },
         {
-          "slug": "locations-count",
-          "heading": "Include or remove locations in the fee",
-          "body": "The section \"Locations counted in the location fee\" lists locations. If you see the buttons, use \"Include this location\" or \"Remove this location\" for each one. Excluded locations show \"Not included\". The message \"Location inclusion saved. Use Update location count to change the Stripe quantity.\" means that saving the inclusion does not change what Stripe bills. 1) Include or remove the locations. 2) Click \"Update location count\". A custom flat fee always uses quantity 1. Otherwise the count is the active locations marked as included. If the buttons are missing, the page says to ask the platform team to include or remove a location.",
+          "slug": "location-count",
+          "heading": "Include locations and update the count",
+          "body": "The billing card lists \"Locations counted in the location fee\". For each location use \"Include this location\" or \"Remove this location\"; excluded ones show \"Not included\". The count is active locations marked included, but a custom flat fee uses quantity 1. Including or removing a location only saves the choice (\"Location inclusion saved\"). To change the Stripe quantity, click \"Update location count\" afterward. If the page says to ask the platform team to include or remove a location, you cannot change it yourself on that screen. A failure shows \"Could not update the location\".",
           "keywords": [
             "locations",
             "location count",
@@ -505,73 +550,24 @@
             "remove location",
             "quantity",
             "retail locations",
-            "update location count",
-            "flat fee"
+            "update count",
+            "custom flat fee"
           ]
         },
         {
-          "slug": "charge-search",
-          "heading": "Search charges and billing changes",
-          "body": "Open \"Charge search\" with the \"Search charges and history\" button on \"Platform billing\". It finds platform charges and billing changes across every organization. Use the \"Charges\" tab for charges and \"Change history\" for billing changes. Filters are \"Find\" (organization name or number, email, or a Stripe id starting in_, sub_, pi_ or cus_), \"Website id\" (exact), \"Fee\", \"From\", \"Amount from ($)\", \"Amount to ($)\", \"Plan\", \"Status\" and \"Order\". Fee choices are \"All fees\", \"Event site\", \"Retail locations\" and \"Organization fee\". Order choices are \"Newest first\", \"Oldest first\", \"Largest amount first\" and \"Smallest amount first\". Click \"Search\" to apply and \"Clear filters\" to reset. Change history cannot be searched by a Stripe id, so search by organization or website there.",
-          "keywords": [
-            "charge search",
-            "find charge",
-            "filter",
-            "stripe id",
-            "invoice",
-            "website id",
-            "amount",
-            "date",
-            "status",
-            "change history",
-            "sort"
-          ]
-        },
-        {
-          "slug": "charge-details",
-          "heading": "View a charge and export results",
-          "body": "Click a charge in the results to open \"Charge details\". It shows items such as Organization id, Period start and Failure reason. It also has \"Ledger rows of this invoice\" and \"Latest billing changes for this fee\". Use \"Open in Stripe\", \"Open the organization billing page\" or \"Open the website billing page\" to go further. A charge marked \"Paid later\" means the invoice was paid after it was issued. Close the panel with the close button. To save results, click \"Export matching charges\" (\"Export every charge that matches\"). If it fails, you will see \"The export failed.\"",
-          "keywords": [
-            "charge details",
-            "export charges",
-            "download",
-            "open in stripe",
-            "ledger",
-            "failure reason",
-            "paid later",
-            "invoice",
-            "period start"
-          ]
-        },
-        {
-          "slug": "website-charges-list",
-          "heading": "See one website's charges",
-          "body": "A website's billing page has a \"Charges\" list and a \"Change history\" tab. You can filter by \"Fee\" (\"All fees\", \"Event site\", \"Retail locations\"), \"Status\" (\"All statuses\") and \"From\". Click \"Open in charge search\" to see the same charges in the full \"Charge search\". While loading you will see \"Loading charges…\". If none match, you will see \"No charges match these filters.\" A website with no charges shows \"No platform charges are recorded for this website yet.\" An invoice marked \"This invoice was paid later.\" was paid after it was issued.",
+          "slug": "website-charges-table",
+          "heading": "See a website's charges",
+          "body": "The \"Charges\" table on a website's billing card lists that website's platform charges. Filter with \"Fee\" (\"All fees\", \"Event site\", \"Retail locations\"), \"Status\" (\"All statuses\"), and \"From\". Use \"Open in charge search\" to see the same charges in Charge search, or open \"Change history\" for billing changes. Messages: \"Loading charges…\", \"Charges could not be loaded.\", \"No charges match these filters.\", or \"No platform charges are recorded for this website yet.\" A row may say \"This invoice was paid later.\"",
           "keywords": [
             "website charges",
-            "charge list",
+            "charges table",
             "filter",
+            "fee",
+            "status",
             "change history",
-            "open in charge search",
-            "no charges",
-            "paid later",
+            "history",
+            "invoice paid later",
             "tenant charges"
-          ]
-        },
-        {
-          "slug": "unavailable-pages",
-          "heading": "Messages when a page is unavailable",
-          "body": "If a link is old or the record was removed, you will see a message instead of the billing page. A website page says \"This tenant is no longer available\" with a \"Back to Organizations\" button. An organization page says \"This organization is no longer available\" and \"The billing link is out of date, or this organization was removed.\" It offers \"Back to Platform Billing\". Other messages are \"Sign in required\", \"Admin access required\" and \"Only a platform super-admin can change platform billing\". If a billing record belongs to another website, you will see \"This billing record belongs to another tenant\".",
-          "keywords": [
-            "no longer available",
-            "error",
-            "removed",
-            "out of date link",
-            "access",
-            "sign in",
-            "super admin",
-            "not found",
-            "permission"
           ]
         }
       ]
@@ -1948,59 +1944,71 @@
         "src/components/FocusGroupCoverImageUpload.tsx",
         "src/components/admin/AdminTenantFilterBar.tsx"
       ],
-      "sourceHash": "4ef2893c229b76da",
+      "sourceHash": "bc38faffc56e5e25",
       "sections": [
         {
           "slug": "overview",
           "heading": "Overview of Focus Groups",
-          "body": "Focus groups are discussion circles and the events attached to them. Use them for committees, not for sports squads or bands. The main page, \"Manage Focus Groups\", lists the focus groups for this tenant with the columns \"Name\", \"Slug\", \"Active\" and \"Actions\". Above the list are a \"Search\" box and a \"New Group\" button. Each row has icon buttons titled \"Edit Focus Group\", \"Manage Events\" and \"Manage Members\", plus a \"Delete Focus Group\" button. Use \"Previous\" and \"Next\" at the bottom to move between pages.",
+          "body": "Focus Groups are discussion circles and the events attached to them, such as committees. The main page, \"Manage Focus Groups\", lists the focus groups for the tenant you have selected, with the columns \"Name\", \"Slug\", \"Active\" and \"Actions\". Use \"New Group\" to create one. Each row has icons for \"Edit Focus Group\", \"Manage Events\", \"Manage Members\" and \"Delete Focus Group\". A search box and \"Previous\" / \"Next\" page buttons sit around the list.",
           "keywords": [
             "focus groups",
             "committee",
             "discussion circle",
             "overview",
-            "list",
-            "manage focus groups",
-            "groups",
+            "groups list",
+            "manage groups",
             "tenant"
           ]
         },
         {
           "slug": "search-list",
-          "heading": "Search the focus group list",
-          "body": "On \"Manage Focus Groups\", type in the search box, which says \"Search name, image text, or search text\". Then use \"Search\" to apply it. To start over, use the \"Clear focus group search\" button. If nothing matches, you will see \"No focus groups found\". The list shows how many focus groups there are (\"Showing ... focus groups\"), and \"Previous\" and \"Next\" move through the pages.",
+          "heading": "Search and browse the list",
+          "body": "On \"Manage Focus Groups\", type in the search box (\"Search name, image text, or search text\") to narrow the list. To clear the search, use the \"Clear focus group search\" button. If nothing matches, you see \"No focus groups found\". The \"Active\" column shows \"YES\" for active groups. When there are many groups, use \"Previous\" and \"Next\" under the list; the footer shows \"Showing\" the count of focus groups and the current \"Page\".",
           "keywords": [
             "search",
             "find",
             "filter",
             "clear search",
-            "name",
-            "list",
-            "page",
-            "next",
-            "previous"
+            "pagination",
+            "next page",
+            "previous page",
+            "list"
           ]
         },
         {
           "slug": "create-group",
-          "heading": "Create a focus group",
-          "body": "1) On \"Manage Focus Groups\", click \"New Group\". 2) Fill in \"Name *\" (placeholder \"Enter focus group name\") and \"Slug *\" (for example \"career-guidance\"). 3) Optionally add a \"Description\" and a \"Cover Image\". 4) Tick or untick \"Active\". 5) Click \"Create Focus Group\", or \"Cancel\" to leave without saving. The slug may only contain lowercase letters, numbers and hyphens. If a group with the same name or slug already exists, you are asked to choose a different one.",
+          "heading": "Create a new focus group",
+          "body": "1) Click \"New Group\" on the \"Manage Focus Groups\" page. 2) Fill in \"Name *\" and \"Slug *\", which are required. 3) Optionally add a \"Description\", choose a \"Cover Image\", and tick \"Active\". 4) Click \"Create Focus Group\". Use \"Cancel\" to leave without saving. If the name or slug is already used by another focus group, you will see a message asking you to choose a different one.",
           "keywords": [
             "create",
             "new group",
-            "add",
-            "new focus group",
+            "add focus group",
             "name",
             "slug",
             "description",
             "active",
-            "make"
+            "cancel"
+          ]
+        },
+        {
+          "slug": "slug-rules",
+          "heading": "Required fields and slug rules",
+          "body": "\"Name *\" and \"Slug *\" are required; leaving them blank shows \"Name is required\" or \"Slug is required\". The slug may contain only lowercase letters, numbers, and hyphens, for example career-guidance. Otherwise you will see \"Slug must contain only lowercase letters, numbers, and hyphens\". Each focus group needs its own unique name and slug.",
+          "keywords": [
+            "slug",
+            "required",
+            "validation",
+            "lowercase",
+            "hyphens",
+            "unique name",
+            "error",
+            "duplicate"
           ]
         },
         {
           "slug": "cover-image",
-          "heading": "Cover image",
-          "body": "The \"Cover Image\" is what visitors see on the focus group. Click \"Click to upload\" or drag and drop a file into the area. PNG, JPG or GIF files up to 10MB are accepted, and 800×480 is recommended. When you create a new group, the image uploads after the group is created. If that upload fails, you will be told the group was created and can upload the image on the edit page. To replace a cover, upload another image. Use the \"Remove image\" button to remove it. Errors such as \"Invalid File Type\", \"File Too Large\" or \"Upload Failed\" appear if there is a problem.",
+          "heading": "Upload or replace the cover image",
+          "body": "The \"Cover Image\" area is shown on the new and edit pages, and visitors see this cover on the focus group. Click to upload or drag and drop a picture. PNG, JPG, or GIF files up to 10MB are accepted, and 800×480 is recommended. On the new page, the image uploads after the focus group is created; if that upload fails you will be told the group was created and you can upload the image on the edit page. To replace a cover, upload another image; use \"Remove image\" to take it away. Wrong file types show \"Invalid File Type\" and oversized files show \"File Too Large\".",
           "keywords": [
             "cover image",
             "picture",
@@ -2008,125 +2016,86 @@
             "upload",
             "replace",
             "remove image",
+            "drag and drop",
+            "file size",
             "png",
             "jpg",
-            "gif",
-            "size",
-            "banner"
+            "gif"
           ]
         },
         {
           "slug": "edit-group",
           "heading": "Edit a focus group",
-          "body": "1) On the list, click the \"Edit Focus Group\" button in the group's row. 2) Change \"Name\", \"Slug\", \"Description\", \"Announcements\" (public announcements shown on the focus group page), \"Meeting schedule\" (for example \"Every Saturday 10am at Kerala Center\") or the \"Cover Image\". 3) Use \"Active\" to switch the group on or off, and \"Show member gallery publicly\" to control whether the member gallery is shown publicly. 4) Click \"Save Focus Group\". The slug only allows lowercase letters, numbers and hyphens.",
+          "body": "1) On the list, click \"Edit Focus Group\" on the group's row. 2) Change \"Name\", \"Slug\", \"Description\", \"Announcements\" (public announcements shown on the focus group page), or \"Meeting schedule\" (for example, Every Saturday 10am at Kerala Center). 3) Tick or untick \"Active\" and \"Show member gallery publicly\" as needed. 4) Update the \"Cover Image\" if you want. 5) Click \"Save Focus Group\". The edit page also shows the group's associated events.",
           "keywords": [
             "edit",
-            "change",
             "update",
+            "change",
             "announcements",
             "meeting schedule",
-            "slug",
-            "save",
             "member gallery",
             "active",
-            "public"
-          ]
-        },
-        {
-          "slug": "manage-events",
-          "heading": "Link and unlink events",
-          "body": "Click \"Manage Events\" in a group's row to open the events page, where you can link or unlink events. \"Linked Events\" lists events already attached, each with an \"Unlink\" button. If none are attached you will see \"No linked events.\" To add one, use \"Link New Event\" and click \"Link\" next to the event you want. The edit page also has an \"Associate Event with Focus Group\" section. There, choose \"Search by Title\" or \"Search by ID\", type the title or event ID, and select the event. An event already linked cannot be linked twice. The \"Associated Events\" table has \"Upcoming Events\" and \"Past Events\" views with \"Event Title\", \"Start Date\", \"End Date\" and \"Status\" columns, and an \"Unlink\" action.",
-          "keywords": [
-            "events",
-            "link event",
-            "unlink",
-            "associate",
-            "attach",
-            "remove event",
-            "upcoming",
-            "past",
-            "event id",
-            "search events"
-          ]
-        },
-        {
-          "slug": "members-list",
-          "heading": "View members",
-          "body": "Click \"Manage Members\" in a group's row to see \"Members\" of this focus group, with their roles and status. The table shows \"First Name\", \"Last Name\", \"Email\", \"Role\", \"Status\" and \"Actions\". Use \"Refresh list\" to reload it, and \"Previous\" and \"Next\" to change page. The \"View user profile\" button in a row opens that person's profile. If the group has none, you will see \"No members found.\"",
-          "keywords": [
-            "members",
-            "people",
-            "list",
-            "users",
-            "roles",
-            "status",
-            "refresh",
-            "view profile",
-            "participants"
-          ]
-        },
-        {
-          "slug": "add-member",
-          "heading": "Add a member",
-          "body": "1) On the members page, click \"Add Member\". 2) In \"Search user (name or email)\", type a name or email and select the person. They must already be registered with a profile, otherwise you will see \"No users found.\" 3) Choose a \"Role\": MEMBER (regular), ORGANISER (contact organiser), EXECUTIVE (contact organiser), LEAD or ADMIN. 4) Choose a \"Status\": ACTIVE, PENDING or INACTIVE. 5) Click the \"Add member\" button. Use ORGANISER or EXECUTIVE for Contact Organisers on the public page. ACTIVE means they count as current members. Use \"Clear selected user\" to pick someone else.",
-          "keywords": [
-            "add member",
-            "join",
-            "user",
-            "role",
-            "organiser",
-            "executive",
-            "lead",
-            "admin",
-            "status",
-            "active",
-            "pending",
-            "contact organiser"
-          ]
-        },
-        {
-          "slug": "update-remove-member",
-          "heading": "Change or remove a member",
-          "body": "In a member's row under \"Actions\", change the \"Role\" and \"Status\" dropdowns, then click \"Update member\" to save. To take someone out of the group, click \"Remove member\" and confirm \"Remove this member from the focus group?\". If something goes wrong you will see \"Failed to update member\" or \"Failed to remove member\".",
-          "keywords": [
-            "update member",
-            "change role",
-            "remove member",
-            "delete member",
-            "kick",
-            "status",
-            "role",
-            "actions",
-            "confirm"
+            "save",
+            "slug"
           ]
         },
         {
           "slug": "delete-group",
           "heading": "Delete a focus group",
-          "body": "1) On \"Manage Focus Groups\", click the \"Delete Focus Group\" button in the group's row. 2) When \"Delete focus group?\" appears, confirm with \"Delete Focus Group\", or choose \"Cancel\" to keep it. If deletion fails, you will see \"Failed to delete focus group\".",
+          "body": "On the list, click \"Delete Focus Group\" on the group's row. A confirmation, \"Delete focus group?\", appears. Confirm with \"Delete Focus Group\", or choose \"Cancel\" to keep it. If it fails, you see \"Failed to delete focus group\".",
           "keywords": [
             "delete",
             "remove group",
-            "remove focus group",
             "confirm",
             "cancel",
-            "erase"
+            "trash"
           ]
         },
         {
-          "slug": "rules",
-          "heading": "Rules and required fields",
-          "body": "\"Name *\" and \"Slug *\" are required, and each must be unique among groups. Slugs allow only lowercase letters, numbers and hyphens. Cover images must be PNG, JPG or GIF and under 10MB. Details and cover changes on the edit page are saved with \"Save Focus Group\". On the members page, a role or status change is saved with \"Update member\". Confirmed deletions and removals take effect right away. Only active groups are marked \"YES\" in the \"Active\" column of the list.",
+          "slug": "manage-events",
+          "heading": "Link and unlink events",
+          "body": "Click \"Manage Events\" on a group's row to see \"Linked Events\". To add one, use \"Link New Event\": search by title (\"Search by Title\") or by ID (\"Search by ID\"), then click \"Link\" next to the event. To remove a link, click \"Unlink\" on the event's row; the event itself is not mentioned as deleted. The edit page also has \"Associated Events\" with \"Upcoming Events\" and \"Past Events\" tabs showing title, start date, end date and status. An event already linked to the group cannot be linked again.",
           "keywords": [
-            "rules",
-            "limits",
-            "required",
-            "unique",
-            "slug format",
-            "file size",
+            "events",
+            "link event",
+            "unlink",
+            "associate event",
+            "upcoming",
+            "past",
+            "search event",
+            "attach"
+          ]
+        },
+        {
+          "slug": "manage-members",
+          "heading": "Add and manage members",
+          "body": "Click \"Manage Members\" on a group's row to see the \"Members\" list with first name, last name, email, role, status and actions. To add someone: 1) Click \"Add Member\". 2) Search for a registered user by name or email and select them. 3) Choose a \"Role\" and \"Status\". 4) Click the \"Add member\" button. The user must already have a profile. Use \"Refresh list\" to reload the list, and \"View user profile\" to open a member's profile.",
+          "keywords": [
+            "members",
+            "add member",
+            "user",
+            "search user",
+            "role",
+            "status",
+            "profile",
+            "refresh"
+          ]
+        },
+        {
+          "slug": "member-roles",
+          "heading": "Roles, status, update and remove members",
+          "body": "Roles available are MEMBER (regular), ORGANISER (contact organiser), EXECUTIVE (contact organiser), LEAD and ADMIN. Use ORGANISER or EXECUTIVE for Contact Organisers on the public page. Status can be ACTIVE, PENDING or INACTIVE; ACTIVE means they count as current members. To change a member, adjust \"Role\" or \"Status\" in their row and click \"Update member\". To take someone out, click \"Remove member\" and confirm \"Remove this member from the focus group?\".",
+          "keywords": [
+            "role",
+            "status",
+            "organiser",
+            "executive",
+            "contact organiser",
             "active",
-            "save",
-            "validation"
+            "pending",
+            "inactive",
+            "remove member",
+            "update member"
           ]
         }
       ]
@@ -2154,12 +2123,12 @@
         "src/components/FormApiErrorBanner.tsx",
         "src/components/admin/gallery/GalleryAlbumCoverImageUpload.tsx"
       ],
-      "sourceHash": "2ff0f188597feb5c",
+      "sourceHash": "45835486e409c683",
       "sections": [
         {
           "slug": "overview",
           "heading": "Overview of Gallery Albums",
-          "body": "Gallery Albums let you group public photos into albums shown on the gallery page. The list page (Admin Dashboard > Gallery > Albums) is titled \"Gallery Albums\" and has a \"Create New Album\" button, search, visibility and sort controls, and a paged list of albums. Each album row has actions: \"Manage Media\", \"Edit Album\" and \"Delete Album\". \"Edit Album\" opens a page for the album's details and settings. \"Manage Media\" opens a page for uploading and managing the album's files and videos. Use the breadcrumb at the top to move back to Albums or the Admin Dashboard.",
+          "body": "Gallery Albums lets you group public photos into albums shown on the gallery page. The main page (Admin Dashboard > Gallery > Albums) is titled \"Gallery Albums\" and lists your albums with a search box, a visibility filter, a sort menu and page buttons. Each album row has three actions: \"Manage Media\", \"Edit Album\" and \"Delete Album\". The \"Create New Album\" button at the top starts a new album. Editing an album opens a page titled \"Edit Album\", and managing media opens a page titled \"Media\" for that album. If you see a message \"Select a tenant in the admin bar\", pick a website (tenant) in the admin bar first.",
           "keywords": [
             "gallery",
             "albums",
@@ -2168,76 +2137,76 @@
             "manage albums",
             "pictures",
             "media",
-            "public gallery"
+            "tenant"
           ]
         },
         {
           "slug": "create-album",
           "heading": "Create a new album",
-          "body": "1) On the albums list, click \"Create New Album\". 2) Enter a \"Title *\" (required). 3) Optionally fill in \"Description\", \"Cover Image URL\", \"Display Order\" and \"Category\". 4) Choose \"Public — visible in gallery\" or \"Private — hidden from public gallery\". 5) Click \"Create Album\". Click \"Cancel\" to close the form without saving. If something goes wrong, an \"Error creating album\" message appears. The cover image URL can be left empty and set later when adding media.",
+          "body": "1) On the \"Gallery Albums\" page click \"Create New Album\". 2) Enter a \"Title *\" (required) in the box marked \"Enter album title\". 3) Optionally add a \"Description\", a \"Cover Image URL\" (can be set later when adding media), and a \"Display Order\" (lower values appear first in the gallery; default is 0). 4) Choose \"Public — visible in gallery\" or \"Private — hidden from public gallery\". 5) Optionally pick a \"Category\", then click \"Create Album\". Use \"Cancel\" to close the form without saving. If something goes wrong, an \"Error creating album\" message appears with \"Technical details\" you can open.",
           "keywords": [
             "create album",
             "new album",
             "add album",
-            "make album",
             "title",
-            "cover image url",
+            "description",
+            "display order",
             "category",
-            "display order"
+            "public",
+            "private"
           ]
         },
         {
-          "slug": "search-filter-sort",
+          "slug": "find-albums",
           "heading": "Search, filter and sort albums",
-          "body": "Use the \"Search by field\" menu to choose what to search: \"All\", \"Title\", \"Description\", \"Image text\", \"Search text\" or \"Album ID\" (the ID box asks for a numeric album ID). Type in \"Search albums\" and use \"Clear album search\" to reset. The \"Visibility filter\" offers \"All Visibility\", \"Public\" and \"Private\". The \"Sort albums\" menu offers \"Display order (asc)\", \"Display order (desc)\", \"Title (A–Z)\", \"Title (Z–A)\", \"Newest first\", \"Oldest first\" and \"Recently updated\". If nothing matches you see \"No albums found\" with the hint \"Try adjusting your search filters.\"",
+          "body": "Use the \"Search by field\" menu to choose what to search: \"All\", \"Title\", \"Description\", \"Image text\", \"Search text\" or \"Album ID\". When you choose Album ID, the search box asks for a numeric album ID. Type in the \"Search albums\" box, and use \"Clear album search\" to reset it. The visibility filter has \"All Visibility\", \"Public\" and \"Private\". The \"Sort\" menu offers \"Display order (asc)\", \"Display order (desc)\", \"Title (A–Z)\", \"Title (Z–A)\", \"Newest first\", \"Oldest first\" and \"Recently updated\". If nothing matches you see \"No albums found\" with the hint \"Try adjusting your search filters.\"",
           "keywords": [
             "search",
             "filter",
             "sort",
             "find album",
             "visibility",
-            "public",
-            "private",
+            "album id",
             "order",
-            "album id"
+            "newest",
+            "oldest"
           ]
         },
         {
           "slug": "browse-list",
-          "heading": "Read the album list and page through it",
-          "body": "Each album shows whether it is visible on the public gallery or hidden from it, and its gallery category. Albums without a category show \"Uncategorized\". When there are many albums, use \"Previous\" and \"Next\" at the bottom, which also show the page and a \"Showing\" count. If no albums exist yet, the page says \"Get started by creating a new album.\" If the list can't be loaded you see \"Error loading albums\".",
+          "heading": "Reading the album list and paging",
+          "body": "Each album shows whether it is \"Visible on the public gallery\" or \"Hidden from the public gallery\", and its gallery category. Albums without a category show \"Uncategorized\". When the list is long, use \"Previous Page\" and \"Next Page\" at the bottom; the list also shows \"Showing\" with the current page. If you have no albums yet, you see \"Get started by creating a new album.\" If the list can't load, you see \"Error loading albums\".",
           "keywords": [
             "list",
             "pages",
+            "pagination",
             "next",
             "previous",
-            "pagination",
-            "category",
             "uncategorized",
+            "category",
             "visible",
             "hidden"
           ]
         },
         {
           "slug": "edit-album",
-          "heading": "Edit album details",
-          "body": "1) On the albums list, click \"Edit Album\" on the album row (or on the media page). 2) Change \"Title *\", \"Description\", \"Display Order\", \"Visibility\" or \"Category\". 3) Click \"Save Changes\". Lower display order values appear first in the gallery; the default is 0. Private albums stay in admin but are hidden on the public site. Category is an optional grouping such as Ecumenical Visits or Major Events. Click \"Cancel\" to leave without saving. If saving fails you see \"Error updating album\".",
+          "heading": "Edit an album",
+          "body": "1) On the album list click \"Edit Album\" on the album's row (or on the media page). 2) Change the \"Title *\", \"Description\", \"Display Order\", \"Visibility\" (\"Public — visible in gallery\" or \"Private — hidden from public gallery\") or \"Category\". 3) Click \"Save Changes\". Private albums stay in the admin but are hidden on the public site. Nothing is saved until you click \"Save Changes\". If saving fails, an \"Error updating album\" message appears.",
           "keywords": [
             "edit album",
             "change title",
-            "update album",
+            "rename",
+            "update",
             "visibility",
-            "display order",
             "category",
             "save changes",
-            "private",
-            "public"
+            "display order"
           ]
         },
         {
           "slug": "album-cover",
-          "heading": "Set the album cover image",
-          "body": "The cover is what visitors see on gallery cards and album listings. On the edit page, in the \"Cover Image\" area, click to upload or drag and drop an image (PNG, JPG, GIF up to 10MB). A message confirms \"Cover image saved to the album.\" Upload another image to replace the cover. You can also type a manual URL, which is saved when you click \"Save Changes\". From the media page, use \"Set as Cover Image\" on an image to make it the cover. Errors such as \"Invalid File Type\", \"File Too Large\" or \"Upload Failed\" appear if the upload doesn't work.",
+          "heading": "Set the album cover",
+          "body": "The cover is what visitors see on gallery cards and album listings. In the \"Cover Image\" section of the edit page, click \"Click to upload\" or drag and drop an image (PNG, JPG, GIF up to 10MB). A preview appears, and \"Cover image saved to the album.\" confirms it. To replace it, upload another image. If you type a cover URL manually, it is saved when you click \"Save Changes\". You can also use \"Set as Cover Image\" on an image in the album's media page. Errors such as \"Invalid File Type\", \"File Too Large\" or \"Upload Failed\" explain what to fix.",
           "keywords": [
             "cover",
             "cover image",
@@ -2245,81 +2214,76 @@
             "picture",
             "upload cover",
             "replace cover",
-            "set as cover image",
             "album image"
           ]
         },
         {
           "slug": "upload-media",
           "heading": "Upload photos and files to an album",
-          "body": "1) On the list, click \"Manage Media\" for the album. 2) In \"Upload Media\", enter \"Title *\" and \"Start Displaying From Date *\"; optionally add \"Description\", \"Alt Text\" and \"Display Order\". 3) Tick \"Make media public (visible in gallery)\" if it should be shown. 4) Drag and drop files, or click \"Browse Files\" or \"Upload Folder\". 5) Confirm \"Upload the selected files to this album?\" with \"Upload files\". Accepted files are images, videos, PDFs, Word, PowerPoint, Excel and SVG files. Titles, dates and at least one file are required, or you'll see messages such as \"No files to upload\".",
+          "body": "On the album list click \"Manage Media\" on the album. In the \"Upload Media\" section: 1) Enter a \"Title *\" (required). 2) Choose a \"Start Displaying From Date *\" (required). 3) Optionally add \"Description\", \"Alt Text\" and \"Display Order\", and tick \"Make media public (visible in gallery)\". 4) Drag and drop files, or click \"Browse Files\" or \"Upload Folder\". 5) Confirm with \"Upload files\" when asked \"Upload the selected files to this album?\" Accepted files are images, videos, PDFs, Word, PowerPoint, Excel and SVG files. At least one file is required; otherwise you see \"No files to upload\".",
           "keywords": [
             "upload",
             "add photos",
-            "files",
+            "add files",
             "folder",
-            "browse",
             "drag and drop",
-            "pdf",
             "video",
-            "media",
+            "pdf",
+            "start displaying",
             "alt text"
           ]
         },
         {
-          "slug": "add-youtube",
+          "slug": "youtube-videos",
           "heading": "Add YouTube videos",
-          "body": "On the media page, use \"Add YouTube video\" (the \"Add videos to album\" button). Enter a \"YouTube URL *\" and a video title, and optionally a description. Click \"Add another URL\" for more videos, or \"Remove\" to drop one. Tick \"Make videos public (visible in this album)\" to show them. A URL and title are both required (\"Add a YouTube URL and a title.\"). On success you see \"YouTube video added to this album.\"",
+          "body": "In the media page use the \"Add YouTube video\" section. 1) Enter a \"YouTube URL *\" and a video title (and optionally a description). 2) Click \"Add another URL\" to add more videos, or \"Remove\" to drop one. 3) Tick \"Make videos public (visible in this album)\" if wanted. 4) Click \"Add videos to album\". The videos are saved as gallery items together with uploaded photos and files. You see \"YouTube video added to this album.\" on success, or \"Add a YouTube URL and a title.\" if something is missing.",
           "keywords": [
             "youtube",
             "video",
             "add video",
-            "url",
             "link",
+            "url",
             "embed"
           ]
         },
         {
           "slug": "manage-media",
           "heading": "Edit, remove or delete media in an album",
-          "body": "Each media item has actions: \"Edit Media\", \"Set as Cover Image\", \"Remove from Album\" and \"Delete Media\". \"Edit Media\" lets you change its details and click \"Save Changes\". \"Remove from Album\" takes the file out of this album but it stays in the library. \"Delete Media\" removes the file permanently from the library and from this album. Each of these asks you to confirm first. Use \"Previous\" and \"Next\" to page through files; \"No media files yet\" shows when the album is empty.",
+          "body": "Each media item on the media page has these actions: \"Set as Cover Image\" (images only), \"Edit Media\" (then \"Save Changes\"), \"Remove from Album\" and \"Delete Media\". \"Remove from Album\" takes the file out of the album but it stays in the library. \"Delete Media\" removes the file permanently from the library and from this album, after you confirm. Use \"Previous Page\" and \"Next Page\" to move through the list. If there are no files you see \"No media files yet\".",
           "keywords": [
             "remove media",
             "delete media",
             "edit media",
+            "cover",
             "remove photo",
             "delete photo",
-            "set cover",
-            "library",
-            "confirm"
+            "library"
           ]
         },
         {
           "slug": "delete-album",
           "heading": "Delete an album",
-          "body": "1) On the list, click \"Delete Album\" on the row (also available on the edit page). 2) Read the confirmation, then click \"Confirm delete\" (or \"Cancel\"). Deleting cannot be undone. Media files in the album are not deleted, but they are removed from the album. If it fails you see \"Failed to delete album\".",
+          "body": "1) Click \"Delete Album\" on the album's row in the list (or on the edit page). 2) Read the confirmation, then click \"Confirm delete\" to proceed, or \"Cancel\" to stop. Deleting cannot be undone. Media files in the album are not deleted, but they are removed from the album. If it fails, you see \"Failed to delete album\".",
           "keywords": [
             "delete album",
             "remove album",
-            "erase",
             "confirm delete",
-            "cannot be undone"
+            "cannot undo"
           ]
         },
         {
           "slug": "rules",
           "heading": "Rules and limits",
-          "body": "A title is required for albums and for uploaded media, and uploads also need a \"Start Displaying From Date\" and at least one file. Cover images must be JPEG, PNG or GIF and smaller than 10MB. Album visibility is either public (shown in the gallery) or private (hidden from the public site but still in admin). Display order is a number, with lower values first. Album edits are saved only when you click \"Save Changes\"; creating, deleting, uploading and cover uploads act when you confirm them.",
+          "body": "A title is required for albums and for uploaded media, and uploads also need a \"Start Displaying From Date\" and at least one file. Cover images must be PNG, JPG or GIF and smaller than 10MB. Lower display order numbers appear first in the gallery; the default is 0. Creating, deleting, uploading and removing media take effect when you confirm the action; album detail changes on the edit page take effect when you click \"Save Changes\". Only public albums are visible on the public gallery.",
           "keywords": [
             "limits",
-            "rules",
             "required",
             "file size",
             "10mb",
             "file types",
-            "title required",
-            "visibility",
-            "saves"
+            "rules",
+            "display order",
+            "save"
           ]
         }
       ]
@@ -5147,156 +5111,175 @@
         "src/components/FromEmailSelect.tsx",
         "src/components/TenantSettingsProvider.tsx"
       ],
-      "sourceHash": "9e9d9bf6093765e3",
+      "sourceHash": "484b909690ccfd36",
       "sections": [
         {
           "slug": "overview",
-          "heading": "Overview of Newsletter Email Management",
-          "body": "The \"Newsletter Email Management\" page (/admin/newsletter-emails) is where you manage email templates and send them. It has two main buttons, \"Email History\" and \"Create New Template\", above a list titled \"Email Templates\". The list has filters (\"Filter by Event\", \"Status\", \"Search\") and the columns \"Template Name\", \"Event\", \"Subject\" and \"Created\". Each row has action icons: Edit, Duplicate, Send Test, Send Bulk, Send to Subscribed Members (also described as \"Send to All Members\") and Delete. Editing a template opens its own page (/admin/newsletter-emails/ followed by the template), titled \"Edit Newsletter Email Template\". You must be logged in to see these pages.",
+          "heading": "What this page is for",
+          "body": "\"Newsletter Email Management\" (the Newsletter Emails page) is where you create, edit and send email templates for promotions and newsletters. The main list, called \"Email Templates\", shows each template's name, event, subject and created date, with a row of action icons for editing, duplicating, sending and deleting. At the top of the page you will find the \"Email History\" and \"Create New Template\" buttons. Opening a template to edit takes you to its own page, where \"Back to templates\" returns you to the list. Hover over a template name in the list to see a popup with its details.",
           "keywords": [
             "newsletter",
-            "email",
-            "templates",
-            "overview",
+            "email templates",
             "promotion emails",
-            "send email",
-            "manage templates",
-            "campaign"
+            "overview",
+            "marketing email",
+            "campaign",
+            "template list",
+            "send email"
+          ]
+        },
+        {
+          "slug": "find-templates",
+          "heading": "Search and filter the template list",
+          "body": "Above the list you can narrow templates down. 1) Use \"Filter by Event\" to pick one event, or leave it on \"All Events\". 2) Use \"Status\" to choose \"All\", \"Active\" or \"Inactive\". 3) Type in the \"Search\" box (\"Search by name or subject...\") to find a template by its promotion name or title. Use the clear button (\"Clear template search\") to empty the search box. If nothing matches you will see \"No templates match your filters\". Use \"Previous\" and \"Next\" at the bottom to move between pages; the footer shows the page number and a \"Showing\" count.",
+          "keywords": [
+            "search",
+            "filter",
+            "find template",
+            "event filter",
+            "status",
+            "active",
+            "inactive",
+            "pagination",
+            "next page"
+          ]
+        },
+        {
+          "slug": "template-details-popup",
+          "heading": "See template details",
+          "body": "Hover over a template name in the list to open a \"Template Details\" popup. It shows the template name, subject, event ID, status, promotion code, whether a header and footer image are set, created and updated dates, and a \"Body HTML Preview\". Use the close button (\"Close tooltip\") to dismiss it.",
+          "keywords": [
+            "details",
+            "preview",
+            "tooltip",
+            "popup",
+            "hover",
+            "template info",
+            "body preview"
           ]
         },
         {
           "slug": "create-template",
           "heading": "Create a new template",
-          "body": "1) Click \"Create New Template\". 2) Fill in \"Template Name\" (for example \"Summer Sale 2024\") and \"Email Subject\". 3) Choose the from email address from the list; if the list is empty, a message asks you to contact Admin to add from addresses. 4) Optionally pick a \"Discount Code (Optional)\" or leave it as \"None\". 5) Enter the \"Email Body HTML\" and, if needed, \"Email Footer HTML\". 6) Leave \"Template is active\" ticked if you want it active. 7) Click \"Create Template\". You will see \"Your template has been created successfully. Redirecting...\". Use \"Cancel\" to close the form without saving. Header and footer images can only be added after the template is created.",
+          "body": "1) Click \"Create New Template\" at the top of the page. 2) Fill in \"Template Name\" (for example, Summer Sale 2024) and \"Email Subject\". 3) Choose the from email address (required; see the from email rules section). 4) Optionally pick a \"Discount Code (Optional)\", or leave it on \"None\". If the event has no discount codes you will see a message saying so. 5) Enter \"Email Body HTML\" and, if needed, \"Email Footer HTML\". Click \"Click to see example HTML\" to view a sample and use \"Copy to editor\" to copy it into the body. 6) Tick or untick \"Template is active\", then click \"Create Template\" (or \"Cancel\" to leave). After saving you are redirected. Header and footer images can only be added after the template is created, by editing it.",
           "keywords": [
             "create template",
             "new template",
             "add template",
-            "template name",
-            "subject",
-            "from email",
+            "email subject",
+            "body html",
             "discount code",
-            "new email"
-          ]
-        },
-        {
-          "slug": "body-html",
-          "heading": "Write the email body and use the example",
-          "body": "The \"Email Body HTML\" box takes HTML content for the email. Click \"Click to see example HTML\" to open an \"Example body HTML\" sample (a special offer with a discount code), then click \"Copy to editor\" to put it in your body. If copying fails, you will see a \"Failed to copy example HTML\" message. \"Email Footer HTML\" is a separate box for footer content. Both the email logo and the email footer can be configured in Tenant Settings → Customization.",
-          "keywords": [
-            "html",
-            "body",
-            "example",
-            "footer html",
-            "copy",
-            "layout",
-            "content",
-            "logo"
+            "active",
+            "example html",
+            "new newsletter"
           ]
         },
         {
           "slug": "from-email-rules",
-          "heading": "From email rules",
-          "body": "The from email address must be registered and verified with AWS SES (Amazon Simple Email Service), and only verified emails can be used. If your domain is verified in the SES Identity section, any valid address from that domain can be used (for example noreply@example.com). You cannot send an email where the \"From\" and \"To\" addresses are the same, and Hotmail accounts do not work as the From email. In the from email picker you can search addresses, see which is marked \"Default\", and use \"Clear selection\". Only active addresses from your tenant configuration are shown. If you get \"Please enter from email address\" or \"Please enter a valid email address\", fix the field and try again.",
+          "heading": "From email address rules",
+          "body": "The from email is chosen from a searchable list (\"Search email addresses...\") of active addresses from your tenant configuration; one may be marked \"Default\", and you can clear your choice with \"Clear selection\". The address must be registered and verified with AWS SES (Amazon Simple Email Service). If your domain is verified in SES, any valid address on that domain can be used. You cannot send an email where the \"From\" and \"To\" addresses are the same, and Hotmail accounts do not work as the From address. If the list is empty you will see a message to contact your admin to add from email addresses. If you leave it blank you will see \"Please enter from email address\". The email logo and footer can be set under Tenant Settings → Customization.",
           "keywords": [
             "from email",
             "sender",
-            "verified",
             "aws ses",
+            "verified email",
             "domain",
             "hotmail",
-            "default",
-            "email address"
+            "default sender",
+            "email address list",
+            "verification"
           ]
         },
         {
           "slug": "edit-template",
-          "heading": "Edit a template and upload header and footer images",
-          "body": "1) In the template list, click the Edit icon in the row (right-click to open it in a new tab). 2) Change the name, subject, from email, discount code, body, footer HTML or the \"Template is active\" setting. 3) Click \"Update Template\". You will see \"Your template has been saved successfully. Redirecting...\". Use \"Back to Promotion Emails\" or \"Cancel\" to leave. In the \"Header Image\" and \"Footer Image\" sections, click to upload or drag and drop an image (PNG, JPG, GIF up to 5MB). The image is saved as soon as it uploads, and you can remove it afterwards. Tick \"Add site footer\" to insert your homepage-style footer when the template is saved or sent; it is sent separately from a footer banner image.",
+          "heading": "Edit an existing template",
+          "body": "1) In the template list, click the \"Edit\" icon on the row (right-click it to open in a new tab). 2) On \"Edit Newsletter Email Template\", change the name, subject, from email, discount code, body HTML, footer HTML or the \"Template is active\" setting. 3) Click \"Update Template\". You will see a saving message, then a success message and a redirect to the list. \"Cancel\" leaves without saving. If the template cannot be found you will see \"This template is no longer available\" or \"This template could not be loaded\"; refresh the page or go back and open it again.",
           "keywords": [
             "edit template",
-            "update",
+            "update template",
+            "change subject",
+            "modify",
+            "save template",
+            "inactive",
+            "deactivate",
+            "template not found"
+          ]
+        },
+        {
+          "slug": "header-footer-images",
+          "heading": "Upload header and footer images",
+          "body": "On the edit page, use the \"Header Image\" and \"Footer Image\" sections. 1) Click the area to upload, or drag and drop an image onto it (\"Drop image here\"). 2) A preview appears. Images must be PNG, JPG or GIF up to 5MB. Uploads and removals are saved straight away (you will see \"Header image uploaded and saved successfully!\" or the footer equivalent), without needing \"Update Template\". Use the remove option on the preview to delete an image. Under the footer image, tick \"Add site footer\" to insert your homepage-style footer (tenant name, contact, links) at about 600 px email width when the template is saved or sent; you can use it together with a footer banner image.",
+          "keywords": [
             "header image",
             "footer image",
             "upload picture",
+            "logo",
+            "banner",
+            "png",
+            "jpg",
+            "gif",
+            "5mb",
             "remove image",
             "site footer",
-            "banner",
             "drag and drop"
           ]
         },
         {
-          "slug": "find-templates",
-          "heading": "Search and filter templates",
-          "body": "Use \"Filter by Event\" (default \"All Events\") to show templates for one event. Use \"Status\" with \"All\", \"Active\" or \"Inactive\". Type in the search box (\"Search by name or subject...\") to search by promotion name or title, and use \"Clear template search\" to reset it. Hover over a template name to see a popup with \"Template Details\" such as subject, event ID, status, promotion code, header and footer images, created and updated dates, and a body preview. If nothing matches you see \"No templates match your filters\". Use \"Previous\" and \"Next\" to move between pages.",
+          "slug": "send-test-email",
+          "heading": "Send a test email",
+          "body": "Always test before sending to subscribers. 1) In the template row, click the \"Send Test\" icon. 2) In the \"Send Test Email\" window, check the \"Template Name\" and type an address in \"Recipient Email Address\" (\"Enter email address\"). 3) Click \"Confirm & Send\". An invalid address shows \"Please enter a valid email address\". When it works you will see \"Send Successfully!\". Sometimes the first email may take a minute or two to arrive. Remember the From and To addresses cannot be the same.",
           "keywords": [
-            "search",
-            "filter",
-            "find template",
-            "status",
-            "active",
-            "inactive",
-            "event",
-            "pagination",
-            "details"
+            "test email",
+            "send test",
+            "preview email",
+            "try email",
+            "recipient",
+            "check email",
+            "confirm and send"
+          ]
+        },
+        {
+          "slug": "send-bulk-email",
+          "heading": "Send to event attendees or all subscribed members",
+          "body": "Two send icons are in each template row. \"Send Bulk\" sends the email to the event attendees registered for the event (or pertinent to that event only); a \"Send Bulk Email\" confirmation window asks you to confirm using the template. \"Send to All Members\" (also titled \"Send to Subscribed Members\") is a global email to members who subscribed to receive emails; its window is titled \"Send to All Subscribed Members\". In either window click \"Confirm & Send\" to proceed or \"Cancel\" to stop. These sends cannot be undone, so send a test first.",
+          "keywords": [
+            "bulk email",
+            "send to all",
+            "subscribers",
+            "members",
+            "attendees",
+            "mass email",
+            "newsletter send",
+            "send newsletter",
+            "cannot be undone"
           ]
         },
         {
           "slug": "duplicate-delete",
           "heading": "Duplicate or delete a template",
-          "body": "To copy a template, click the Duplicate icon in its row. You will see \"Template duplicated successfully!\" when it works. To remove one, click the Delete icon, then confirm in the \"Delete Template\" box that asks \"Are you sure you want to delete this template?\". Deleting is permanent and cannot be undone. Use \"Cancel\" to keep the template.",
+          "body": "To copy a template, click the \"Duplicate\" icon on its row; you will see \"Template duplicated successfully!\". To remove one, click the \"Delete\" icon, then confirm in the \"Delete Template\" window. Deleting is permanent and cannot be undone. Click \"Cancel\" to keep the template.",
           "keywords": [
             "duplicate",
-            "copy",
+            "copy template",
             "clone",
             "delete",
             "remove template",
-            "confirm"
-          ]
-        },
-        {
-          "slug": "send-emails",
-          "heading": "Send a test, bulk or subscriber email",
-          "body": "Row icons send emails. 1) \"Send Test\": opens a \"Send Test Email\" box; enter the address in \"Recipient Email Address\" and confirm with \"Confirm & Send\". This is for checking content, layout and links before sending to others. 2) \"Send Bulk\": asks you to confirm, then sends to all eligible recipients; the help note says it goes to attendees registered for that event. 3) \"Send to Subscribed Members\" (\"Send to All Members\"): sends to all members who have subscribed to receive emails; the help note calls it a global email to all members of the organisation. Bulk sends cannot be undone, so check the template name in the confirmation first. The first email may take a minute or two to arrive.",
-          "keywords": [
-            "send",
-            "test email",
-            "bulk email",
-            "subscribed members",
-            "all members",
-            "recipients",
-            "confirm",
-            "newsletter send"
+            "permanently delete"
           ]
         },
         {
           "slug": "email-history",
-          "heading": "View email history",
-          "body": "Click \"Email History\" at the top of the page to see sent emails. You can filter by event (\"All Events\"), by status (\"All Statuses\", \"Sent\", \"Failed\", \"Bounced\"), and by \"Start Date\" and \"End Date\". The list shows the recipient, subject and sent time, and marks test emails with \"Test Email\". Use \"Previous\" and \"Next\" to page through results. If nothing matches you see \"No emails found\".",
+          "heading": "Check email history",
+          "body": "Click \"Email History\" at the top of the page to see emails that were sent. You can filter by \"Event\" (or \"All Events\"), by \"Status\" (\"All Statuses\", \"Sent\", \"Failed\", \"Bounced\"), and by \"Start Date\" and \"End Date\". The table lists \"Recipient\", \"Subject\" and \"Sent At\", and marks test emails as \"Test Email\". Use \"Previous\" and \"Next\" to move between pages. If nothing matches you will see \"No emails found\".",
           "keywords": [
-            "history",
+            "email history",
             "sent emails",
-            "log",
             "failed",
             "bounced",
+            "log",
+            "delivery status",
             "date range",
-            "status",
             "recipient"
-          ]
-        },
-        {
-          "slug": "messages-limits",
-          "heading": "Rules and common messages",
-          "body": "Image uploads accept image files only (PNG, JPG, GIF up to 5MB); otherwise you see \"Please drop a valid image file\". Header and footer images can be added only after the template exists. A test send needs a template and a valid address (\"Please enter a valid email address\"). Messages like \"Send Successfully!\" confirm a send, while \"Failed to send test email\" or \"Failed to send bulk email\" mean it did not go through; try again. Template create, update and image upload or removal show their own success or failure messages. If the list does not load, you see \"Unable to load email templates. Please try again later.\"",
-          "keywords": [
-            "limits",
-            "errors",
-            "file size",
-            "image types",
-            "failed",
-            "success",
-            "required fields",
-            "troubleshooting"
           ]
         }
       ]
@@ -5649,32 +5632,31 @@
         "src/app/admin/tenant-management/organizations/tenantIdServerActions.ts",
         "src/app/admin/tenant-management/settings/ApiServerActions.ts",
         "src/components/admin/AdminListSearchCombobox.tsx",
-        "src/components/admin/AdminRecordMissing.tsx",
         "src/components/admin/CopyInstructionsButton.tsx"
       ],
-      "sourceHash": "cef77b537fabca0a",
+      "sourceHash": "6c25ccc8cfb7b4a2",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
-          "heading": "Overview",
-          "body": "Onboarding Requests lists new customer applications for a website. Reviewing and approving one creates the tenant (the customer's website), its tenant settings, email addresses, satellite domain and admin access in one step. The site type chosen on the request decides which tools that tenant sees. The main page is \"Onboarding Requests\" and has a search box, a list of requests, an \"Add Request Manually\" button and \"Previous\" / \"Next\" paging. Click \"Review request\" on a row to open that request's review screen. The new-request form opens from \"Add Request Manually\". This area is for the platform super admin.",
+          "heading": "What this page is for and where things are",
+          "body": "Onboarding Requests lists applications from new customers who want a website (a tenant). Approving a request creates the tenant, its settings, email addresses, satellite domain and admin access in one step. The site type chosen on the request decides which tools that tenant sees. This area is for the platform super admin. The list is at the Onboarding Requests page, with a search box, an \"Add Request Manually\" button, a \"Review request\" action on each row, and \"Previous\" and \"Next\" page buttons. Opening a row takes you to the review screen for that request, and \"Add Request Manually\" opens the \"Add onboarding request\" form.",
           "keywords": [
             "onboarding",
             "requests",
             "new customer",
             "application",
-            "approve",
             "tenant",
-            "site type",
+            "approve",
             "overview",
-            "review"
+            "website",
+            "site type"
           ]
         },
         {
           "slug": "find-requests",
-          "heading": "Search and page through requests",
-          "body": "Use the search box on the \"Onboarding Requests\" page. It accepts an organization name, email, domain, tenant ID, organization ID, or an ONB- code. Click \"Clear search\" to empty it. While the list loads you see \"Loading...\". If nothing matches you see \"No requests match this filter.\" or \"No requests found\". Requests that an admin entered by hand are marked \"(manual)\". Use \"Previous\" and \"Next\" at the bottom to change pages; the list shows which page and how many items you are viewing. A tenant ID appears in tenant settings only after approval.",
+          "heading": "Search and browse requests",
+          "body": "On the list, type in the search box to find a request by organization, email, domain, tenant ID, organization ID, or an ONB- code. While results load you will see \"Loading...\". If nothing matches, the list shows \"No requests match this filter.\" or \"No requests found\". Use \"Previous\" and \"Next\" at the bottom to move between pages; the page number and a \"Showing\" count are displayed there. Requests you entered yourself are marked \"(manual)\". Tenant IDs appear in tenant settings only after approval.",
           "keywords": [
             "search",
             "find",
@@ -5685,21 +5667,20 @@
             "previous",
             "onb code",
             "domain",
-            "email",
-            "clear"
+            "email"
           ]
         },
         {
-          "slug": "add-request",
+          "slug": "add-manually",
           "heading": "Add a request manually",
-          "body": "Click \"Add Request Manually\" to open \"Add onboarding request\". The company must already exist under Organizations, because contact and address details live there. 1) Select the existing organization from the list. If it has no contact email you will be told to update it under Organizations and select it again. 2) Type a \"Name prefix (you supply)\"; the sequence number is added automatically and the \"Generated Tenant ID:\" is shown. 3) Fill in the requested domain, site type, domain ownership and branding. 4) Optionally add subscription details. 5) Click \"Save request\". The request stays PENDING until you approve it on the review screen. Use \"Back to onboarding requests\" to leave without saving.",
+          "body": "Use this when you want to enter an application yourself. 1) Click \"Add Request Manually\" on the list. 2) Pick an existing organization; if it doesn't exist yet, create it first under Organizations, because contact and address details live there. 3) Type a Name prefix in \"Name prefix (you supply) *\" (for example ford_motors); the sequence number is generated automatically and the \"Generated Tenant ID:\" is shown. 4) Fill in the requested domain, site type, domain ownership, branding and any subscription details. 5) Click \"Save request\". The request stays PENDING until you approve it on the review screen. If the organization has no contact email, you will be asked to update it under Organizations and select it again.",
           "keywords": [
             "add",
             "create",
             "new request",
             "manual",
             "organization",
-            "name prefix",
+            "prefix",
             "tenant id",
             "save request",
             "pending"
@@ -5707,16 +5688,16 @@
         },
         {
           "slug": "request-fields",
-          "heading": "Request fields",
-          "body": "Required fields are marked with an asterisk, such as \"Site type *\" and \"Domain ownership *\"; \"Requested domain\" (for example www.example.org) and \"Contact email\" are also required. Contact details include first name, last name, phone and a mailing address (\"Address line 1\", \"Address line 2\", \"City\", \"State / province\", \"ZIP / postal code\", \"Country\"). \"Registrar details\" can be added for domain ownership. Other fields are \"Tenant / site description\" (about this website only, not copied from the organization record), \"Customer notes\", the checkbox \"Wants online payments (tickets / donations)\", and \"Primary color\" and \"Secondary color\" (for example #1E40AF and #F59E0B).",
+          "heading": "Request form fields",
+          "body": "Required fields are marked with an asterisk: \"Site type *\", \"Domain ownership *\", and \"Requested domain\" (for example www.example.org), plus the contact email. Contact first name, last name and phone are also needed for contacts. Other fields include address lines, city, \"State / province\", \"ZIP / postal code\", country, \"Primary color\" (for example #1E40AF), \"Secondary color\" (for example #F59E0B), \"Tenant / site description\", \"Customer notes\", and the checkbox \"Wants online payments (tickets / donations)\". The site description describes only this website tenant and is not copied from the organization record. Under \"Domain ownership\", the \"Registrar details\" field is available for domain handoff details.",
           "keywords": [
             "fields",
             "required",
+            "domain",
             "site type",
-            "domain ownership",
             "contact",
             "address",
-            "colors",
+            "color",
             "description",
             "notes",
             "payments",
@@ -5724,86 +5705,89 @@
           ]
         },
         {
-          "slug": "tenant-id-prefix",
-          "heading": "Tenant ID prefix rules",
-          "body": "The tenant ID is built from your name prefix plus an automatic sequence number. Use lowercase letters, numbers and underscores only, for example bst_school_demo_1. Hyphens are not allowed. The prefix must end with a letter. If the ID cannot be generated you will see \"Could not generate tenant ID. Check the prefix and try again.\" and a valid generated ID is required before saving. On the review screen, \"Check availability\" shows whether the ID is \"Available\" or \"Already in use\".",
-          "keywords": [
-            "tenant id",
-            "prefix",
-            "underscore",
-            "hyphen",
-            "generate",
-            "availability",
-            "sequence",
-            "naming"
-          ]
-        },
-        {
-          "slug": "logo-and-subscription",
+          "slug": "logo-subscription",
           "heading": "Tenant logo and subscription details",
-          "body": "The \"Tenant logo (optional)\" belongs to the new website tenant, not the organization record. You must generate a Tenant ID first; until then upload is disabled. 1) Click the logo area or drag and drop an image (PNG, JPG, GIF or WebP, max 10MB). 2) Or paste a \"Logo URL\". 3) Click \"Remove logo\" to clear it. Optional subscription fields are \"Subscription Plan\" (Basic, Professional, Enterprise), \"Subscription Status\" (Active, Inactive, Suspended, Cancelled), start and end dates, \"Monthly Fee (USD)\" and \"Stripe Customer ID\".",
+          "body": "In \"Tenant logo (optional)\" you can click to upload or drag and drop an image, or paste a \"Logo URL\". Accepted files are images (PNG, JPG, GIF, WebP) up to 10MB. Upload is enabled only after a Tenant ID has been generated from the name prefix. Use \"Remove logo\" to clear it. If upload fails you may see \"Please select an image file\", \"File size must be less than 10MB\" or \"Failed to upload logo\". Optional subscription details are \"Subscription Plan\" (Basic, Professional, Enterprise), \"Subscription Status\" (Active, Inactive, Suspended, Cancelled), \"Subscription Start Date\", \"Subscription End Date\", \"Monthly Fee (USD)\" and \"Stripe Customer ID\".",
           "keywords": [
             "logo",
             "upload",
             "image",
             "picture",
+            "10mb",
             "subscription",
             "plan",
             "monthly fee",
             "stripe",
-            "status",
             "remove"
           ]
         },
         {
           "slug": "review-edit",
           "heading": "Review and edit a request",
-          "body": "Click \"Review request\" on a row to open the review screen. It shows the source, submitted and reviewed information, and any reviewer comments. Under \"Request details\" you can change values, then click \"Save changes\"; you will see \"Changes saved.\" If fields are invalid you will see \"Fix the highlighted request fields first.\" If a previous approval failed, a notice says it was rolled back; fix the values and approve again. If the request was removed you will see \"This onboarding request is no longer available\"; use \"Back to onboarding requests\".",
+          "body": "Click \"Review request\" on a row to open the review screen. At the top you see details such as Source, Submitted, Reviewed and Submitter IP, and reviewer comments if any. Under \"Request details\" you can change the fields, then click \"Save changes\"; \"Changes saved.\" confirms it. If some fields are wrong you will see \"Fix the highlighted request fields first.\" Use \"Back to onboarding requests\" to return to the list. If you see \"This onboarding request is no longer available\", it may have been deleted; if it \"could not be loaded\", refresh the page or go back to the list.",
           "keywords": [
             "review",
             "edit",
             "save changes",
-            "details",
-            "request",
-            "failed approval",
-            "rolled back",
-            "comments"
+            "request details",
+            "open",
+            "update",
+            "reviewer comments",
+            "not available"
+          ]
+        },
+        {
+          "slug": "provisioning",
+          "heading": "Set provisioning options",
+          "body": "In the \"Provisioning\" section, set the \"Tenant ID prefix\" using letters, numbers and underscores only; hyphens are not allowed and it must end with a letter. Click \"Check availability\" to see whether the Tenant ID shows \"Available\" or \"Already in use\". Optional fields are \"Display name\", \"Contact email (site)\" (defaults to the contact email), \"Info email\", and a no-reply email; empty optional fields use defaults. The satellite key must use lowercase letters, numbers and hyphens, and a hostname is required. \"Copy admins from tenant\" and \"Copy platform ADMIN / SUPER_ADMIN profiles\" control which admins are copied to the new tenant. Add internal notes in \"Reviewer comments (internal)\".",
+          "keywords": [
+            "provisioning",
+            "tenant id",
+            "prefix",
+            "check availability",
+            "hostname",
+            "satellite key",
+            "display name",
+            "info email",
+            "copy admins"
           ]
         },
         {
           "slug": "approve",
           "heading": "Approve a request and create the tenant",
-          "body": "Under \"Provisioning\", set the optional values: \"Tenant ID prefix\", \"Display name\", \"Contact email (site)\", \"Info email\" and \"Copy admins from tenant\". Empty optional fields use defaults. 1) Click \"Check availability\" for the tenant ID and satellite details. 2) Optionally add \"Reviewer comments (internal)\" and choose \"Copy platform ADMIN / SUPER_ADMIN profiles\" and \"Email the customer about the decision\". 3) Click approve and confirm \"Approve and create tenant?\". If any step fails nothing is created; use \"Retry approval\" after fixing. On success \"Approval successful\" appears and \"Done\" closes it.",
+          "body": "1) Review the request and provisioning options. 2) Tick \"Email the customer about the decision\" if you want them notified. 3) Click approve, then confirm in \"Approve and create tenant?\" (or \"Cancel\"). Approval stores the tenant on the selected organization, then creates tenant settings, email addresses, the satellite domain, and copies the admins, all in one transaction; if any step fails, nothing is created. On success you see \"Approval successful\" and \"Tenant created\" with the Tenant ID, satellite key, hostname, no-reply email and admins copied, plus links \"View Organization\", \"Edit Tenant Settings\" and \"Satellite Domains\". If it fails, the page shows the last failed attempt; fix the values and click \"Retry approval\". Some warnings may ask you to set presets, hero or logo in Tenant Settings.",
           "keywords": [
             "approve",
             "create tenant",
-            "provisioning",
-            "copy admins",
-            "retry approval",
-            "email customer",
             "confirm",
-            "check availability"
+            "retry approval",
+            "provision",
+            "success",
+            "failed",
+            "satellite domain",
+            "tenant settings"
           ]
         },
         {
           "slug": "after-approval",
-          "heading": "After approval: results and next steps",
-          "body": "After approval, \"Tenant created\" shows the Tenant ID, satellite key, hostname, no-reply email and admins copied. Use \"View Organization\", \"Edit Tenant Settings\" or \"Satellite Domains\" to continue. \"Remaining manual steps\" gives domain guidance depending on domain ownership (for example registering in Route 53 or a DNS handoff from the customer's registrar). \"Copy instructions\", \"Copy org details\" and \"Copy Cursor prompt\" copy handoff text. If site-type presets, hero or logo could not be applied, set them in Tenant Settings.",
+          "heading": "Remaining manual steps and copy buttons",
+          "body": "After approval, \"Remaining manual steps\" shows what is still to do, based on the \"Domain ownership\" chosen: registering the domain in Route 53 and attaching it in Amplify, a DNS-only handoff from the customer's registrar, or confirming an existing Route 53 hosted zone and Amplify mapping before changing DNS. Buttons let you copy text: \"Copy instructions\" (organization details and remaining manual steps), \"Copy org details\" (organization database details), and \"Copy Cursor prompt\" (Cursor rule prompt and satellite env checklist). \"Organization Details\" and \"Mailing address\" are shown on the screen once loaded. If the organization is gone you will see \"The organization created for this request is no longer in the database.\"",
           "keywords": [
-            "after approval",
-            "tenant created",
-            "satellite domain",
-            "settings",
-            "copy instructions",
             "manual steps",
+            "copy instructions",
+            "copy org details",
+            "cursor prompt",
             "dns",
-            "organization details"
+            "route 53",
+            "amplify",
+            "organization details",
+            "after approval"
           ]
         },
         {
           "slug": "reject",
           "heading": "Reject a request",
-          "body": "1) On the review screen click \"Reject\". 2) Enter a \"Reason for rejecting\"; a reason is required. 3) If \"Email the customer about the decision\" is on, the reason is emailed to the customer; otherwise the customer will not be emailed. 4) Confirm with \"Reject request\", or click \"Keep request\" to cancel. You will see \"Request rejected.\"",
+          "body": "To decline an application, use \"Reject\" on the review screen. 1) Type a reason in \"Reason for rejecting\"; a reason is required. 2) Choose whether to tick \"Email the customer about the decision\". If ticked, the reason is emailed to the customer; if not, \"The customer will not be emailed.\" 3) Confirm in \"Reject this request?\" by clicking \"Reject request\", or choose \"Keep request\" to back out. \"Request rejected.\" confirms it.",
           "keywords": [
             "reject",
             "decline",
@@ -6473,12 +6457,12 @@
         "src/components/FromEmailSelect.tsx",
         "src/components/TenantSettingsProvider.tsx"
       ],
-      "sourceHash": "01e82f202995db20",
+      "sourceHash": "fe95ddb5fc1571e3",
       "sections": [
         {
           "slug": "overview",
           "heading": "Overview of Promotion Emails",
-          "body": "The page titled \"Promotional Emails for Events\" (/admin/promotion-emails) is where you manage email templates for event promotions and send them. It has an \"Email Templates\" list with search and filters, a \"Create New Template\" button, and an \"Email History\" button that shows what was sent. Each template row has action icons for edit, duplicate, send test, send bulk, send to subscribed members and delete. Editing a template opens its own page (/admin/promotion-emails/[id]) titled \"Edit Promotion Email Template\", which has a \"Back to Promotion Emails\" link. You must be logged in to view these pages.",
+          "body": "The Promotion Emails page (titled \"Promotional Emails for Events\") is where you manage email templates for events and send them. The main list is called \"Email Templates\" and has a \"Filter by Event\" box, a \"Status\" filter, and a search box. At the top you will find the \"Create New Template\" and \"Email History\" buttons. Each template row has action icons for editing, duplicating, testing and sending, and deleting. Opening a template (the Edit icon) takes you to its own edit page, titled \"Edit Promotion Email Template\", where you can use \"Back to Promotion Emails\" or \"Back to templates\" to return.",
           "keywords": [
             "promotion emails",
             "promotional email",
@@ -6486,14 +6470,14 @@
             "marketing email",
             "newsletter",
             "overview",
-            "event emails",
+            "event email",
             "campaign"
           ]
         },
         {
           "slug": "find-templates",
-          "heading": "Search and filter templates",
-          "body": "In the \"Email Templates\" list, use \"Filter by Event\" to pick an event (or \"All Events\"). Use \"Status\" to show \"All\", \"Active\" or \"Inactive\" templates. Type in the \"Search by name or subject...\" box to find a template by its name or subject, and use the clear button (\"Clear template search\") to reset it. The table shows \"Template Name\", \"Event\", \"Subject\" and \"Created\". If nothing matches you see \"No templates match your filters\". Use \"Previous\" and \"Next\" under the table to move between pages.",
+          "heading": "Find and filter templates",
+          "body": "In the \"Email Templates\" list, use \"Filter by Event\" to show templates for one event, or keep \"All Events\". Use \"Status\" to choose \"All\", \"Active\" or \"Inactive\". Type in the search box (\"Search by name or subject...\") to find a template by its name or subject, and use the clear button (\"Clear template search\") to reset it. The list shows \"Template Name\", \"Event\", \"Subject\" and \"Created\". Hover over a template name to see a popup with \"Template Details\" such as subject, event ID, status, promotion code, header and footer images, dates, and a body preview. Long lists are split into pages; use \"Previous\" and \"Next\". If nothing matches, you see \"No templates match your filters\".",
           "keywords": [
             "search",
             "filter",
@@ -6503,133 +6487,117 @@
             "inactive",
             "event filter",
             "pagination",
-            "list"
-          ]
-        },
-        {
-          "slug": "template-details",
-          "heading": "View template details",
-          "body": "Hover over a template name in the list to see a popup with \"Template Details\". It shows the template name, subject, event ID, status, promotion code, header image, footer image, created and updated dates, and a \"Body HTML Preview\". Use the \"Close tooltip\" button to close the popup.",
-          "keywords": [
             "details",
-            "preview",
-            "tooltip",
-            "hover",
-            "template info",
-            "body preview",
-            "popup"
+            "preview"
           ]
         },
         {
           "slug": "create-template",
           "heading": "Create a new template",
-          "body": "1) Click \"Create New Template\". 2) Pick the event, then fill in \"Template Name\" (for example, Summer Sale 2024) and \"Email Subject\". 3) Choose the from email address from the searchable list of verified addresses. 4) Optionally choose a \"Discount Code (Optional)\" for the event, or leave it as \"None\". 5) Enter the \"Email Body HTML\" and \"Email Footer HTML\"; click \"Click to see example HTML\" for a sample. 6) Leave \"Template is active\" ticked if you want it active, then click \"Create Template\". An event must be selected, and a valid from email address is required. If the event has no discount codes, you are told to create one in the event's discount codes section. After saving you are taken back to the list.",
+          "body": "1) Click \"Create New Template\". 2) Fill in \"Template Name\" (for example, Summer Sale 2024) and \"Email Subject\". 3) Choose the event, since you will be asked \"Please select an event\" if you skip it. 4) Pick a from email address from the list of verified addresses. 5) Optionally choose a \"Discount Code (Optional)\" or leave it as \"None\". 6) Enter the \"Email Body HTML\" and, if needed, the \"Email Footer HTML\". Click \"Click to see example HTML\" for a sample. 7) Leave \"Template is active\" ticked if you want it active, then click \"Create Template\". After it saves you are redirected back to the list. Header and footer images can only be added after the template is created, by editing it. If the chosen event has no discount codes, you will see a note to create one in the event's discount codes section.",
           "keywords": [
-            "create template",
+            "create",
             "new template",
             "add template",
-            "discount code",
-            "from email",
-            "event",
+            "template name",
+            "subject",
             "html body",
-            "subject"
+            "discount code",
+            "active",
+            "event"
           ]
         },
         {
           "slug": "from-email-rules",
           "heading": "From email rules",
-          "body": "The from email must be a verified address in AWS SES (Amazon Simple Email Service). If your domain is verified in SES, any valid address on that domain can be used. You cannot send to yourself when the \"From\" and \"To\" addresses are the same, and Hotmail accounts do not work as the from address. The from list only shows active addresses from your tenant configuration, and one is marked \"Default\". If the list is empty, contact your administrator to add addresses. The email logo and footer can be set in Tenant Settings → Customization.",
+          "body": "The from email must be registered and verified with AWS SES (Amazon Simple Email Service). The from-email box lets you search and select from the active verified addresses set up for your tenant; one may be marked \"Default\". If the list is empty, you will see a message asking you to contact your admin to add from email addresses. If your domain is verified in SES, any valid address on that domain can be used. You cannot send an email where the From and To addresses are the same, and Hotmail accounts do not work as the From address. You will see \"Please enter from email address\" or \"Please enter a valid email address\" if the field is missing or incorrect.",
           "keywords": [
             "from email",
-            "ses",
-            "verified email",
             "sender",
-            "domain verification",
+            "aws ses",
+            "verified email",
+            "domain",
             "hotmail",
-            "default email",
-            "logo",
-            "footer"
+            "default address",
+            "email address"
           ]
         },
         {
           "slug": "edit-template",
-          "heading": "Edit a template and upload images",
-          "body": "Click the \"Edit\" icon on a template row (right-click to open it in a new tab). Change the name, subject, discount code, from email, body, footer HTML or the \"Template is active\" setting, then click \"Update Template\". Header and footer images can only be added after a template is created, so create it first and then edit it. In the \"Header Image\" and \"Footer Image\" sections, click to upload or drag and drop an image (PNG, JPG, GIF up to 5MB); the image is saved right away, and you can remove it again. You can also tick \"Add site footer\" to insert your homepage-style footer when the template is saved or sent; it can be used together with a footer image. Use \"Cancel\" or \"Back to Promotion Emails\" to leave.",
+          "heading": "Edit a template",
+          "body": "1) In the template list, click the Edit icon on the template row (right-click it to open in a new tab). 2) Change the \"Template Name\", \"Email Subject\", \"Discount Code (Optional)\", body HTML, footer HTML, or the \"Template is active\" box. 3) Click \"Update Template\". You will see a saving message and are then redirected to the promotion emails list. Click \"Cancel\" to leave without saving. If the page says \"This template could not be loaded\" or \"This template is no longer available\", refresh the page or go back to the template list and open it again.",
           "keywords": [
-            "edit template",
-            "update",
-            "header image",
-            "footer image",
-            "upload picture",
-            "remove image",
-            "site footer",
-            "drag and drop",
-            "active"
+            "edit",
+            "update template",
+            "change",
+            "modify",
+            "activate",
+            "deactivate",
+            "save",
+            "subject"
           ]
         },
         {
-          "slug": "duplicate-template",
-          "heading": "Duplicate a template",
-          "body": "Click the \"Duplicate\" icon on a template row to make a copy. You see \"Template duplicated successfully!\" when it works. You can then edit the copy.",
+          "slug": "header-footer-images",
+          "heading": "Upload header and footer images",
+          "body": "On a template's edit page, the \"Header Image\" and \"Footer Image\" sections accept image files (PNG, JPG, GIF up to 5MB). 1) Click the upload area or drag and drop an image onto it. 2) A preview appears and the image is uploaded and saved right away, with a success message. 3) To remove an image, use the remove option on the preview; it is also removed immediately. If you drop something that is not an image, you see \"Please drop a valid image file\". In the footer section you can also tick \"Add site footer\" to insert your homepage-style footer (tenant name, contact, links) when the template is saved or sent. You can use both footer image and site footer together. The email logo and footer can also be set in Tenant Settings → Customization.",
+          "keywords": [
+            "image",
+            "picture",
+            "header image",
+            "footer image",
+            "upload",
+            "logo",
+            "banner",
+            "remove image",
+            "site footer",
+            "drag and drop"
+          ]
+        },
+        {
+          "slug": "duplicate-delete",
+          "heading": "Duplicate or delete a template",
+          "body": "To copy a template, click the Duplicate icon on its row; you see \"Template duplicated successfully!\" when done. To remove a template, click the Delete icon. A \"Delete Template\" window asks \"Are you sure you want to delete this template?\" and warns that it is permanent and cannot be undone. Click the delete confirmation to proceed, or \"Cancel\" to keep it.",
           "keywords": [
             "duplicate",
             "copy",
             "clone",
-            "template"
+            "delete",
+            "remove",
+            "template",
+            "permanent"
           ]
         },
         {
-          "slug": "send-test",
-          "heading": "Send a test email",
-          "body": "Click the \"Send Test\" icon on a template row to send a test to check the contents. 1) Enter a valid address in the \"Recipient Email Address\" box. 2) Click \"Send Test Email\". A message confirms \"Send Successfully!\" or reports a failure. The first email can take a minute or two to arrive. Remember the from and to addresses cannot be the same.",
+          "slug": "send-emails",
+          "heading": "Send test, bulk, or member emails",
+          "body": "Each template row has three send icons. \"Send Test\" sends a test email so you can check the contents: enter the address in the \"Recipient Email Address\" box (\"Enter email address\") and click \"Send Test Email\"; a valid email is required. \"Send Bulk\" sends to the event attendees registered for that event. \"Send to Subscribed Members\" (shown as \"Send to All Members\" in the guide) is a global email to all members who subscribed to receive emails. For both bulk options a confirmation window appears; click \"Confirm & Send\" to continue or \"Cancel\" to stop. These sends cannot be undone. You will see \"Send Successfully!\" when it works, and the first email may take a minute or two to arrive.",
           "keywords": [
+            "send",
             "test email",
-            "send test",
-            "preview email",
-            "recipient",
-            "check email",
-            "try"
-          ]
-        },
-        {
-          "slug": "send-bulk",
-          "heading": "Send to event attendees or all subscribed members",
-          "body": "\"Send Bulk\" sends the email to the attendees registered for that event. \"Send to Subscribed Members\" (also described as \"Send to All Members\") sends a global email to all members who subscribed to receive emails. Click the matching icon on a template row, read the confirmation, then click \"Confirm & Send\". Both actions cannot be undone, so send a test first. Use \"Cancel\" if you change your mind.",
-          "keywords": [
-            "send bulk",
             "bulk email",
-            "send to all",
+            "send to members",
             "subscribed members",
             "attendees",
-            "mass email",
-            "send campaign",
-            "confirm"
-          ]
-        },
-        {
-          "slug": "delete-template",
-          "heading": "Delete a template",
-          "body": "Click the \"Delete\" icon on a template row. A \"Delete Template\" box asks you to confirm. Deleting is permanent and cannot be undone. Click \"Cancel\" to keep the template.",
-          "keywords": [
-            "delete",
-            "remove template",
-            "erase",
-            "permanent"
+            "confirm",
+            "campaign",
+            "recipient"
           ]
         },
         {
           "slug": "email-history",
           "heading": "View email history",
-          "body": "Click \"Email History\" to see what was sent. Filter by \"Event\" (or \"All Events\"), by \"Status\" (\"Sent\", \"Failed\", \"Bounced\" or \"All Statuses\"), and by \"Start Date\" and \"End Date\". The table lists \"Recipient\", \"Subject\", \"Sent At\", status, and marks \"Test Email\" entries. Use \"Previous\" and \"Next\" to change pages. If nothing matches you see \"No email history found.\"",
+          "body": "Click \"Email History\" at the top of the page to see emails that were sent. Filter by \"Event\" (or \"All Events\"), \"Status\" (\"Sent\", \"Failed\", \"Bounced\", or \"All Statuses\"), and by \"Start Date\" and \"End Date\". The table shows \"Recipient\", \"Subject\", \"Sent At\", and marks test emails as \"Test Email\". Use \"Previous\" and \"Next\" to move between pages. If nothing matches, you see \"No emails found\". Click the close button to leave the history.",
           "keywords": [
-            "email history",
-            "sent log",
+            "history",
+            "sent emails",
+            "log",
             "status",
-            "bounced",
             "failed",
+            "bounced",
             "date filter",
-            "report",
-            "sent emails"
+            "recipient",
+            "report"
           ]
         }
       ]
@@ -8392,6 +8360,7 @@
         "/admin/tenant-management/organizations/[id]/move-tenant",
         "/admin/tenant-management/organizations/[id]/settings",
         "/admin/tenant-management/organizations/move-between",
+        "/admin/tenant-management/organizations/move-tenant",
         "/admin/tenant-management/organizations/new",
         "/admin/tenant-management/organizations/search"
       ],
@@ -8413,6 +8382,8 @@
         "src/app/admin/tenant-management/organizations/domainServerActions.ts",
         "src/app/admin/tenant-management/organizations/move-between/MoveBetweenOrganizationsClient.tsx",
         "src/app/admin/tenant-management/organizations/move-between/page.tsx",
+        "src/app/admin/tenant-management/organizations/move-tenant/MoveTenantOrganizationPicker.tsx",
+        "src/app/admin/tenant-management/organizations/move-tenant/page.tsx",
         "src/app/admin/tenant-management/organizations/nameServerActions.ts",
         "src/app/admin/tenant-management/organizations/new/page.tsx",
         "src/app/admin/tenant-management/organizations/organizationMoveLabel.ts",
@@ -8425,188 +8396,180 @@
         "src/app/admin/tenant-management/organizations/websiteActions.ts",
         "src/components/admin/AddressFieldsSection.tsx",
         "src/components/admin/AdminHelpDialog.tsx",
-        "src/components/admin/AdminRecordMissing.tsx",
         "src/components/admin/AdminTableActionButtons.tsx",
         "src/components/admin/DescriptionTextareaField.tsx",
         "src/components/admin/SatelliteDomainsGuidance.tsx"
       ],
-      "sourceHash": "3faec70097390062",
+      "sourceHash": "ac069b328ec42fc3",
       "platformOnly": true,
       "sections": [
         {
           "slug": "overview",
-          "heading": "Overview of Tenant Organizations",
-          "body": "An organization is the client (a company, institution, or person) that signs up. Its websites are tenants, each with its own tenant ID. The \"Tenant Organizations\" page lists all organizations with a search box, status filters, a \"Create New\" button, and an onboarding button for creating a website Tenant ID. Click an organization to open its detail page, which has \"Organization Details\", billing, a \"Tenant IDs\" list, and an \"Actions\" panel. Related pages are the edit page, the move-a-tenant-ID page, the move-between-organizations page, and a full search page (\"Search organizations\"). Website Tenant IDs, hostnames, and branding are set up under Onboarding, not on the organization form.",
+          "heading": "Organizations overview",
+          "body": "An organization is the client (a company, institution or person) that signs up. Its websites are tenants, each with its own website tenant ID. The main page, \"Tenant Organizations\", lists organizations in a table with the columns \"Organization Name\", \"Tenant IDs\", \"Website / Domain\", \"Contact Email\", \"Organization charge\", \"Status\" and \"Actions\". Above the table you will find a search box, status filters, and a \"Create New\" button. Click an organization to open its detail page, which has an \"Edit Organization\" button, an \"Actions\" area for onboarding and moving tenant IDs, a billing card, and a \"Tenant IDs\" list. Organization records hold contact and address details. Website tenant IDs and hostnames are created through Onboarding.",
           "keywords": [
             "organizations",
+            "organization list",
             "client",
             "company",
             "tenant organizations",
             "overview",
-            "list",
-            "tenant id",
+            "tenant ids",
             "website"
           ]
         },
         {
           "slug": "find-organizations",
           "heading": "Find organizations in the list",
-          "body": "On \"Tenant Organizations\", type in the box \"Search by organization name, tenant ID, or domain...\" to narrow the list. Use the status dropdown (\"All Statuses\", \"Active\", \"Inactive\", \"Suspended\") and the active filter (\"All Organizations\", \"Active Only\", \"Inactive Only\"). The table shows \"Organization Name\", \"Tenant IDs\", \"Website / Domain\", \"Contact Email\", \"Organization charge\", \"Status\", and \"Actions\". Hover over a row to see full organization details. Use \"Previous\" and \"Next\" to move through pages. If nothing matches, you will see \"No organizations found\".",
+          "body": "On the \"Tenant Organizations\" page, type in the box \"Search by organization name, tenant ID, or domain...\" to narrow the list. Use the status drop-downs, which offer \"All Statuses\", \"Active\", \"Inactive\" and \"Suspended\", and also \"All Organizations\", \"Active Only\" and \"Inactive Only\". Results are paged: use \"Previous\" and \"Next\" at the bottom, which show the page number and a \"Showing\" count. If nothing matches, you will see \"No organizations found\". Hover over a row to see full organization details, such as address, subscription and colors. Close that pop-up with the × button.",
           "keywords": [
             "search",
             "find",
             "filter",
             "status",
             "list",
+            "paging",
             "active",
             "inactive",
             "suspended",
-            "domain",
-            "page"
+            "hover details"
           ]
         },
         {
           "slug": "advanced-search",
-          "heading": "Use the advanced search and export",
-          "body": "Open the \"Search organizations\" button (magnifier) on the list to reach the search page. Filter by any combination of: \"Organization name\", \"Domain\", \"Contact email\", \"Contact person\", \"Phone\", \"City\", \"State\", \"ZIP\", \"Country\", \"Website URL\", \"Website tenant ID\", \"Site type\", and \"Subscription status\", plus an active/inactive choice. Each text field matches anywhere in the value. 1) Fill in filters. 2) Click \"Search\". 3) Use \"Clear\" to reset. Results are paged. \"Export results\" downloads every match, and \"Export all organizations\" downloads the full table. If an export has no matches, the sheet contains only the column headers.",
+          "heading": "Search by many fields and export",
+          "body": "Open the search page (the \"Search organizations\" button on the list) to filter by any combination of fields. Fields include \"Organization name\", \"Domain\", \"Contact email\", \"Contact person\", \"Phone\", \"City\", \"State\", \"ZIP\", \"Country\", \"Website URL\" and \"Website tenant ID\". Drop-downs include \"Site type\", \"Subscription status\" and an active/inactive choice. Each text field matches anywhere in the value. 1) Fill in one or more filters. 2) Click \"Search\". 3) Use \"Clear\" to reset the filters. Click \"Export results\" to download every match, or \"Export all organizations\" to download the full table. If nothing matched, the exported sheet contains only the column headers.",
           "keywords": [
-            "search",
+            "advanced search",
             "filter",
             "export",
             "download",
             "spreadsheet",
-            "csv",
+            "clear filters",
             "site type",
-            "subscription",
-            "phone",
-            "city",
-            "clear"
+            "subscription status",
+            "website tenant id",
+            "csv"
           ]
         },
         {
           "slug": "create-organization",
           "heading": "Create a new organization",
-          "body": "1) On \"Tenant Organizations\", click \"Create New\" (or open the New Organization page). 2) Fill in \"Organization Name *\", \"Contact Email *\", \"Contact Phone *\", and \"Contact person name *\". 3) Fill in the address under \"Address Information\": address line 1, city, state / province, ZIP / postal code, and country are required; address line 2 is optional. 4) Optionally add \"Domain\", \"Website URL\", and \"Description\". 5) Under \"Status\", keep \"Active Organization\" checked, or clear it. 6) Click \"Create Organization\". Creating an organization does not create a website tenant ID. Names must be unique, and a domain already in use shows \"This domain is already registered.\" \"Cancel\" leaves without saving.",
+          "body": "1) On the \"Tenant Organizations\" page click \"Create New\". 2) Fill in the \"Company information\" section. Required fields are marked with *: \"Organization Name\", \"Contact Email\", \"Contact Phone\" and \"Contact person name\". \"Domain\", \"Description\" and the website link are optional, so leave the domain empty if the company has none yet. 3) Complete the \"Address Information\" section: address line 1, city, state/province, ZIP/postal code and country are required, and address line 2 is optional. 4) Click \"Create Organization\". This creates only the client organization, not a website tenant ID. You can also use \"Cancel\" to leave the form.",
           "keywords": [
             "create",
-            "new",
-            "add organization",
+            "new organization",
+            "add",
             "client",
-            "form",
-            "required fields",
-            "domain",
+            "company",
+            "contact",
             "address",
-            "contact"
+            "form",
+            "required fields"
+          ]
+        },
+        {
+          "slug": "form-rules",
+          "heading": "Form rules and checks",
+          "body": "The form checks your entries. The organization name is required, must be under 255 characters, and must not match an existing organization (\"An organization with this name already exists.\"). A domain already in use shows \"This domain is already registered.\" If a check cannot run, you will see \"Could not verify the organization name. Try again.\" or \"Could not verify domain availability. Try again.\" Contact email must be a valid address, and contact phone must be under 50 characters. Contact person name must be under 255 characters. Address line limits are 255 for lines 1 and 2, 20 for ZIP code and 100 for country. If saving fails, you will see \"Failed to save organization. Please try again.\"",
+          "keywords": [
+            "validation",
+            "required",
+            "limits",
+            "duplicate name",
+            "domain already registered",
+            "email",
+            "phone",
+            "error",
+            "characters"
           ]
         },
         {
           "slug": "edit-organization",
           "heading": "Edit an organization",
-          "body": "Open the organization and click \"Edit Organization\" (in the \"Actions\" panel or the row action in the list). The page \"Edit Organization\" lets you update company contact, address, domain, and the \"Active Organization\" status. Click \"Update Organization\" to save. While saving you will see a wait message, then a confirmation and a redirect back to the organization page. The Site Tenant ID, domain, and branding of a website stay on Onboarding / Tenant Settings. If saving fails, you will see \"Failed to update the organization. Please try again.\"",
+          "body": "1) Open the organization from the list. 2) Click \"Edit Organization\". 3) Change the company contact, address, domain, description or website link in the \"Company information\" section. 4) Click \"Update Organization\". The page confirms the update and then returns you to the organization page. Site tenant ID, domain and branding are not changed here. They stay on Onboarding and Tenant Settings. The form also has an \"Active Organization\" status setting, and inactive organizations cannot be used for new events or registrations.",
           "keywords": [
             "edit",
             "update",
             "change",
             "contact",
             "address",
-            "save",
-            "modify",
-            "organization details"
+            "active organization",
+            "save"
           ]
         },
         {
-          "slug": "view-details",
-          "heading": "View organization details and tenant IDs",
-          "body": "The organization page shows \"Organization Details\" such as \"Status\", \"Organization Name\", \"Contact Email\", \"Contact Phone\", \"Contact person name\", \"Website URL\", \"Address\", \"Created At\", and \"Updated At\". Below, the \"Tenant IDs\" list shows each website tenant ID for this organization, with \"View\" and \"Edit\" links for its settings and \"Previous\" / \"Next\" paging. If there are none, it says \"No tenant IDs yet\" with a link, \"Go to the tenant ID list\". If an organization was deleted, you will see \"This organization is no longer available\"; use \"Back to Organizations\".",
+          "slug": "organization-details",
+          "heading": "Read an organization's detail page",
+          "body": "The detail page shows \"Organization Details\": \"Database ID (PK)\", \"Organization Name\", \"Contact Email\", \"Contact Phone\", \"Contact person name\", \"Website URL\", \"Address\", \"Status\", \"Created At\" and \"Updated At\". The \"Organization monthly charge\" shows the single charge for the organization, and tenant IDs under it are complimentary and not billed on their own. Below that, the \"Tenant IDs\" list shows each tenant ID with \"View\" and \"Edit\" links for its settings. Use \"Previous\" and \"Next\" to page through. If the organization has none, you will see \"No tenant IDs yet\" with a link, \"Go to the tenant ID list\". If you see \"This organization is no longer available\", the link may be old or the organization may have been deleted. Use \"Back to Organizations\".",
           "keywords": [
             "details",
-            "view",
-            "tenant ids",
-            "websites",
+            "view organization",
+            "tenant ids list",
             "settings",
-            "created",
-            "address",
-            "deleted",
-            "not available"
+            "database id",
+            "monthly charge",
+            "not available",
+            "deleted"
           ]
         },
         {
           "slug": "billing-scope",
-          "heading": "Set the billing scope and monthly charge",
-          "body": "In the billing scope card, choose \"Bill the organization once\" or \"Bill each website separately\", then click \"Save billing scope\". For one charge, enter a \"Monthly amount\" greater than zero; this is one charge for the organization and its tenant IDs stay complimentary. The organization needs a website tenant before it can be billed as one subscription. For separate billing, enter an amount of zero or more; each website stays complimentary until its own charge switch is turned on. On the form, \"Monthly charge (USD)\" works the same way: above 0.00 turns the charge on, 0.00 leaves it off. \"Open billing area\" takes you to billing.",
+          "heading": "Set the billing scope",
+          "body": "The billing card on the organization page has a \"Billing scope\" setting. Choose \"Bill the organization once\" to charge one monthly amount for the whole organization. Enter a \"Monthly amount\" greater than zero, and the organization then has one subscription. Choose \"Bill each website separately\" with a monthly amount of zero or more, and each website stays complimentary until its own charge switch is turned on. Click \"Save billing scope\" to apply it, and use \"Open billing area\" to go to billing. Billing the organization once needs the organization to have a website tenant first.",
           "keywords": [
             "billing",
             "charge",
             "monthly fee",
             "subscription",
-            "price",
-            "usd",
             "one subscription",
-            "each website",
-            "payment"
+            "per website",
+            "amount",
+            "scope"
+          ]
+        },
+        {
+          "slug": "onboard-tenant",
+          "heading": "Add a website tenant ID",
+          "body": "Creating an organization does not create a website. 1) Open the organization page. 2) In \"Actions\" click \"Onboard a tenant ID\", or on the list use \"Create Tenant ID via onboarding\". 3) Go to Onboarding and use \"Add Request\" to create the site tenant ID, hostname/domain, branding and portfolio membership. A custom website URL also needs a satellite domain record so sign-in works there. Use the same tenant ID in both places.",
+          "keywords": [
+            "onboarding",
+            "add tenant id",
+            "new website",
+            "hostname",
+            "domain",
+            "satellite domain",
+            "create tenant id"
           ]
         },
         {
           "slug": "move-tenant-ids",
           "heading": "Move tenant IDs between organizations",
-          "body": "On an organization page, click \"Move a tenant ID to this organization\". 1) Type the \"Tenant ID\". 2) Click \"Look up tenant ID\". 3) Click \"Move to this organization\". A tenant ID already on this organization cannot be moved to it. To work with two organizations at once, click \"Move tenant IDs between two organizations\". Choose two different organizations (\"Choose an organization\"), then drag a tenant ID onto the other organization or use \"Move to the other organization\". Dropping onto the organization it already belongs to does nothing.",
+          "body": "There are three ways. To move one tenant ID into an organization: 1) open that organization and click \"Move a tenant ID to this organization\". 2) Type the tenant ID and click \"Look up tenant ID\". 3) Click \"Move to this organization\". You can also start from the move page, pick the receiving organization under \"Organization that receives the tenant ID\" and continue. To move between two organizations, open \"Move tenant IDs between two organizations\", choose an organization in each column, then drag a tenant ID onto the other organization or use \"Move to the other organization\". The two columns must be different organizations, and a tenant ID already on the target organization is not moved. Messages such as \"That tenant ID is already on this organization.\" tell you why a move did not happen.",
           "keywords": [
             "move",
             "transfer",
             "tenant id",
-            "between organizations",
-            "drag",
-            "drop",
             "reassign",
-            "website"
-          ]
-        },
-        {
-          "slug": "add-tenant-id",
-          "heading": "Create a website tenant ID",
-          "body": "A website tenant ID is not created on the organization form. After the organization exists, click \"Create Tenant ID via onboarding\" on the list, or \"Onboard a tenant ID\" on the organization page. This opens Onboarding → Add Request, where you create the site Tenant ID, hostname/domain, branding, and portfolio membership. A tenant ID must use lowercase letters, numbers, and underscores. Custom domains also need a satellite domain record so sign-in and branding work.",
-          "keywords": [
-            "onboarding",
-            "new tenant id",
-            "website",
-            "hostname",
-            "domain",
-            "satellite",
-            "add website",
-            "branding"
+            "drag",
+            "between organizations",
+            "look up",
+            "change organization"
           ]
         },
         {
           "slug": "inactive-delete",
           "heading": "Make inactive or cascade delete",
-          "body": "Use \"Make inactive\" to mark an organization inactive without deleting anything: its tenant settings, email addresses, satellite domains, and onboarding requests are kept, and it can be made active again. Inactive organizations cannot be used for new events or registrations. \"Cascade Delete\" permanently removes the organization row, its tenant settings, tenant email addresses, and satellite domains. This cannot be undone. Onboarding requests, user profiles, and events are kept. 1) Click \"Cascade Delete\". 2) Read the list of what will be removed. 3) Type the tenant ID to confirm. 4) Click \"Cascade delete now\". Choose \"Keep organization\" or \"Make inactive instead\" to avoid deleting.",
+          "body": "If you see these buttons in a row's actions, you can make an organization inactive or delete it. \"Make inactive\" opens \"Make this organization inactive?\". It keeps the tenant settings, email addresses, satellite domains and onboarding requests, and you can make the organization active again later. \"Cascade Delete\" opens \"Cascade delete organization?\" and removes the organization row, plus its tenant settings, tenant email addresses and satellite domains. This cannot be undone. Onboarding requests, user profiles and events are kept. To confirm, type the organization name, then choose \"Cascade delete now\". Choose \"Keep organization\" or \"Make inactive instead\" to avoid deleting.",
           "keywords": [
             "delete",
             "remove",
+            "cascade delete",
             "inactive",
             "deactivate",
-            "cascade",
             "reactivate",
-            "active",
-            "undo",
-            "disable"
-          ]
-        },
-        {
-          "slug": "rules-limits",
-          "heading": "Form rules and limits",
-          "body": "Required fields: organization name, contact email (a valid address), contact phone, contact person name, address line 1, city, state / province, ZIP / postal code, and country. Limits: organization name and contact person name under 255 characters, phone under 50, address lines 255 or fewer, ZIP 20 or fewer, country 100 or fewer. The organization name must be unique and the domain must not already be registered; if the check fails you are asked to try again. \"Domain\" and \"Website URL\" are optional, and \"Description\" is a short summary shown on About pages and admin reference. Everything on a form saves only when you click \"Create Organization\" or \"Update Organization\".",
-          "keywords": [
-            "required",
-            "limits",
-            "validation",
-            "characters",
-            "unique name",
-            "email",
-            "phone",
-            "maximum",
-            "rules",
-            "save"
+            "confirm",
+            "undo"
           ]
         }
       ]

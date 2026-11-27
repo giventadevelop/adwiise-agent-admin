@@ -47,6 +47,12 @@
     { "id": "concept-locations", "pathname": "/admin/retail", "question": "can a gas station owner have many stores?", "expectFeature": "concepts", "mustMention": ["location"] },
     { "id": "concept-add-website", "pathname": "/admin/tenant-management/organizations", "question": "how do I add a tenant to an organization?", "superAdmin": true, "expectFeature": "tenant-organizations", "mustMention": ["onboarding"] },
     { "id": "concept-add-website-hub", "pathname": "/admin", "question": "how do I add another website to our organization?", "superAdmin": true, "expectFeature": "concepts", "mustMention": ["onboard"] },
-    { "id": "hub-sponsors", "pathname": "/admin", "question": "where do I manage sponsors?", "expectFeature": "event-sponsors", "mustMention": ["sponsor"] }
+    { "id": "hub-sponsors", "pathname": "/admin", "question": "where do I manage sponsors?", "expectFeature": "event-sponsors", "mustMention": ["sponsor"] },
+    {"id": "cross-logo-from-sponsors", "pathname": "/admin/event-sponsors", "question": "how do I change our website logo?", "expectFeature": "tenant-settings", "mustMention": ["Tenant Settings", "Tenant Logo"], "crossPage": true},
+    {"id": "cross-hero-from-sponsors", "pathname": "/admin/event-sponsors", "question": "how do I upload a homepage hero image?", "expectFeature": "tenant-settings", "mustMention": ["Tenant Settings", "Homepage Hero"], "crossPage": true},
+    {"id": "cross-facebook-from-event-settings", "pathname": "/admin/events/settings", "question": "where do I add our facebook link?", "expectFeature": "tenant-settings", "mustMention": ["Tenant Settings", "Facebook"], "crossPage": true},
+    {"id": "cross-organization-from-event-settings", "pathname": "/admin/events/settings", "question": "what is an organization?", "expectFeature": "concepts", "mustMention": ["tenant"], "crossPage": true},
+    {"id": "cross-approve-from-event-settings", "pathname": "/admin/events/settings", "question": "how do I approve a pending member?", "expectFeature": "manage-usage", "mustMention": ["Manage Users", "Approve"], "crossPage": true},
+    {"id": "cross-colors-from-media", "pathname": "/admin/media", "question": "how do I change the brand colors of our website?", "expectFeature": "tenant-settings", "mustMention": ["Tenant Settings", "Primary color"], "crossPage": true}
   ]
 }

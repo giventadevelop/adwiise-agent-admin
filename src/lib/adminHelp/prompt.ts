@@ -1,4 +1,15 @@
-import type { AdminHelpPageContext, AdminHelpRetrieveResult } from './types';
+import { resolveRouteEntry } from './knowledge/routeMap';
+import type { AdminHelpChunk, AdminHelpPageContext, AdminHelpRetrieveResult } from './types';
+
+/** Which admin page a chunk describes, so the model can tell the user how to get there. */
+function chunkLocation(chunk: AdminHelpChunk): { page: string; path: string } | null {
+  for (const prefix of chunk.pathPrefixes ?? []) {
+    if (prefix.includes('[')) continue;
+    const entry = resolveRouteEntry(prefix);
+    if (entry) return { page: entry.info.label, path: prefix };
+  }
+  return null;
+}
 
 export function adminHelpSystemPrompt(isPlatformSuperAdmin: boolean): string {
   const roleLine = isPlatformSuperAdmin
@@ -14,6 +25,7 @@ Rules:
 - Answer the question that was asked. Do not answer a different topic just because it is on the same page; if nothing matches, say so.
 - Do not invent menu items, buttons, routes, or fields that are not in the knowledge.
 - Prefer short step-by-step answers (numbered steps when helpful). Plain text only — no JSON wrapper.
+- Questions about other admin pages are welcome on any page. Each knowledge chunk has a location (page name and path) when known. If the answer is on a different page than page.pathname, first say which page it is on and how to get there: "Go to Admin Home (/admin) and open the <page> tile (<path>)", then the steps on that page. Never answer with a control from the current page that only looks similar (for example a sponsor's logo is not the website logo).
 - If the answer is not in the knowledge, say you do not know and point to the closest admin tile or route from the knowledge.
 - Do not perform or claim to perform admin actions; you only explain.
 - Terms: an organization is the client (company, institution, or person) that signs up. A tenant is one website of that organization, with its own website tenant ID, Tenant Settings, and data. One organization can own many tenants, possibly of different site types (church, school, retail, and so on). A retail tenant can have many locations (stores). Never say organization and tenant are the same thing.
@@ -34,6 +46,7 @@ export function buildAdminHelpUserPayload(
       id: c.id,
       featureKey: c.featureKey,
       title: c.title,
+      location: chunkLocation(c),
       body: c.body,
       platformOnly: Boolean(c.platformOnly),
     }));
@@ -42,6 +55,7 @@ export function buildAdminHelpUserPayload(
     question,
     page: {
       pathname: page.pathname,
+      pageName: retrieved.route?.label ?? null,
       isPlatformSuperAdmin: page.isPlatformSuperAdmin,
       siteType: page.siteType ?? null,
       tenantId: page.tenantId ?? null,

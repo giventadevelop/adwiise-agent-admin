@@ -20,6 +20,8 @@ type EvalCase = {
   superAdmin?: boolean;
   expectFeature: string;
   mustMention: string[];
+  /** Question about a different page than pathname: the answer may rank below current-page chunks, so any retrieved slot counts. */
+  crossPage?: boolean;
 };
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,13 +43,13 @@ async function main() {
     const r = retrieveAdminHelpKnowledge(c.question, page);
     const problems: string[] = [];
 
-    const top3 = r.chunks.slice(0, 3);
-    if (!top3.some((ch) => featureMatches(ch.featureKey, c.expectFeature))) {
-      problems.push(`expected ${c.expectFeature} in top 3, got ${top3.map((ch) => ch.id).join(', ') || 'nothing'}`);
+    const topN = c.crossPage ? r.chunks : r.chunks.slice(0, 3);
+    if (!topN.some((ch) => featureMatches(ch.featureKey, c.expectFeature))) {
+      problems.push(`expected ${c.expectFeature} in top ${topN.length}, got ${topN.map((ch) => ch.id).join(', ') || 'nothing'}`);
     }
 
     const context = [
-      ...r.chunks.slice(0, 5).map((ch) => `${ch.title} ${ch.body}`),
+      ...(c.crossPage ? r.chunks : r.chunks.slice(0, 5)).map((ch) => `${ch.title} ${ch.body}`),
       ...(r.pageGuide ? r.pageGuide.sections.map((s) => `${s.heading} ${s.body}`) : []),
     ]
       .join(' ')
