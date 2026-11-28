@@ -59,3 +59,27 @@ export interface OrganizationTenantSuspensionRow {
   tenant: TenantSuspensionFlags;
   effective: EffectiveTenantSuspension;
 }
+
+/** One organization in the Suspend Sites organization picker. */
+export interface SuspensionOrganizationOption {
+  organizationId: number;
+  organizationName: string;
+  flags: TenantSuspensionFlags;
+}
+
+/** One row of the Suspend Sites tenant ID list. */
+export interface TenantSuspensionListRow {
+  settingsId: number;
+  tenantId: string;
+  organizationId: number | null;
+  organizationName: string | null;
+  tenant: TenantSuspensionFlags;
+  effective: EffectiveTenantSuspension;
+}
+
+export interface TenantSuspensionListPage {
+  rows: TenantSuspensionListRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

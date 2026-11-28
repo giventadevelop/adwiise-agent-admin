@@ -86,7 +86,7 @@ export async function loadOrganizationIdsForTenantIds(tenantIds: string[]): Prom
         { cache: 'no-store' },
       );
       if (!response.ok) {
-        throw new Error('Could not look up organizations for website tenant IDs.');
+        throw new Error(`Could not look up organizations for website tenant IDs (backend status ${response.status}).`);
       }
       const rows = readArray(await response.json()) as SettingsRow[];
       for (const row of rows) {
@@ -109,7 +109,15 @@ export async function loadOrganizationIdsForTenantIds(tenantIds: string[]): Prom
 export async function loadOrganizationForTenantId(tenantId: string): Promise<TenantOrganizationDTO | null> {
   const tid = tenantId.trim();
   if (!tid) return null;
-  const [organizationId] = await loadOrganizationIdsForTenantIds([tid]);
+  let organizationId: number | undefined;
+  try {
+    [organizationId] = await loadOrganizationIdsForTenantIds([tid]);
+  } catch (error) {
+    // Callers treat null as "no organization". A backend error (for example a database missing a
+    // new column) must not break the public layout or the admin pages that only need site type.
+    console.warn('[loadOrganizationForTenantId] organization lookup failed for', tid, error instanceof Error ? error.message : error);
+    return null;
+  }
   if (organizationId == null) return null;
   const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-organizations/${organizationId}`, {
     cache: 'no-store',

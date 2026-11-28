@@ -1,17 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import SuspensionDialogButton, { SuspensionBadges } from './SuspensionDialogButton';
-import { lookupTenantSuspension } from './ApiServerActions';
+import { listTenantSuspensionPage } from './ApiServerActions';
 import type {
   SuspendedOrganizationRow,
   SuspendedTenantRow,
-  TenantSuspensionLookup,
+  SuspensionOrganizationOption,
+  TenantSuspensionListPage,
 } from '@/types/tenantSuspension';
 
+const PAGE_SIZE = 20;
+
 interface SuspensionsClientProps {
-  initialTenantId: string;
+  initialTenantSearch: string;
+  initialOrganizationId: number | null;
+  organizations: SuspensionOrganizationOption[];
   suspendedTenants: SuspendedTenantRow[];
   suspendedOrganizations: SuspendedOrganizationRow[];
   listError: string | null;
@@ -24,106 +29,237 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export default function SuspensionsClient({
-  initialTenantId,
+  initialTenantSearch,
+  initialOrganizationId,
+  organizations,
   suspendedTenants,
   suspendedOrganizations,
   listError,
 }: SuspensionsClientProps) {
-  const [tenantInput, setTenantInput] = useState(initialTenantId);
-  const [lookup, setLookup] = useState<TenantSuspensionLookup | null>(null);
-  const [lookupError, setLookupError] = useState('');
-  const [searching, setSearching] = useState(false);
+  const [organizationId, setOrganizationId] = useState<number | null>(initialOrganizationId);
+  const [searchInput, setSearchInput] = useState(initialTenantSearch);
+  const [search, setSearch] = useState(initialTenantSearch);
+  const [page, setPage] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [result, setResult] = useState<TenantSuspensionListPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const runLookup = useCallback(async (value: string) => {
-    const tenantId = value.trim();
-    if (!tenantId) return;
-    setSearching(true);
-    setLookupError('');
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
-      const result = await lookupTenantSuspension(tenantId);
-      setLookup(result);
-      if (!result) setLookupError(`No tenant settings were found for tenant ID ${tenantId}.`);
+      setResult(await listTenantSuspensionPage({ organizationId, search, page, pageSize: PAGE_SIZE }));
     } catch (err) {
-      setLookup(null);
-      setLookupError(err instanceof Error ? err.message : 'That tenant ID could not be looked up.');
+      setResult(null);
+      setError(err instanceof Error ? err.message : 'The tenant IDs could not be loaded.');
     } finally {
-      setSearching(false);
+      setLoading(false);
     }
-  }, []);
+  }, [organizationId, search, page]);
 
   useEffect(() => {
-    if (initialTenantId) void runLookup(initialTenantId);
-  }, [initialTenantId, runLookup]);
+    void load();
+  }, [load, reloadKey]);
 
+  const selectedOrganization = useMemo(
+    () => organizations.find((org) => org.organizationId === organizationId) ?? null,
+    [organizations, organizationId],
+  );
+  const totalCount = result?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const nothingSuspended = suspendedTenants.length === 0 && suspendedOrganizations.length === 0;
 
   return (
     <div className="space-y-8">
       <section className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Suspend one tenant ID</h2>
-          <p className="text-sm text-gray-600 mt-1">Enter the tenant ID of the website or retail dashboard.</p>
+          <h2 className="text-lg font-medium text-gray-900">Tenant IDs</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Shows every tenant ID until you pick an organization. Pick one to work on that organization and its tenant
+            IDs only. Use Suspend on a row to turn off just that tenant ID.
+          </p>
         </div>
         <div className="px-6 py-4 space-y-4">
-          <form
-            className="flex flex-col sm:flex-row gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void runLookup(tenantInput);
-            }}
-          >
-            <input
-              type="text"
-              value={tenantInput}
-              onChange={(event) => setTenantInput(event.target.value)}
-              placeholder="Tenant ID, for example tenant_demo_001"
-              aria-label="Tenant ID"
-              className="flex-1 h-14 rounded-xl border border-gray-300 px-4 font-mono text-sm"
-            />
-            <button
-              type="submit"
-              disabled={searching || !tenantInput.trim()}
-              className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-              title="Look up tenant ID"
-              aria-label="Look up tenant ID"
+          <div className="flex flex-col lg:flex-row gap-3">
+            <select
+              value={organizationId ?? ''}
+              onChange={(event) => {
+                const next = Number.parseInt(event.target.value, 10);
+                setOrganizationId(Number.isFinite(next) ? next : null);
+                setPage(0);
+              }}
+              aria-label="Organization"
+              className="h-14 rounded-xl border border-gray-300 px-4 text-sm lg:w-80"
             >
-              {searching ? 'Looking up...' : 'Look up'}
-            </button>
-          </form>
-          {lookupError && <p className="text-sm text-red-600">{lookupError}</p>}
-          {lookup && (
-            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono text-sm font-semibold text-gray-900 break-all">{lookup.tenantId}</span>
-                <SuspensionBadges
-                  website={lookup.effective.website}
-                  dashboard={lookup.effective.dashboard}
-                  source={lookup.effective.websiteSource === 'organization' || lookup.effective.dashboardSource === 'organization' ? 'organization' : 'tenant'}
-                />
-              </div>
-              <p className="text-sm text-gray-600">
-                Organization:{' '}
-                {lookup.organizationId ? (
-                  <Link href={`/admin/tenant-management/organizations/${lookup.organizationId}`} className="text-blue-600 hover:underline">
-                    {lookup.organizationName || `#${lookup.organizationId}`}
-                  </Link>
-                ) : (
-                  'none'
-                )}
-              </p>
-              {(lookup.organization?.websiteSuspended || lookup.organization?.dashboardSuspended) && (
-                <p className="text-sm text-amber-700">
-                  The whole organization is suspended too. Lift that on the organization page, or this tenant ID stays off.
-                </p>
+              <option value="">All organizations</option>
+              {organizations.map((org) => (
+                <option key={org.organizationId} value={org.organizationId}>
+                  {org.organizationName}
+                  {org.flags.websiteSuspended || org.flags.dashboardSuspended ? ' (suspended)' : ''}
+                </option>
+              ))}
+            </select>
+            <form
+              className="flex flex-1 gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSearch(searchInput.trim());
+                setPage(0);
+              }}
+            >
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search by tenant ID"
+                aria-label="Search by tenant ID"
+                className="flex-1 h-14 rounded-xl border border-gray-300 px-4 font-mono text-sm"
+              />
+              <button
+                type="submit"
+                className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 px-6 font-semibold text-blue-700 transition-all duration-300 hover:scale-105"
+                title="Search"
+                aria-label="Search"
+              >
+                Search
+              </button>
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput('');
+                    setSearch('');
+                    setPage(0);
+                  }}
+                  className="flex-shrink-0 h-14 rounded-xl bg-gray-100 hover:bg-gray-200 px-4 font-semibold text-gray-700"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  Clear
+                </button>
               )}
+            </form>
+          </div>
+
+          {selectedOrganization && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <div className="flex-1 text-sm text-gray-700">
+                <Link
+                  href={`/admin/tenant-management/organizations/${selectedOrganization.organizationId}`}
+                  className="font-semibold text-blue-600 hover:underline"
+                >
+                  {selectedOrganization.organizationName}
+                </Link>{' '}
+                <SuspensionBadges
+                  website={selectedOrganization.flags.websiteSuspended === true}
+                  dashboard={selectedOrganization.flags.dashboardSuspended === true}
+                />
+                <p className="mt-1">To turn off every tenant ID in this organization at once, use Suspend all.</p>
+              </div>
               <SuspensionDialogButton
-                key={`${lookup.settingsId}-${String(lookup.tenant.websiteSuspended)}-${String(lookup.tenant.dashboardSuspended)}`}
-                target={{ kind: 'tenant', settingsId: lookup.settingsId, tenantId: lookup.tenantId }}
-                current={lookup.tenant}
-                onSaved={() => void runLookup(lookup.tenantId)}
+                compact
+                key={`org-${selectedOrganization.organizationId}-${String(selectedOrganization.flags.websiteSuspended)}-${String(selectedOrganization.flags.dashboardSuspended)}`}
+                target={{
+                  kind: 'organization',
+                  organizationId: selectedOrganization.organizationId,
+                  organizationName: selectedOrganization.organizationName,
+                }}
+                current={selectedOrganization.flags}
+                onSaved={() => setReloadKey((value) => value + 1)}
               />
             </div>
           )}
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {loading && <p className="text-sm text-gray-600">Loading tenant IDs...</p>}
+          {!loading && !error && result && result.rows.length === 0 && (
+            <p className="text-sm text-gray-600">No tenant IDs match.</p>
+          )}
+          {!loading && result && result.rows.length > 0 && (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Change</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {result.rows.map((row) => (
+                    <tr key={row.settingsId}>
+                      <td className="px-4 py-3 font-mono text-sm text-gray-900 break-all">{row.tenantId}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {row.organizationId ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOrganizationId(row.organizationId);
+                              setPage(0);
+                            }}
+                            className="text-blue-600 hover:underline text-left"
+                            title="Show only this organization"
+                          >
+                            {row.organizationName || `#${row.organizationId}`}
+                          </button>
+                        ) : (
+                          ''
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <SuspensionBadges
+                          website={row.effective.website}
+                          dashboard={row.effective.dashboard}
+                          source={
+                            row.effective.websiteSource === 'tenant' || row.effective.dashboardSource === 'tenant'
+                              ? 'tenant'
+                              : row.effective.websiteSource ?? row.effective.dashboardSource
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <SuspensionDialogButton
+                          compact
+                          key={`${row.settingsId}-${String(row.tenant.websiteSuspended)}-${String(row.tenant.dashboardSuspended)}`}
+                          target={{ kind: 'tenant', settingsId: row.settingsId, tenantId: row.tenantId }}
+                          current={row.tenant}
+                          onSaved={() => setReloadKey((value) => value + 1)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              disabled={page === 0 || loading}
+              className="px-5 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg border-2 border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Previous Page"
+              aria-label="Previous Page"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-bold text-blue-700">
+              Page {page + 1} of {totalPages} ({totalCount} tenant IDs)
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => current + 1)}
+              disabled={page >= totalPages - 1 || loading}
+              className="px-5 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg border-2 border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Next Page"
+              aria-label="Next Page"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
 

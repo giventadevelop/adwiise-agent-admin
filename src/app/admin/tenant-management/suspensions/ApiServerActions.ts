@@ -13,6 +13,8 @@ import type {
   SuspendedOrganizationRow,
   SuspendedTenantRow,
   SuspensionInput,
+  SuspensionOrganizationOption,
+  TenantSuspensionListPage,
   TenantSuspensionFlags,
   TenantSuspensionLookup,
 } from '@/types/tenantSuspension';
@@ -269,5 +271,69 @@ export async function listSuspensions(): Promise<{
         flags: pickFlags(row),
       }))
       .sort((a, b) => a.organizationName.localeCompare(b.organizationName)),
+  };
+}
+
+/** Every organization, for the Suspend Sites organization picker (up to 1000). */
+export async function listSuspensionOrganizations(): Promise<SuspensionOrganizationOption[]> {
+  await assertPlatformSuperAdmin();
+  const params = new URLSearchParams({ page: '0', size: '1000', sort: 'organizationName,asc' });
+  const response = await fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-organizations?${params.toString()}`, {
+    cache: 'no-store',
+  });
+  const rows = await readJson<TenantOrganizationDTO[]>(response, 'Could not load organizations');
+  return (Array.isArray(rows) ? rows : [])
+    .filter((row) => row.id != null)
+    .map((row) => ({
+      organizationId: row.id as number,
+      organizationName: row.organizationName || `Organization #${row.id}`,
+      flags: pickFlags(row),
+    }));
+}
+
+/**
+ * One page of tenant IDs with their suspension status. No organization means every tenant ID;
+ * an organization narrows the list to its tenant IDs. The search matches part of a tenant ID.
+ */
+export async function listTenantSuspensionPage(options: {
+  organizationId?: number | null;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<TenantSuspensionListPage> {
+  await assertPlatformSuperAdmin();
+  const page = Number.isFinite(options.page) && (options.page as number) >= 0 ? (options.page as number) : 0;
+  const pageSize = Math.min(Math.max(options.pageSize ?? 20, 1), 100);
+  const params = new URLSearchParams({ page: String(page), size: String(pageSize), sort: 'tenantId,asc' });
+  if (options.organizationId) params.set('tenantOrganizationId.equals', String(options.organizationId));
+  const search = options.search?.trim();
+  if (search) params.set('tenantId.contains', search);
+  const [response, organizations] = await Promise.all([
+    fetchWithJwtRetry(`${getApiBaseUrl()}/api/tenant-settings?${params.toString()}`, { cache: 'no-store' }),
+    listSuspensionOrganizations().catch(() => [] as SuspensionOrganizationOption[]),
+  ]);
+  const rows = await readJson<TenantSettingsDTO[]>(response, 'Could not load tenant IDs');
+  const byId = new Map(organizations.map((org) => [org.organizationId, org]));
+  const headerCount = Number.parseInt(response.headers.get('x-total-count') || '', 10);
+  const list = (Array.isArray(rows) ? rows : [])
+    .filter((row) => row.id != null && row.tenantId?.trim())
+    .map((row) => {
+      const tenantId = row.tenantId.trim();
+      const organizationId = row.tenantOrganization?.id ?? null;
+      const organization = organizationId ? byId.get(organizationId) : undefined;
+      return {
+        settingsId: row.id as number,
+        tenantId,
+        organizationId,
+        organizationName: organization?.organizationName ?? null,
+        tenant: pickFlags(row),
+        effective: combineSuspension(tenantId, row, organization?.flags),
+      };
+    });
+  return {
+    rows: list,
+    totalCount: Number.isFinite(headerCount) && headerCount >= 0 ? headerCount : list.length,
+    page,
+    pageSize,
   };
 }
