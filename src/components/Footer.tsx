@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Facebook, Twitter, Linkedin, Youtube, ArrowUp, Mail, Phone, MapPin, Globe } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import type { FooterContactProps } from "@/lib/footerContactTypes";
@@ -20,7 +21,10 @@ function formatTelHref(phone: string): string {
 }
 
 function AddressLines({ address }: { address: string }) {
-  const lines = address.split("\n").filter(Boolean);
+  const lines = address
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !/^apt\.?\s*7$/i.test(line));
   return (
     <>
       {lines.map((line, index) => (
@@ -89,6 +93,8 @@ const BackToTopButton = () => {
 };
 
 const Footer = ({ contact }: { contact?: Partial<FooterContactProps> }) => {
+  const pathname = usePathname();
+  const onHub = pathname === "/" || pathname.startsWith("/admin");
   const usePlaceholderContact = contact === undefined;
   const resolved: FooterContactProps = {
     formattedAddress: usePlaceholderContact
@@ -105,30 +111,47 @@ const Footer = ({ contact }: { contact?: Partial<FooterContactProps> }) => {
       ? DEFAULT_CONTACT.description
       : (contact.description ?? null),
   };
+  const footerEmail =
+    resolved.email?.toLowerCase() === "giventauser@gmail.com"
+      ? "sales@giventa.com"
+      : resolved.email;
 
   return (
-    <footer className="bg-gray-900 text-gray-300 footer-edge-to-edge mt-20" data-testid="main-footer" role="contentinfo">
+    <footer className={`${onHub ? "footer-on-hub bg-[#A3124F]" : "bg-gray-900"} text-gray-300 footer-edge-to-edge mt-20`} data-testid="main-footer" role="contentinfo">
       {/* Main Footer Content */}
-      <div className="w-full bg-gray-900">
+      <div className={`w-full ${onHub ? "bg-[#A3124F]" : "bg-gray-900"}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
 
-            {/* Column 1: Logo and Social Media */}
+            {/* Column 1: Logos and Social Media */}
             <div className="lg:col-span-1">
-              <Link href="/charity-theme" className="inline-block mb-6">
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets%2Fa70a28525f6f491aaa751610252a199c%2Fd7543f582d4f477599d341da96d48e2b?format=webp&width=800"
-                  alt="Malayalees Friends Logo"
-                  width={150}
-                  height={150}
-                  priority
-                  className="h-12 w-auto"
-                />
-              </Link>
-
-              <p className="text-gray-400 mb-6 font-inter text-sm leading-relaxed">
-                Making a difference in communities worldwide through compassionate action and sustainable impact.
-              </p>
+              <div className="flex flex-col items-start gap-3 mb-6">
+                <Link href="/" className="inline-flex items-center bg-white rounded-lg px-3 py-2">
+                  <Image
+                    src="/images/adwiise-agent/adwiise-agent-logo.svg"
+                    alt="Adwiise Agent"
+                    width={220}
+                    height={40}
+                    priority
+                    unoptimized
+                    className="h-9 w-auto"
+                  />
+                </Link>
+                <a
+                  href="https://www.giventa.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center bg-white rounded-lg px-3 py-2"
+                >
+                  <Image
+                    src="/images/adwiise-agent/giventa-logo.png"
+                    alt="Giventa"
+                    width={160}
+                    height={40}
+                    className="h-9 w-auto"
+                  />
+                </a>
+              </div>
 
               <div className="mb-6">
                 <p className="text-white font-inter font-medium text-sm mb-4">Follow our journey</p>
@@ -233,15 +256,15 @@ const Footer = ({ contact }: { contact?: Partial<FooterContactProps> }) => {
                 </div>
                 )}
 
-                {resolved.email && (
+                {footerEmail && (
                 <div className="flex items-center space-x-3">
                   <Mail size={18} className="text-blue-400 flex-shrink-0" strokeWidth={2} />
                   <p>
                     <a
-                      href={`mailto:${resolved.email}`}
+                      href={`mailto:${footerEmail}`}
                       className="text-blue-400 hover:text-blue-300 font-inter text-sm transition-colors duration-300 focus:outline-none focus:text-blue-300"
                     >
-                      {resolved.email}
+                      {footerEmail}
                     </a>
                   </p>
                 </div>
@@ -265,98 +288,25 @@ const Footer = ({ contact }: { contact?: Partial<FooterContactProps> }) => {
               </div>
             </div>
 
-            {/* Column 3: Quick Links */}
+            {/* Column 3: Quick Links — same items kept in the hub header */}
             <div>
               <h6 className="text-white font-inter font-semibold text-lg mb-6 tracking-wide">Quick Links</h6>
               <nav>
                 <ul className="space-y-3">
                   <li>
                     <Link
-                      href="/charity-theme"
+                      href="/home#about-us"
                       className="text-gray-300 hover:text-white font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-white block"
                     >
-                      Home
+                      About
                     </Link>
                   </li>
                   <li>
                     <Link
-                      href="#about"
-                      className="text-gray-300 hover:text-white font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-white block"
-                    >
-                      About Us
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#causes"
-                      className="text-gray-300 hover:text-white font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-white block"
-                    >
-                      Our Causes
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#events"
-                      className="text-gray-300 hover:text-white font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-white block"
-                    >
-                      Events
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#contact"
+                      href="/home#contact"
                       className="text-gray-300 hover:text-white font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-white block"
                     >
                       Contact
-                    </Link>
-                  </li>
-                </ul>
-              </nav>
-            </div>
-
-            {/* Column 4: Support & Resources */}
-            <div>
-              <h6 className="text-white font-inter font-semibold text-lg mb-6 tracking-wide">Ways to Help</h6>
-              <nav>
-                <ul className="space-y-3">
-                  <li>
-                    <Link
-                      href="#donate"
-                      className="text-gray-300 hover:text-blue-400 font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-blue-400 block"
-                    >
-                      Make a Donation
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#volunteer"
-                      className="text-gray-300 hover:text-blue-400 font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-blue-400 block"
-                    >
-                      Become a Volunteer
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#fundraise"
-                      className="text-gray-300 hover:text-blue-400 font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-blue-400 block"
-                    >
-                      Start a Fundraiser
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#sponsor"
-                      className="text-gray-300 hover:text-blue-400 font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-blue-400 block"
-                    >
-                      Corporate Sponsorship
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="#newsletter"
-                      className="text-gray-300 hover:text-blue-400 font-inter text-sm transition-colors duration-300 hover:translate-x-1 transform focus:outline-none focus:text-blue-400 block"
-                    >
-                      Newsletter Signup
                     </Link>
                   </li>
                 </ul>
@@ -368,19 +318,19 @@ const Footer = ({ contact }: { contact?: Partial<FooterContactProps> }) => {
       </div>
 
       {/* Copyright Section */}
-      <div className="bg-gray-900 border-t border-gray-800 w-full">
+      <div className={`${onHub ? "bg-[#A3124F] border-white/20" : "bg-gray-900 border-gray-800"} border-t w-full`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex flex-col items-center md:items-start gap-1">
             <p className="text-gray-400 font-inter text-sm text-center md:text-left">
-              © 2024{' '}
+              © {new Date().getFullYear()}{' '}
               <Link
-                href="/charity-theme"
+                href="/"
                 className="text-white hover:text-blue-400 transition-colors duration-300 focus:outline-none focus:text-blue-400"
               >
-                Malayalees US Charity Organization
+                Adwiise Agent
               </Link>
-              . All rights reserved. Making hope happen.
+              . All rights reserved.
             </p>
             <p className="text-gray-500 font-inter text-[11px] md:text-xs text-center md:text-left">
               Powered by{' '}

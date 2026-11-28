@@ -29,7 +29,7 @@ export default function HubLanding() {
     >
 {/* HERO */}
 <section id="top" style={{ position: "relative" }}>
-<div style={{ maxWidth: "1240px", margin: "0 auto", padding: "56px 24px 40px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "32px" }}>
+<div style={{ maxWidth: "1240px", margin: "0 auto", padding: "calc(4.5rem + 28px) 24px 40px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "32px" }}>
 <div style={{ flex: "1 1 420px", minWidth: "0", display: "flex", flexDirection: "column", gap: "22px", alignItems: "flex-start" }}>
 <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "7px 14px", borderRadius: "999px", background: "#FFE98A", border: "1.5px solid #15132E", boxShadow: "3px 3px 0 #19E6FF", fontSize: "13px", fontWeight: "700", letterSpacing: "0.04em", textTransform: "uppercase", color: "#3B3960" }}>
 <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "#15132E", color: "#19E6FF", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 10px rgba(25,230,255,0.8)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"></path></svg></span>
@@ -317,7 +317,6 @@ Adwiise Agent by
 <div style={{ padding: "8px 14px", borderRadius: "12px", background: "#FFFFFF", border: "1.5px solid #15132E" }}>
 <img src="/images/adwiise-agent/giventa-logo.png" alt="Giventa" style={{ display: "block", height: "36px", width: "auto" }} />
 </div>
-<a href="mailto:sales@giventa.com" style={{ display: "inline-flex", alignItems: "center", minHeight: "52px", padding: "0 26px", borderRadius: "14px", background: "#5B2EFF", color: "#FFFFFF", fontWeight: "700", fontSize: "17px", textDecoration: "none", boxShadow: "5px 5px 0 #FF8AD0" }}>sales@giventa.com</a>
 <HubEntryButton variant="outline" />
 <p style={{ margin: "0", fontSize: "15px", color: "#4F4D72" }}>Also: <a href="mailto:info@giventa.com">info@giventa.com</a> · <a href="tel:+18628124371">+1 (862) 812-4371</a></p>
 </div>

@@ -48,6 +48,50 @@ html {
   box-shadow: var(--header-shadow);
 }
 
+/* Hub landing: header matches the page body (#A3124F) */
+.header-on-hub {
+  background: #A3124F;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+.header-on-hub .header-logo-primary,
+.header-on-hub .header-nav-link,
+.header-on-hub .header-nav-link:hover,
+.header-on-hub .header-nav-link.active,
+.header-on-hub .header-chevron,
+.header-on-hub .header-search-btn {
+  color: #ffffff;
+}
+
+.header-on-hub .header-nav-link:hover,
+.header-on-hub .header-nav-link.active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.header-on-hub .header-cta {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+.header-on-hub .header-hamburger {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+.header-on-hub .header-hamburger-line {
+  background: #ffffff;
+}
+
+.header-on-hub .header-search-btn:hover,
+.header-on-hub .header-hamburger:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
 /* Header Logo Typography */
 .header-logo-primary {
   font-family: 'DM Serif Display', Georgia, serif;

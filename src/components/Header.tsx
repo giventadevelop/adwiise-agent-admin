@@ -447,7 +447,6 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
   const { signOut } = useClerk();
   const {
     settings,
-    showTeamSection,
     showHeaderHome,
     showHeaderAbout,
     showHeaderEvents,
@@ -458,7 +457,6 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
     showHeaderNews,
     showHeaderDownloads,
     showHeaderLinks,
-    loading: settingsLoading,
   } = useTenantSettings();
   const [isAdmin, setIsAdmin] = useState(!!isTenantAdmin);
   const [isPlatformSuperAdmin, setIsPlatformSuperAdmin] = useState(false);
@@ -827,21 +825,6 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
     };
   }, [pathname]);
 
-  // Build About dropdown dynamically based on tenant settings
-  // Only show Team when settings are loaded AND showTeamSection is explicitly true
-  const aboutDropdown = [
-    { name: 'About Us', href: '/home#about-us' }
-  ];
-  // Only add Team if:
-  // 1. Settings are loaded (not loading)
-  // 2. Settings exist (not null)
-  // 3. showTeamSection is explicitly true
-  if (!settingsLoading && settings && showTeamSection) {
-    aboutDropdown.push({ name: 'Team', href: '/team' });
-  }
-  // Always add Sponsors menu item
-  aboutDropdown.push({ name: 'Sponsors', href: '/sponsors' });
-
   const headerVisibility: Record<(typeof navItemCatalog)[number]['key'], boolean> = {
     home: showHeaderHome,
     about: showHeaderAbout,
@@ -855,18 +838,15 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
     contact: showHeaderContact,
   };
 
-  // Filter catalog by tenant header flags, then attach About dropdown
+  const hubLanding = pathname === '/';
+  // Public header keeps About and Contact. Home, Events, Features, Calendar,
+  // Gallery, and the other catalog items are not shown.
+  const hubNavKeys = new Set<(typeof navItemCatalog)[number]['key']>(['about', 'contact']);
+
+  // About is a single link. Its submenu (About Us, Team, Sponsors) is not shown.
   const navItemsWithDropdown = navItemCatalog
-    .filter((item) => headerVisibility[item.key])
-    .map((item) => {
-      if (item.key === 'about') {
-        return {
-          ...item,
-          dropdown: aboutDropdown,
-        };
-      }
-      return item;
-    });
+    .filter((item) => hubNavKeys.has(item.key) && headerVisibility[item.key])
+    .map((item) => (item.key === 'about' ? { ...item, dropdown: [] } : item));
 
   // Update active state based on current route
   const updatedNavItems = navItemsWithDropdown.map(item => ({
@@ -881,14 +861,14 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 header-glass">
+      <header className={`fixed top-0 left-0 right-0 z-50 header-glass${hubLanding ? ' header-on-hub' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-nowrap items-center justify-between h-[4.5rem]">
             {/* Left side - Unite India Text Logo with Editorial Typography */}
             <div className="flex items-center h-full">
               <Link href="/home" className="group flex items-center gap-3 h-full">
                 {/* Unite India logo icon - full header height, 102px wide */}
-                <div className="flex items-center justify-center h-full w-[102px] min-w-[102px] rounded-xl flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105">
+                <div className={`flex items-center justify-center h-full w-[102px] min-w-[102px] rounded-xl flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105${hubLanding ? ' bg-white px-1' : ''}`}>
                   <Image
                     src={headerLogoSrc}
                     alt={`${BRAND_NAME} logo`}
@@ -902,11 +882,6 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
                       );
                     }}
                   />
-                </div>
-                <div className="text-left">
-                  <div className="header-logo-primary whitespace-nowrap text-[1.375rem] leading-tight group-hover:text-[var(--header-accent-primary)] transition-colors duration-300">
-                    EVENT SITE ADMIN
-                  </div>
                 </div>
               </Link>
             </div>
@@ -1186,11 +1161,6 @@ export default function Header({ hideMenuItems = false, variant = 'charity', isT
                     );
                   }}
                 />
-              </div>
-              <div className="text-left">
-                <div className="header-logo-primary whitespace-nowrap text-lg leading-tight">
-                  EVENT SITE ADMIN
-                </div>
               </div>
             </Link>
             <button
