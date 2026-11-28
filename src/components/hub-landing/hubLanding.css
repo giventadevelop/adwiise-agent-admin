@@ -1,0 +1,50 @@
+/* Animations and breakpoints for the hub landing page (src/components/hub-landing). */
+html { scroll-behavior: smooth; }
+.aa-landing p a { color: #4A21E0; }
+.aa-landing p a:hover { color: #15132E; }
+
+.aa-spin { animation: aa-spin var(--dur, 44s) linear infinite; }
+.aa-spin-rev { animation: aa-spin-rev var(--dur, 44s) linear infinite; }
+.aa-unspin { animation: aa-unspin var(--dur, 44s) linear infinite; }
+.aa-unspin-rev { animation: aa-unspin-rev var(--dur, 44s) linear infinite; }
+.aa-pulse { animation: aa-pulse 3.2s ease-in-out infinite; }
+.aa-bob { animation: aa-bob 5s ease-in-out infinite; }
+.aa-halo { animation: aa-halo 4s ease-in-out infinite; }
+.aa-twinkle { animation: aa-twinkle 2.8s ease-in-out infinite; }
+.aa-caret { animation: aa-caret 1.1s steps(2) infinite; }
+
+@keyframes aa-spin { to { transform: rotateZ(360deg); } }
+@keyframes aa-spin-rev { to { transform: rotateZ(-360deg); } }
+@keyframes aa-unspin {
+  from { transform: rotateZ(calc(-1 * var(--a))); }
+  to { transform: rotateZ(calc(-1 * var(--a) - 360deg)); }
+}
+@keyframes aa-unspin-rev {
+  from { transform: rotateZ(calc(-1 * var(--a))); }
+  to { transform: rotateZ(calc(-1 * var(--a) + 360deg)); }
+}
+@keyframes aa-pulse {
+  0% { transform: translateX(36px); opacity: 0; }
+  15% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(236px); opacity: 0; }
+}
+@keyframes aa-bob {
+  0%, 100% { transform: translateZ(44px); }
+  50% { transform: translateZ(62px); }
+}
+@keyframes aa-halo {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes aa-twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.78) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(18deg); }
+}
+@keyframes aa-caret { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (max-width: 1180px) { .aa-stage { margin: 0 auto; } }
+@media (max-width: 720px) { .aa-stage { zoom: 0.52; } }
+@media (prefers-reduced-motion: reduce) {
+  .aa-spin, .aa-spin-rev, .aa-unspin, .aa-unspin-rev, .aa-pulse, .aa-bob, .aa-halo, .aa-twinkle, .aa-caret { animation: none; }
+}

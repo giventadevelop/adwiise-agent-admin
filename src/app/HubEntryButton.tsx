@@ -1,60 +1,63 @@
 'use client';
 
 import Link from 'next/link';
+import type { CSSProperties } from 'react';
 import { useAuth } from '@clerk/nextjs';
+
+type HubEntryButtonProps = {
+  /** `primary` is the neon call-to-action; `outline` is the quieter secondary button. */
+  variant?: 'primary' | 'outline';
+};
+
+const baseStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '10px',
+  minHeight: '52px',
+  padding: '0 26px',
+  borderRadius: '14px',
+  fontWeight: 700,
+  fontSize: '17px',
+  textDecoration: 'none',
+  color: '#15132E',
+};
+
+const variantStyle: Record<NonNullable<HubEntryButtonProps['variant']>, CSSProperties> = {
+  primary: { background: '#19E6FF', boxShadow: '5px 5px 0 #FFE14D' },
+  outline: { background: '#FFFFFF', border: '1.5px solid #15132E' },
+};
 
 /**
  * Hub call-to-action follows the live Clerk session.
  * The server-rendered page can still be holding the previous signed-in payload after sign-out.
  */
-export default function HubEntryButton() {
+export default function HubEntryButton({ variant = 'primary' }: HubEntryButtonProps) {
   const { isLoaded, userId } = useAuth();
 
   if (!isLoaded) {
-    return <div className="h-14" aria-hidden="true" />;
+    return <div style={{ minHeight: '52px' }} aria-hidden="true" />;
   }
 
-  if (userId) {
-    return (
-      <Link
-        href="/admin"
-        className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-        title="Open Admin"
-        aria-label="Open Admin"
-      >
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
-          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-            />
-          </svg>
-        </div>
-        <span className="font-semibold text-blue-700">Open Admin</span>
-      </Link>
-    );
-  }
+  const signedIn = Boolean(userId);
+  const label = signedIn ? 'Open admin hub' : 'Sign in';
 
   return (
-    <Link
-      href="/sign-in"
-      className="flex-shrink-0 h-14 rounded-xl bg-blue-100 hover:bg-blue-200 flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 px-6"
-      title="Sign in"
-      aria-label="Sign in"
-    >
-      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center">
-        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-          />
-        </svg>
-      </div>
-      <span className="font-semibold text-blue-700">Sign in</span>
+    <Link href={signedIn ? '/admin' : '/sign-in'} style={{ ...baseStyle, ...variantStyle[variant] }} title={label}>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="7" y="7" width="10" height="10" rx="2" />
+        <path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4" />
+      </svg>
+      {label}
     </Link>
   );
 }
